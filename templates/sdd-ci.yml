@@ -1,0 +1,19 @@
+# Required SDD gate on pull requests (ADR-0003, layer 1).
+# Install as .github/workflows/sdd-ci.yml and mark as a required check in branch settings.
+name: sdd-gate
+
+on:
+  pull_request:
+
+jobs:
+  sdd-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: SDD checks (AGENTS.md + openspec validate)
+        run: make sdd-check
+      # TODO per repo: wire in the full `make test` (linters + pytest + contract
+      # tests). WBN runs tests through docker compose — add that as a separate step.

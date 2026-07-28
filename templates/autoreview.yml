@@ -1,0 +1,88 @@
+# Auto-review on pull requests (see refactor_v4/autoreviewer.md verdict).
+# Layer 1 (deterministic): ruff -> reviewdog -> inline PR comments.
+# Layer 2 (logic): repo reviewer agents (.claude/agents/) via headless `claude -p`.
+#
+# Auth: Claude Code SUBSCRIPTION (OAuth), NOT an Anthropic API key.
+# One-time setup: run `claude setup-token` on a logged-in machine and save the
+# printed token as the repo/org secret CLAUDE_CODE_OAUTH_TOKEN.
+# Layer 2 is skipped without the secret; never pass --bare (API-key-only mode).
+name: autoreview
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  reviewdog-ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: reviewdog/action-setup@v1
+      - name: ruff findings as inline PR comments
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uvx ruff check --output-format concise . |
+            reviewdog -efm="%f:%l:%c: %m" -name=ruff \
+              -reporter=github-pr-review -level=warning -fail-level=none
+
+  claude-review:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: astral-sh/setup-uv@v5
+      - name: Static-tool report on changed Python files (radon, complexipy, vulture)
+        run: |
+          FILES=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep '\.py$' || true)
+          {
+            echo "# Static-tool leads for changed .py files (verify each in code before trusting)"
+            if [ -n "$FILES" ]; then
+              echo "## radon (cyclomatic complexity, B and worse)"; uvx radon cc $FILES -s -a --min B || true
+              echo "## complexipy (cognitive complexity)"; uvx complexipy $FILES || true
+              echo "## vulture (dead code; <100% confidence is often false)"; uvx vulture $FILES || true
+            else
+              echo "no changed .py files"
+            fi
+          } > /tmp/tools.txt 2>&1
+      - name: Skip when CLAUDE_CODE_OAUTH_TOKEN is not configured
+        id: key
+        run: |
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN secret missing — AI review skipped (create one with: claude setup-token)"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: AI review with repo reviewer agents
+        if: steps.key.outputs.present == 'true'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          git diff "origin/${{ github.base_ref }}"...HEAD > /tmp/pr.diff
+          claude -p "Read /tmp/pr.diff (a pull-request diff of this repository).
+          Review it following the rules in .claude/agents/python-reviewer.md,
+          .claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md
+          (read them first; apply each where relevant). Repo context: AGENTS.md.
+          Also Read /tmp/tools.txt — static-tool leads (radon/complexipy/vulture) for
+          the changed files; verify each lead in code before reporting it.
+          Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix.
+          If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \
+            --allowedTools "Read,Grep,Glob" > /tmp/review.md || true
+          {
+            echo "## AI review (sdd-kit autoreview)"
+            echo ""
+            cat /tmp/review.md
+          } > /tmp/comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
