@@ -47,6 +47,44 @@ repo.
 5. AI review auth (subscription, no API key): run `claude setup-token` on a
    logged-in machine, save it as the `CLAUDE_CODE_OAUTH_TOKEN` repo/org secret.
 
+## Deliberately NOT installed
+
+sdd-kit installs repo-level assets only. Per-user tooling belongs on each
+developer's machine (see the team onboarding guide), because baking it into
+every repo bloats context and duplicates state:
+
+- **ponytail / caveman skills** — personal working style; install as a user-level plugin/skill.
+- **RTK** (rtk-ai/rtk) — shell-output compressor; global per-user integration
+  (`rtk init -g`), never a repo asset. Only enable its hook after the binary is installed.
+- **Graphify** — per-machine CLI + skill; navigation aid, never a CI gate.
+- **Chrome DevTools MCP / Playwright** — frontend debug loops; add to `.mcp.json` only in frontend repos that need them.
+- **Headroom MCP** — user-level context compression. Note: with Anthropic prompt
+  caching active, cached input re-reads already cost ~10% — Headroom's savings
+  estimates assume full-price tokens, so its real win is context-window space,
+  not cost. It appends (never rewrites history), so it does not invalidate the cache prefix.
+- **grill-with-docs** — a thin wrapper over the `/grilling` + `/domain-modeling`
+  skill set; useful as a team practice (interrogate the plan before implementing)
+  but not self-contained enough to vendor here.
+
+What the kit DOES cover from that list: Claude Code hooks (PreToolUse:
+spec-guard + no-verify blocker; PostToolUse: ruff auto-format on edited .py),
+the review toolchain (ruff/radon/complexipy/vulture), and the MCP baseline
+(context7 + youtrack).
+
+## Configuration
+
+- `YOUTRACK_URL` — YouTrack instance for youtrack-mcp (default: cybernet.youtrack.cloud).
+- `YOUTRACK_MCP_DIR` — where youtrack-mcp lives (default search: ~/dev, ~/cybernet).
+- `SDD_KIT_ASSUME_YES=1` — auto-confirm installs in non-TTY runs (never the token).
+- `SPEC_LINT_STRICT=1` — make spec freshness/metadata violations blocking.
+- `SDD_AUDIT_STRICT=1` — make repo-audit warnings blocking.
+- `SDD_ALLOW_PROTECTED=1` — one-off bypass of the protected-branch commit guard.
+
+## Attribution
+
+Reviewer agents and spec-miner are adapted from
+[everything-claude-code](https://github.com/affaan-m/ECC) (MIT).
+
 ## Layout
 
 ```

@@ -20,6 +20,9 @@ SKIP_LIST=""   # one skipped step per line (bash 3.2-safe, no arrays)
 skip() { SKIP_COUNT=$((SKIP_COUNT + 1)); SKIP_LIST="$SKIP_LIST$1
 "; say "skipped: $1"; }
 
+# YouTrack instance for the youtrack-mcp server; override per company/machine.
+YT_URL="${YOUTRACK_URL:-https://cybernet.youtrack.cloud}"
+
 INTERACTIVE=0; [ -t 0 ] && INTERACTIVE=1
 ASSUME_YES=0; [ "${SDD_KIT_ASSUME_YES:-0}" = "1" ] && ASSUME_YES=1
 
@@ -114,14 +117,14 @@ if [ "$WANT_YOUTRACK" = 1 ]; then
   if [ "$HAS_TOKEN" = 1 ]; then
     say "ok:      YOUTRACK_API_TOKEN already configured"
   elif [ "$INTERACTIVE" = 1 ]; then
-    say "Get a permanent token here: https://cybernet.youtrack.cloud/users/me?tab=account-security (Account Security -> New token)"
+    say "Get a permanent token here: $YT_URL/users/me?tab=account-security (Account Security -> New token)"
     printf '[sdd-kit] Paste the YouTrack token (input hidden): '
     read -r -s YT_TOKEN_INPUT || YT_TOKEN_INPUT=""
     echo
     if [ -n "$YT_TOKEN_INPUT" ]; then
       touch "$YT_ENV"; chmod 600 "$YT_ENV"
       grep -Eq '^[[:space:]]*YOUTRACK_URL[[:space:]]*=' "$YT_ENV" \
-        || printf 'YOUTRACK_URL=https://cybernet.youtrack.cloud\n' >> "$YT_ENV"
+        || printf 'YOUTRACK_URL=%s\n' "$YT_URL" >> "$YT_ENV"
       printf 'YOUTRACK_API_TOKEN=%s\n' "$YT_TOKEN_INPUT" >> "$YT_ENV"
       unset YT_TOKEN_INPUT
       say "wrote:   YOUTRACK_API_TOKEN into $YT_ENV (chmod 600)"
@@ -129,7 +132,7 @@ if [ "$WANT_YOUTRACK" = 1 ]; then
       skip "empty token — add YOUTRACK_API_TOKEN to $YT_ENV manually"
     fi
   else
-    skip "no YOUTRACK_API_TOKEN. Add YOUTRACK_URL and YOUTRACK_API_TOKEN to $YT_ENV manually (chmod 600). Token page: https://cybernet.youtrack.cloud/users/me?tab=account-security"
+    skip "no YOUTRACK_API_TOKEN. Add YOUTRACK_URL and YOUTRACK_API_TOKEN to $YT_ENV manually (chmod 600). Token page: $YT_URL/users/me?tab=account-security"
   fi
 fi
 
@@ -175,6 +178,7 @@ fi
 # ------------------------------------------------- 7. Claude Code hooks (repo-local)
 put spec-guard.js .claude/hooks/spec-guard.js
 put block-no-verify.js .claude/hooks/block-no-verify.js
+put format-py.js .claude/hooks/format-py.js
 put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
 put spec-lint.py .claude/scripts/spec-lint.py
 put repo-audit.sh .claude/scripts/repo-audit.sh
