@@ -80,6 +80,12 @@ the review toolchain (ruff/radon/complexipy/vulture), and the MCP baseline
 - `SDD_AUDIT_STRICT=1` — make repo-audit warnings blocking.
 - `SDD_ALLOW_PROTECTED=1` — one-off bypass of the protected-branch commit guard.
 
+## Design notes
+
+Gate output follows [axi](https://github.com/kunchenguid/axi) agent-ergonomics
+principles: summary line first, explicit "0 issues" instead of silence, and a
+concrete `next:` command suggestion on every failure path.
+
 ## Attribution
 
 Reviewer agents and spec-miner are adapted from

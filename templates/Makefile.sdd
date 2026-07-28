@@ -7,13 +7,13 @@ sdd-audit:
 	@sh .claude/scripts/repo-audit.sh
 
 sdd-check:
-	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; exit 1; }
-	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; exit 1; }
+	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; }
+	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
 	@if [ -d openspec ]; then \
-		npx -y @fission-ai/openspec@1.6.0 validate --all --strict || exit 1; \
+		npx -y @fission-ai/openspec@1.6.0 validate --all --strict || { echo "next: fix the specs listed above, then re-run make sdd-check"; exit 1; }; \
 	else \
-		echo "FAIL: openspec/ directory is missing (run sdd-kit/bootstrap.sh)"; exit 1; \
+		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; \
 	fi
-	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py >/dev/null || exit 1; fi
-	@echo "sdd-check: OK"
+	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py >/dev/null || { echo "next: run python3 .claude/scripts/spec-lint.py for the full JSON report"; exit 1; }; fi
+	@echo "sdd-check: OK — all gates passed (AGENTS.md, openspec validate, spec-lint)"

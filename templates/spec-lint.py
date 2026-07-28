@@ -249,7 +249,10 @@ def main() -> int:
 
     mode = "STRICT" if strict else "WARN-ONLY"
     out = sys.stderr
-    print(f"spec-lint [{mode}] {len(results)} spec(s) under {root}", file=out)
+    # Summary first (agent ergonomics: lead with aggregates, never make the reader count).
+    print(f"spec-lint [{mode}] {len(results)} spec(s) checked: "
+          + ", ".join(f"{k}={v}" for k, v in totals.items())
+          + f"; metadata violations={violations}", file=out)
     for item in results:
         print(f"  {item['status']:<10} {item['spec']}  "
               f"({item['requirements']} req, {item['enforced_files']} enforced file(s), "
@@ -262,15 +265,19 @@ def main() -> int:
             print(f"      anchor resolves to no file: {anchor}", file=out)
         for violation in item["violations"]:
             print(f"      {violation['kind']} (line {violation['line']}): {violation['message']}", file=out)
-    print("spec-lint: freshness " + ", ".join(f"{k}={v}" for k, v in totals.items())
-          + f"; metadata violations={violations}", file=out)
+    if violations == 0 and not totals["STALE"] and not totals["MISSING"]:
+        print("spec-lint: 0 issues found", file=out)
 
     if not strict:
         print("spec-lint: warn-only mode, exiting 0 (set SPEC_LINT_STRICT=1 to enforce)", file=out)
         return 0
     if violations:
+        print("next: fix the metadata violations listed above, then re-run "
+              "python3 .claude/scripts/spec-lint.py --strict", file=out)
         return 1
     if totals["STALE"] or totals["MISSING"]:
+        print("next: re-verify each STALE/MISSING spec against the code and bump its "
+              "'Last verified (commit)' line, then re-run", file=out)
         return 2
     return 0
 
