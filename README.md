@@ -1,8 +1,8 @@
 # sdd-kit
 
-Bootstrap for spec-driven development (SDD) in a CybernetAI repository — new or
+Bootstrap for spec-driven development (SDD) in a repository — new or
 existing. One script, idempotent: never overwrites existing files, only adds
-what is missing. Decisions behind it: ADR-0001…0003 in `refactor_v4/ADR/`.
+what is missing.
 
 ## Usage
 

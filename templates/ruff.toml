@@ -1,4 +1,4 @@
-# Ruff defaults for CybernetAI Python backends.
+# Ruff defaults for Python backends.
 # Installed by sdd-kit ONLY when the repository has no Ruff config of its own
 # (no ruff.toml / .ruff.toml and no [tool.ruff] in any pyproject.toml) —
 # web-backend-new keeps its own config (backend/pyproject.toml, select=ALL + ignores).

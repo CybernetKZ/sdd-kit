@@ -1,7 +1,7 @@
 # AGENTS.md — context for AI agents
 
 <!-- Limit: 500 lines. Enforced by `make sdd-check`. -->
-<!-- CLAUDE.md in this repository is a symlink to this file (ADR-0002). -->
+<!-- CLAUDE.md in this repository is a symlink to this file. -->
 
 ## What this service is
 
@@ -22,7 +22,7 @@ TODO: a short "directory — responsibility" tree. One line per module.
 - Capability specs for this repository: `openspec/specs/`
 - Changes go through `openspec/changes/<id>/` (rule: no code without a spec;
   for refactoring/tooling use `skip_specs: true` in the change metadata).
-- Cross-service contracts live in the central store repository (see ADR-0001),
+- Cross-service contracts live in the central store repository,
   wired in via `references:` in `openspec/config.yaml`.
 
 ## Do not edit by hand

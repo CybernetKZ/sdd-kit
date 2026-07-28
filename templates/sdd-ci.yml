@@ -1,4 +1,4 @@
-# Required SDD gate on pull requests (ADR-0003, layer 1).
+# Required SDD gate on pull requests.
 # Install as .github/workflows/sdd-ci.yml and mark as a required check in branch settings.
 name: sdd-gate
 

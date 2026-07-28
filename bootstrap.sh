@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# SDD bootstrap for a CybernetAI repository (new or existing).
+# SDD bootstrap for a repository (new or existing).
 # Usage: sdd-kit/bootstrap.sh /path/to/repo
 # Idempotent: never overwrites existing files, only adds what is missing.
-# Basis: ADR-0001 (openspec in every repo), ADR-0002 (AGENTS.md <= 500 lines),
-# ADR-0003 (make test/sdd-check in CI + PreToolUse hooks).
+# Basis: openspec in every repo, AGENTS.md <= 500 lines,
+# make test/sdd-check in CI + PreToolUse hooks.
 set -euo pipefail
 
 KIT="$(cd "$(dirname "$0")" && pwd)"
@@ -133,7 +133,7 @@ if [ "$WANT_YOUTRACK" = 1 ]; then
   fi
 fi
 
-# --------------- 3. agent context: AGENTS.md is canonical, CLAUDE.md a symlink (ADR-0002)
+# --------------- 3. agent context: AGENTS.md is canonical, CLAUDE.md a symlink
 if [ ! -e AGENTS.md ] && [ -f CLAUDE.md ] && [ ! -L CLAUDE.md ]; then
   if git ls-files --error-unmatch CLAUDE.md >/dev/null 2>&1; then
     git mv CLAUDE.md AGENTS.md

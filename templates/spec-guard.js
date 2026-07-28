@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook (ADR-0003, layer 2): forbids the agent from editing code
+ * PreToolUse hook: forbids the agent from editing code
  * when the repository has no active change under openspec/changes/<id>/.
  *
  * Enabled ONLY when the repository root contains a .spec-guard-paths file —
@@ -52,7 +52,7 @@ process.stdin.on('end', () => {
   if (active.length === 0) {
     console.error(
       `BLOCKED: editing code (${rel}) without an active change in openspec/changes/. ` +
-      `Create a change (/opsx:propose) or mark it skip_specs: true. (ADR-0003)`
+      `Create a change (/opsx:propose) or mark it skip_specs: true.`
     );
     process.exit(2);
   }

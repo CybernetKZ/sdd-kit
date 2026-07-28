@@ -1,5 +1,5 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
-# Installed by sdd-kit/bootstrap.sh. ADR-0002, ADR-0003.
+# Installed by sdd-kit/bootstrap.sh.
 
 .PHONY: sdd-check sdd-audit
 
@@ -7,7 +7,7 @@ sdd-audit:
 	@sh .claude/scripts/repo-audit.sh
 
 sdd-check:
-	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing (ADR-0002)"; exit 1; }
+	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; exit 1; }
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
 	@if [ -d openspec ]; then \
