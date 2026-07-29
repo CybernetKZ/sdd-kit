@@ -1,0 +1,18 @@
+Proprietary License
+
+Copyright (c) 2026 owner. All rights reserved.
+
+This software and its templates are provided for internal use by owner
+and its authorized contractors only. No permission is granted to use, copy,
+modify, distribute, or sublicense this software, in whole or in part, outside
+that scope without prior written consent of the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+Third-party notices:
+- The reviewer agents and the spec-miner agent are adapted from
+  everything-claude-code (https://github.com/affaan-m/ECC), MIT License,
+  Copyright (c) affaan-m and contributors. The MIT license text and copyright
+  notice apply to those adapted portions.
