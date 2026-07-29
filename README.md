@@ -27,8 +27,30 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/repo-audit.sh` | advisory clutter audit: extra MCP servers, foreign agent-tool configs (.cursor/.serena/…), stray skills/agents; runs at the end of bootstrap and via `make sdd-audit` |
+| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence; runs at the end of bootstrap |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) — installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
+| `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
+
+## Profiles
+
+`profiles/<repo-basename>.env` tailors the bootstrap for known repos. When the
+target directory name matches a profile, bootstrap additionally:
+
+- seeds `.spec-guard-paths` with the repo's real production-code prefixes
+  (tests/docs/migrations/helm values stay unguarded);
+- wires the central spec store: clones it if missing (with permission),
+  registers it (`openspec store register`), and appends `references:` to
+  `openspec/config.yaml` — `openspec validate` stays green on machines/CI
+  without the store; `openspec doctor` tells you how to register it;
+- skips Python tooling for non-Python repos (`PROFILE_SKIP_PY=1`);
+- for the store repo itself (`PROFILE_IS_STORE=1`): minimal install — local
+  registration + a strict-validate CI gate, nothing else.
+
+Shipped profiles: web-backend-new, voice-agent-constructor-backend,
+voice-agent-postcall-analitics-backend, cybernet3.0, web-frontend-new,
+conversation_flow, cybernet-specs (the store). Unknown repos fall back to the
+generic flow with a `.spec-guard-paths` TODO.
 
 ## Dependencies
 
@@ -79,6 +101,9 @@ the review toolchain (ruff/radon/complexipy/vulture), and the MCP baseline
 - `SPEC_LINT_STRICT=1` — make spec freshness/metadata violations blocking.
 - `SDD_AUDIT_STRICT=1` — make repo-audit warnings blocking.
 - `SDD_ALLOW_PROTECTED=1` — one-off bypass of the protected-branch commit guard.
+- `SDD_STORE_ID` / `SDD_STORE_DIR` / `SDD_STORE_GIT` — central spec store id,
+  local checkout path, and clone URL (defaults: cybernet-specs,
+  ~/cybernet/cybernet-specs, github.com/octrow/cybernet-specs).
 
 ## Design notes
 

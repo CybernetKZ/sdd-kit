@@ -23,6 +23,26 @@ skip() { SKIP_COUNT=$((SKIP_COUNT + 1)); SKIP_LIST="$SKIP_LIST$1
 # YouTrack instance for the youtrack-mcp server; override per company/machine.
 YT_URL="${YOUTRACK_URL:-https://cybernet.youtrack.cloud}"
 
+# ------------------------------------------------------------------ repo profile
+# Known repos get tailored config (spec-guard paths, central-store wiring, py/no-py).
+# A profile is a shell fragment in profiles/<repo-basename>.env setting PROFILE_* vars.
+REPO_NAME="$(basename "$REPO")"
+PROFILE_STORE=0            # 1 = wire this repo to the central spec store
+PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
+PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
+PROFILE_FRONTEND=0         # 1 = frontend repo: add chrome-devtools MCP to .mcp.json
+PROFILE_SPEC_GUARD_PATHS=""
+if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
+  # shellcheck disable=SC1090
+  . "$KIT/profiles/$REPO_NAME.env"
+  say "profile: $REPO_NAME"
+fi
+
+# Central spec store (ADR-0001). Override per machine/org.
+STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
+STORE_DIR="${SDD_STORE_DIR:-$HOME/cybernet/cybernet-specs}"
+STORE_GIT="${SDD_STORE_GIT:-https://github.com/octrow/cybernet-specs.git}"
+
 INTERACTIVE=0; [ -t 0 ] && INTERACTIVE=1
 ASSUME_YES=0; [ "${SDD_KIT_ASSUME_YES:-0}" = "1" ] && ASSUME_YES=1
 
@@ -47,6 +67,22 @@ put() { # put <template> <destination> — copies only when the destination is m
 
 # ---------------------------------------------------------------- 0. dependencies
 [ -d .git ] || fail "$REPO is not a git repository"
+
+# The store repo needs only itself: local registration + validate gate. Nothing else.
+if [ "$PROFILE_IS_STORE" = 1 ]; then
+  command -v git >/dev/null 2>&1 || fail "git not found. Install git and re-run."
+  OPENSPEC="npx -y @fission-ai/openspec@1.6.0"
+  command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
+  if ! $OPENSPEC store list 2>/dev/null | grep -q "^$STORE_ID[[:space:]]"; then
+    $OPENSPEC store register "$REPO" --id "$STORE_ID"
+    say "registered: this repo as store '$STORE_ID'"
+  else
+    say "ok:      store '$STORE_ID' already registered on this machine"
+  fi
+  put store-ci.yml .github/workflows/store-ci.yml
+  say "done (store profile). Gate: openspec validate --all --strict runs on every PR."
+  exit 0
+fi
 
 command -v git >/dev/null 2>&1 || fail "git not found. Install git and re-run."
 if ! command -v node >/dev/null 2>&1 || ! command -v npx >/dev/null 2>&1; then
@@ -156,6 +192,29 @@ else
   say "exists:  openspec/ (left alone)"
 fi
 
+# ------------------------------------------- 4b. central spec store (profile repos)
+if [ "$PROFILE_STORE" = 1 ]; then
+  if ! $OPENSPEC store list 2>/dev/null | grep -q "^$STORE_ID[[:space:]]"; then
+    if [ ! -d "$STORE_DIR" ] && ask "Clone the central spec store to $STORE_DIR? ($STORE_GIT)"; then
+      git clone "$STORE_GIT" "$STORE_DIR"
+      say "cloned:  $STORE_DIR"
+    fi
+    if [ -d "$STORE_DIR" ]; then
+      $OPENSPEC store register "$STORE_DIR" --id "$STORE_ID"
+      say "registered: store '$STORE_ID' from $STORE_DIR"
+    else
+      skip "store not cloned — register later: $OPENSPEC store register $STORE_DIR --id $STORE_ID"
+    fi
+  else
+    say "ok:      store '$STORE_ID' already registered"
+  fi
+  CFG=openspec/config.yaml
+  if [ -f "$CFG" ] && ! grep -q '^references:' "$CFG"; then
+    printf '\n# Central contract store (ADR-0001), registered via `openspec store register`\nreferences:\n  - %s\n' "$STORE_ID" >> "$CFG"
+    say "appended: references: $STORE_ID to $CFG"
+  fi
+fi
+
 # --------------------------------------------------------- 5. Makefile: sdd-check
 put Makefile.sdd Makefile.sdd
 if [ -f Makefile ]; then
@@ -168,7 +227,9 @@ fi
 put sdd-ci.yml .github/workflows/sdd-ci.yml
 
 # ----------------------------------------- 6b. ruff config (only when none exists)
-if [ -e ruff.toml ] || [ -e .ruff.toml ] \
+if [ "$PROFILE_SKIP_PY" = 1 ]; then
+  say "skipped: ruff.toml (profile: not a Python repo)"
+elif [ -e ruff.toml ] || [ -e .ruff.toml ] \
    || grep -rls --include=pyproject.toml '^\[tool\.ruff' . >/dev/null 2>&1; then
   say "exists:  ruff config (repo's own — left alone)"
 else
@@ -182,6 +243,7 @@ put format-py.js .claude/hooks/format-py.js
 put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
 put spec-lint.py .claude/scripts/spec-lint.py
 put repo-audit.sh .claude/scripts/repo-audit.sh
+put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 
 # ---------------------------------------- 7b. auto-review: agents + PR workflow
 for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer; do
@@ -190,6 +252,10 @@ done
 put autoreview.yml .github/workflows/autoreview.yml
 
 # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
+if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
+  printf '%s\n' "$PROFILE_SPEC_GUARD_PATHS" > .spec-guard-paths
+  say "created: .spec-guard-paths (from profile: $REPO_NAME)"
+fi
 [ -e .spec-guard-paths ] || say "TODO:    create .spec-guard-paths (code path prefixes) to enable spec-guard"
 
 # ------------------------------------------- 8b. git pre-commit hook: sdd-check
@@ -210,47 +276,30 @@ fi
 # --------------------------------------------- 9. project MCP servers (.mcp.json)
 if [ -e .mcp.json ]; then
   say "exists:  .mcp.json (left alone)"
-elif [ "$WANT_YOUTRACK" = 1 ]; then
-  cat > .mcp.json <<EOF
-{
-  "mcpServers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
-    },
-    "youtrack": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory", "$YT_DIR",
-        "--no-project",
-        "--with-requirements", "$YT_DIR/requirements.txt",
-        "main.py"
-      ],
-      "env": {}
-    }
-  }
-}
-EOF
-  say "created: .mcp.json (context7 + youtrack from $YT_DIR)"
 else
-  cat > .mcp.json <<'EOF'
-{
-  "mcpServers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
-    }
-  }
-}
-EOF
-  say "created: .mcp.json (context7 only — youtrack-mcp unavailable)"
+  MCP_LIST="context7"
+  {
+    printf '{\n  "mcpServers": {\n'
+    printf '    "context7": {\n      "type": "http",\n      "url": "https://mcp.context7.com/mcp"\n    }'
+    if [ "$WANT_YOUTRACK" = 1 ]; then
+      MCP_LIST="$MCP_LIST + youtrack"
+      printf ',\n    "youtrack": {\n      "type": "stdio",\n      "command": "uv",\n      "args": [\n        "run",\n        "--directory", "%s",\n        "--no-project",\n        "--with-requirements", "%s/requirements.txt",\n        "main.py"\n      ],\n      "env": {}\n    }' "$YT_DIR" "$YT_DIR"
+    fi
+    if [ "$PROFILE_FRONTEND" = 1 ]; then
+      MCP_LIST="$MCP_LIST + chrome-devtools"
+      printf ',\n    "chrome-devtools": {\n      "type": "stdio",\n      "command": "npx",\n      "args": ["-y", "chrome-devtools-mcp@latest"]\n    }'
+    fi
+    printf '\n  }\n}\n'
+  } > .mcp.json
+  say "created: .mcp.json ($MCP_LIST)"
 fi
 
 # -------------------------------------------------------------- 10. repo audit
 # Advisory report: extra MCP servers, foreign agent-tool configs, stray skills.
 sh .claude/scripts/repo-audit.sh || true
+
+# -------------------------------------------- 10b. environment doctor (advisory)
+bash .claude/scripts/sdd-doctor.sh || true
 
 # ------------------------------------------------------------------- 11. wrap up
 say "done. Remaining manual steps:"

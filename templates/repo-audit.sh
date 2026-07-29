@@ -9,15 +9,15 @@ warn() { echo "  WARN: $*"; WARNINGS=$((WARNINGS + 1)); }
 
 echo "[repo-audit] $(basename "$(pwd)")"
 
-# 1. MCP servers: only the project set (context7, youtrack) is expected.
+# 1. MCP servers: only the project set (context7, youtrack, chrome-devtools for frontend) is expected.
 if [ -f .mcp.json ]; then
   EXTRA=$(python3 -c "
 import json
-allowed = {'context7', 'youtrack'}
+allowed = {'context7', 'youtrack', 'chrome-devtools'}
 servers = set(json.load(open('.mcp.json')).get('mcpServers', {}))
 print(' '.join(sorted(servers - allowed)))
 " 2>/dev/null)
-  [ -n "$EXTRA" ] && warn ".mcp.json has extra MCP servers: $EXTRA (expected only: context7, youtrack)"
+  [ -n "$EXTRA" ] && warn ".mcp.json has extra MCP servers: $EXTRA (expected: context7, youtrack, chrome-devtools)"
 else
   warn ".mcp.json is missing (run sdd-kit/bootstrap.sh)"
 fi

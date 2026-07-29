@@ -1,10 +1,13 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
 # Installed by sdd-kit/bootstrap.sh.
 
-.PHONY: sdd-check sdd-audit
+.PHONY: sdd-check sdd-audit sdd-doctor
 
 sdd-audit:
 	@sh .claude/scripts/repo-audit.sh
+
+sdd-doctor:
+	@bash .claude/scripts/sdd-doctor.sh
 
 sdd-check:
 	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; }
