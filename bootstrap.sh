@@ -308,9 +308,9 @@ say "  1) fill in the TODOs in AGENTS.md (module map, rules)"
 say "  2) make sdd-gate a required check in branch protection settings"
 say "  3) enable branch protection on dev (no direct pushes)"
 say "  4) seed the specs: run the spec-miner agent one capability at a time"
-say "  5) for the AI step of autoreview.yml: run 'claude setup-token' on a logged-in"
-say "     machine and save it as the CLAUDE_CODE_OAUTH_TOKEN secret in GitHub"
-say "     (subscription auth — no Anthropic API key is used)"
+say "  5) AI review runs locally: 'make sdd-review' (your own subscription login;"
+say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
+say "     skips gracefully without one, reviewdog/ruff always runs)"
 
 if [ "$SKIP_COUNT" -gt 0 ]; then
   say "skipped $SKIP_COUNT interactive step(s) — finish them later:"

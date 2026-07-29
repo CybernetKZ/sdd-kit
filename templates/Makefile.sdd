@@ -1,7 +1,22 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
 # Installed by sdd-kit/bootstrap.sh.
 
-.PHONY: sdd-check sdd-audit sdd-doctor
+.PHONY: sdd-check sdd-audit sdd-doctor sdd-review
+
+# AI review of your current branch vs dev, on YOUR machine with YOUR
+# subscription login (no shared tokens; CI AI-step stays optional).
+SDD_REVIEW_BASE ?= dev
+sdd-review:
+	@command -v claude >/dev/null || { echo "FAIL: claude CLI not found"; echo "next: install Claude Code and log in"; exit 1; }
+	@git diff "$(SDD_REVIEW_BASE)"...HEAD > /tmp/sdd-review.diff
+	@test -s /tmp/sdd-review.diff || { echo "sdd-review: 0 changes vs $(SDD_REVIEW_BASE) — nothing to review"; exit 0; }
+	@claude -p "Read /tmp/sdd-review.diff (diff of this branch vs $(SDD_REVIEW_BASE)). \
+	Review it following the rules in .claude/agents/python-reviewer.md, \
+	.claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md \
+	(read them first; apply each where relevant). Repo context: AGENTS.md. \
+	Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix. \
+	If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \
+	--allowedTools "Read,Grep,Glob"
 
 sdd-audit:
 	@sh .claude/scripts/repo-audit.sh

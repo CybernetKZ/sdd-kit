@@ -69,8 +69,10 @@ repo.
    spec-guard — automatic for known repos (see Profiles).
 3. Seed specs with the spec-miner agent, one capability at a time.
 4. GitHub: make `sdd-gate` a required check, enable branch protection on dev.
-5. AI review auth (subscription, no API key): run `claude setup-token` on a
-   logged-in machine, save it as the `CLAUDE_CODE_OAUTH_TOKEN` repo/org secret.
+5. AI review auth (subscription, no API key): tokens are PER-DEVELOPER,
+   machine-level — no shared GitHub secret. Run reviews locally with
+   `make sdd-review`; the CI AI-step skips gracefully when no secret exists
+   (reviewdog/ruff always runs).
 
 ## Per-developer tools: setup-dev.sh
 
