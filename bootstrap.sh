@@ -250,6 +250,7 @@ for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer; do
   put "agents/$a.md" ".claude/agents/$a.md"
 done
 put autoreview.yml .github/workflows/autoreview.yml
+put skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
 
 # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
 if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
