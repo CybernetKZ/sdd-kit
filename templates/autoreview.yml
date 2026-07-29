@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: "22"
       - uses: astral-sh/setup-uv@v5
-      - name: Static-tool report on changed Python files (radon, complexipy, vulture)
+      - name: Static-tool report on changed Python files (radon, complexipy, vulture, semgrep)
         run: |
           FILES=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep '\.py$' || true)
           {
@@ -50,6 +50,9 @@ jobs:
               echo "## radon (cyclomatic complexity, B and worse)"; uvx radon cc $FILES -s -a --min B || true
               echo "## complexipy (cognitive complexity)"; uvx complexipy $FILES || true
               echo "## vulture (dead code; <100% confidence is often false)"; uvx vulture $FILES || true
+              echo "## semgrep (security patterns: secrets, injection, auth)"
+              uvx semgrep scan --config p/security-audit --config p/secrets \
+                --severity WARNING --quiet --text $FILES || true
             else
               echo "no changed .py files"
             fi
@@ -75,8 +78,9 @@ jobs:
           Review it following the rules in .claude/agents/python-reviewer.md,
           .claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md
           (read them first; apply each where relevant). Repo context: AGENTS.md.
-          Also Read /tmp/tools.txt — static-tool leads (radon/complexipy/vulture) for
-          the changed files; verify each lead in code before reporting it.
+          Also Read /tmp/tools.txt — static-tool leads (radon/complexipy/vulture/semgrep)
+          for the changed files; verify each lead in code before reporting it.
+          semgrep security findings that verify as real are at least HIGH.
           Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix.
           If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \
             --allowedTools "Read,Grep,Glob" > /tmp/review.md || true

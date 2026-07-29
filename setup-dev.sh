@@ -63,7 +63,18 @@ elif ask "Install chrome-devtools-axi? (browser debug loop for frontend work)"; 
     || say "install failed — see https://github.com/kunchenguid/chrome-devtools-axi"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ---------------------------------------------------------------- 5. Graphify
+# ---------------------------------------------------------------- 5. ast-grep
+# AST-based structural search & rewrite (codemods) — the only code-rewriting
+# tool in the stack; language-agnostic (Python + the React frontend).
+if command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1; then
+  say "ok:      ast-grep already installed"
+elif ask "Install ast-grep? (structural codemods for bulk mechanical refactors)"; then
+  uv tool install ast-grep-cli \
+    && { DONE=$((DONE+1)); say "installed: ast-grep (binary: ast-grep / sg)"; } \
+    || say "ast-grep install failed — see https://github.com/ast-grep/ast-grep"
+else SKIPPED=$((SKIPPED+1)); fi
+
+# ---------------------------------------------------------------- 6. Graphify
 # Repo-to-knowledge-graph: navigation/context aid, never a CI gate.
 if command -v graphify >/dev/null 2>&1; then
   say "ok:      graphify already installed"
@@ -74,7 +85,7 @@ elif ask "Install Graphify? (codebase knowledge graph; PyPI package is 'graphify
     || say "graphify install failed — see https://github.com/safishamsi/graphify"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ---------------------------------------------------------------- 6. Headroom
+# ---------------------------------------------------------------- 7. Headroom
 # Context compression MCP. Real win is context-window space, not cost
 # (cached input re-reads already cost ~10%). PyPI name is headroom-ai —
 # plain 'headroom' is an unrelated package.

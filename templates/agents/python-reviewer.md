@@ -127,6 +127,7 @@ FILES=$(git diff --name-only origin/dev...HEAD | grep "\.py$" || true)
 [ -n "$FILES" ] && uvx radon cc $FILES -s -a --min B  # cyclomatic complexity, B and worse
 [ -n "$FILES" ] && uvx complexipy $FILES || true    # cognitive complexity
 [ -n "$FILES" ] && uvx vulture $FILES || true       # dead code; <100% confidence hits are often false — verify in code
+[ -n "$FILES" ] && uvx semgrep scan --config p/security-audit --config p/secrets --severity WARNING --quiet --text $FILES || true  # security patterns
 ```
 
 Feed the results into the priority order: complexity hits -> "targeted complexity reduction", vulture hits -> "unused code cleanup". Never report a tool hit without checking the code yourself.

@@ -22,7 +22,7 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `openspec/` | OpenSpec init (`--tools claude`); specs + delta-changes live here |
 | `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + spec-lint; every failure prints a concrete `next:` step |
 | `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request |
-| `.github/workflows/autoreview.yml` | PR auto-review: ruff → reviewdog inline comments + AI review via headless `claude -p` |
+| `.github/workflows/autoreview.yml` | PR auto-review: ruff → reviewdog inline comments + AI review via headless `claude -p`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting |
 | `.claude/agents/*-reviewer.md` | python/fastapi/database/code reviewers used by the AI review step |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`) and a `git commit --no-verify` blocker |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
@@ -85,6 +85,7 @@ sdd-kit/setup-dev.sh
 Offered: **ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook), **gh-axi** and
 **chrome-devtools-axi** (agent-ergonomic CLI wrappers, ~/.claude/skills),
+**ast-grep** (AST codemods for bulk mechanical refactors),
 **Graphify** (repo knowledge graph; PyPI name `graphifyy`), **Headroom**
 (context compression MCP — real win is context-window space, not cost: cached
 input re-reads already cost ~10%; it appends, so the cache prefix survives).
