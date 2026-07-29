@@ -22,8 +22,8 @@ Do not edit after the first measured run. Deviations go to `deviations.md`.
 
 | Parameter | Value |
 |---|---|
-| Command | `claude -p "$(cat prompt.md)" --permission-mode acceptEdits` |
-| Model | sonnet (default effort) — same binary version both arms, record `claude --version` |
+| Command | `claude -p "$(cat prompt.md)" --model sonnet --permission-mode acceptEdits --allowedTools "Bash(*)"` |
+| Model | sonnet pinned via `--model` (fresh config dirs have no default; user's daily default is fable — must NOT leak in). Same binary version both arms (2.1.220). Per-model token/cost breakdown extracted per run from OTEL `model` attribute — any fable/opus/haiku usage is visible. |
 | Env | `CLAUDE_CONFIG_DIR` per arm; OTEL vars per PLAN-benchmark.md Phase 3 |
 | Failed run (crash, API outage) | rerun once with same tag + note in deviations.md; agent giving up ≠ failure — scored task_success=0 |
 

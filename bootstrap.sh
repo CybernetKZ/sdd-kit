@@ -31,6 +31,7 @@ PROFILE_STORE=0            # 1 = wire this repo to the central spec store
 PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
 PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
 PROFILE_FRONTEND=0         # 1 = frontend repo: add chrome-devtools MCP to .mcp.json
+PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
 PROFILE_SPEC_GUARD_PATHS=""
 if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
   # shellcheck disable=SC1090
@@ -237,10 +238,16 @@ else
 fi
 
 # ------------------------------------------------- 7. Claude Code hooks (repo-local)
-put spec-guard.js .claude/hooks/spec-guard.js
 put block-no-verify.js .claude/hooks/block-no-verify.js
 put format-py.js .claude/hooks/format-py.js
-put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
+if [ "$PROFILE_LIVING_SPEC" = 1 ]; then
+  # LIVING SPEC repos: no spec-guard (internal work is not openspec-gated);
+  # the pre-commit LIVING-SPEC check enforces the spec-doc discipline instead.
+  put settings-living-spec.json .claude/settings.json
+else
+  put spec-guard.js .claude/hooks/spec-guard.js
+  put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
+fi
 put spec-lint.py .claude/scripts/spec-lint.py
 put repo-audit.sh .claude/scripts/repo-audit.sh
 put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
@@ -251,6 +258,7 @@ for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer; do
 done
 put autoreview.yml .github/workflows/autoreview.yml
 put skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
+put skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
 
 # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
 if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
@@ -272,6 +280,19 @@ else
   cp "$KIT/templates/pre-commit-hook.sh" "$PRE_COMMIT"
   chmod +x "$PRE_COMMIT"
   say "created: $PRE_COMMIT (hygiene checks + make sdd-check before every commit)"
+fi
+# LIVING SPEC repos: warn when production code is staged without the spec doc.
+if [ "$PROFILE_LIVING_SPEC" = 1 ] && [ -f "$PRE_COMMIT" ] \
+   && ! grep -q "LIVING SPEC discipline" "$PRE_COMMIT"; then
+  python3 - "$PRE_COMMIT" "$KIT/templates/living-spec-check.sh" <<'PYEOF'
+import sys
+hook, tpl = sys.argv[1], sys.argv[2]
+s, block = open(hook).read(), open(tpl).read()
+marker = "make sdd-check"
+i = s.index(marker)
+open(hook, "w").write(s[:i] + block + s[i:])
+PYEOF
+  say "added:   LIVING SPEC discipline check to $PRE_COMMIT"
 fi
 
 # --------------------------------------------- 9. project MCP servers (.mcp.json)

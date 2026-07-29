@@ -31,6 +31,7 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence; runs at the end of bootstrap |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine); + chrome-devtools for frontend profiles |
 | `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket → OpenSpec change → implement → test-cases doc → tests → manual check → review → PR |
+| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (collect_incident.py) → root-cause doc (bug/misuse/infra) → OpenSpec change → fix + regression test → verify against the incident |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) — installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
 | `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
 

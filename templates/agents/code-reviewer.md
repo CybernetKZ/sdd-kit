@@ -357,3 +357,16 @@ Feed the results into the priority order: complexity hits -> "targeted complexit
 4. Unused code cleanup.
 5. Minor style and safety.
 6. Readability pass (naming, comments, type hints).
+
+## Review discipline (from no-mistakes; keeps noise out)
+
+- Do NOT report styling, formatting, linting, or type-checking issues — ruff
+  and the static-tool report own those; re-deriving them wastes the review.
+- Tag every finding with an action: `auto-fix` (mechanical, does not change
+  the author's intent), `ask-user` (touches a deliberate decision — the
+  default when in doubt), or `no-op` (informational). Never silently expand
+  an unlabeled finding into a fix.
+- Durable fix vs. authorized containment: before recommending a redesign,
+  reconstruct the concrete failing sequence and the violated invariant.
+  Do not infer a systemic flaw from code shape, duplication, or
+  architectural preference alone.

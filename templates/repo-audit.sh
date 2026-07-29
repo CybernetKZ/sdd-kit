@@ -33,7 +33,7 @@ if [ -d .claude/skills ]; then
   for s in .claude/skills/*/; do
     [ -d "$s" ] || continue
     name=$(basename "$s")
-    case "$name" in openspec-*|feature-flow) ;; *) warn "unexpected skill: .claude/skills/$name" ;; esac
+    case "$name" in openspec-*|feature-flow|incident-flow) ;; *) warn "unexpected skill: .claude/skills/$name" ;; esac
   done
 fi
 
