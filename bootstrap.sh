@@ -74,7 +74,7 @@ if [ "$PROFILE_IS_STORE" = 1 ]; then
   command -v git >/dev/null 2>&1 || fail "git not found. Install git and re-run."
   OPENSPEC="npx -y @fission-ai/openspec@1.6.0"
   command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
-  if ! $OPENSPEC store list 2>/dev/null | grep -q "^$STORE_ID[[:space:]]"; then
+  if ! $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
     $OPENSPEC store register "$REPO" --id "$STORE_ID"
     say "registered: this repo as store '$STORE_ID'"
   else
@@ -195,7 +195,7 @@ fi
 
 # ------------------------------------------- 4b. central spec store (profile repos)
 if [ "$PROFILE_STORE" = 1 ]; then
-  if ! $OPENSPEC store list 2>/dev/null | grep -q "^$STORE_ID[[:space:]]"; then
+  if ! $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
     if [ ! -d "$STORE_DIR" ] && ask "Clone the central spec store to $STORE_DIR? ($STORE_GIT)"; then
       git clone "$STORE_GIT" "$STORE_DIR"
       say "cloned:  $STORE_DIR"

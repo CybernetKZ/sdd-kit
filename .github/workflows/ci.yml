@@ -1,0 +1,65 @@
+# CI for sdd-kit itself: lint every script/template, then a real bootstrap
+# smoke test on an empty repository.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck all shell scripts
+        run: shellcheck -S warning bootstrap.sh setup-dev.sh templates/*.sh
+      - name: bash syntax
+        run: |
+          bash -n bootstrap.sh setup-dev.sh
+          for f in templates/pre-commit-hook.sh templates/repo-audit.sh templates/sdd-doctor.sh; do
+            bash -n "$f"
+          done
+      - name: node syntax (hooks)
+        run: for f in templates/*.js; do node --check "$f"; done
+      - name: python syntax (spec-lint)
+        run: python3 -m py_compile templates/spec-lint.py
+      - name: YAML templates parse
+        run: |
+          python3 - <<'EOF'
+          import yaml, glob
+          files = glob.glob('templates/*.yml') + glob.glob('.github/workflows/*.yml')
+          for f in files:
+              yaml.safe_load(open(f))
+              print('ok', f)
+          EOF
+      - name: JSON templates parse
+        run: |
+          for f in templates/*.json; do python3 -m json.tool "$f" > /dev/null && echo "ok $f"; done
+      - name: profiles are valid shell fragments
+        run: for f in profiles/*.env; do bash -n "$f"; done
+
+  bootstrap-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: bootstrap an empty repo (no TTY, auto-yes; no uv -> youtrack skipped)
+        run: |
+          git init -q /tmp/smoke-repo
+          SDD_KIT_ASSUME_YES=1 ./bootstrap.sh /tmp/smoke-repo
+      - name: gates work in the bootstrapped repo
+        run: |
+          cd /tmp/smoke-repo
+          make sdd-check
+          make sdd-audit
+          test -x .git/hooks/pre-commit
+          grep -q "sdd-check" .git/hooks/pre-commit
+      - name: bootstrap is idempotent (second run changes nothing)
+        run: |
+          cd /tmp/smoke-repo
+          find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/before.md5
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/bootstrap.sh /tmp/smoke-repo
+          find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/after.md5
+          diff /tmp/before.md5 /tmp/after.md5
