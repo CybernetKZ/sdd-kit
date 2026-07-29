@@ -13,6 +13,14 @@
 - 2026-07-29: arm B prep session could not run `openspec validate` itself
   (permission sandbox); conductor validated manually after the session —
   1 passed, 0 failed (strict).
+- 2026-07-29 (after pilot, before remaining runs): **two-move rule** (user
+  decision). B-1 correctly followed feature-flow intake and stopped to ask 3
+  clarification questions (headless → empty diff). New rule, identical for
+  both arms: if move 1 ends with an empty diff and a question, the session is
+  resumed ONCE with a fixed pre-written answer (`~/bench/clarify.md`, derived
+  from the frozen acceptance criteria); counts as interventions=1. Non-empty
+  diff → no resume, interventions=0. prompt.md unchanged, so A-1 (didn't ask,
+  intervention=0) stays a valid measured run. Run cost = move1+move2.
 - Kit prep cost (break-even input): bootstrap.sh ~6 s, $0; LLM prep session
   (AGENTS.md fill + gateway spec seeding, sonnet, 9.5 min): **$3.60**
   (57k output, 5.1M cacheRead, 270k cacheCreation + $0.0008 haiku).
