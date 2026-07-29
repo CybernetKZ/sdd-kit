@@ -12,6 +12,12 @@ same model + effort in every arm.
 | B `sdd` | clean + sdd-kit artifacts | fresh `CLAUDE_CONFIG_DIR=~/bench/cfg-b`, clone in `~/bench/sdd-kit-claude/web-backend-new`, run `bootstrap.sh` |
 | C `daily` (optional, round 2) | your real config, no sdd-kit | normal `~/.claude`, clone of A |
 
+Arm B realistic state (fairness): after `bootstrap.sh`, replace the template
+AGENTS.md stub with the curated one and seed the mined repo specs — otherwise
+arm B is understated (a team that adopted the kit has a filled AGENTS.md + specs,
+not TODO stubs). `.env` for all 8 services copied into both clones (gitignored).
+Commit arm B's kit state into `bench-base` so the task diff stays clean.
+
 Same repo SHA in all clones — record it. Identical prompt in all arms
 (ticket text fetched from YouTrack ONCE, pasted verbatim — no MCP calls
 inside measured runs).

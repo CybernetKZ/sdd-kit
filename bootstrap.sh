@@ -33,6 +33,7 @@ PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
 PROFILE_FRONTEND=0         # 1 = frontend repo: add chrome-devtools MCP to .mcp.json
 PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
 PROFILE_SPEC_GUARD_PATHS=""
+PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
 if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
   # shellcheck disable=SC1090
   . "$KIT/profiles/$REPO_NAME.env"
@@ -267,6 +268,13 @@ if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
 fi
 [ -e .spec-guard-paths ] || say "TODO:    create .spec-guard-paths (code path prefixes) to enable spec-guard"
 
+# Expected per-service .env files (from profile): sdd-doctor warns if any is missing.
+# Only the list of PATHS is written — never any secret value.
+if [ -n "$PROFILE_ENV_FILES" ] && [ ! -e .claude/expected-env ]; then
+  printf '%s\n' "$PROFILE_ENV_FILES" > .claude/expected-env
+  say "created: .claude/expected-env (sdd-doctor checks these .env exist)"
+fi
+
 # ------------------------------------------- 8b. git pre-commit hook: sdd-check
 # Lives in .git/hooks (never committed), so it is safe to install even in test mode.
 PRE_COMMIT=.git/hooks/pre-commit
@@ -305,7 +313,9 @@ else
     printf '    "context7": {\n      "type": "http",\n      "url": "https://mcp.context7.com/mcp"\n    }'
     if [ "$WANT_YOUTRACK" = 1 ]; then
       MCP_LIST="$MCP_LIST + youtrack"
-      printf ',\n    "youtrack": {\n      "type": "stdio",\n      "command": "uv",\n      "args": [\n        "run",\n        "--directory", "%s",\n        "--no-project",\n        "--with-requirements", "%s/requirements.txt",\n        "main.py"\n      ],\n      "env": {}\n    }' "$YT_DIR" "$YT_DIR"
+      # --with mcp<2: youtrack-mcp needs mcp.server.fastmcp, removed in mcp 2.x
+      # (requirements.txt says mcp>=1.11.0, so a fresh uv env silently breaks).
+      printf ',\n    "youtrack": {\n      "type": "stdio",\n      "command": "uv",\n      "args": [\n        "run",\n        "--directory", "%s",\n        "--no-project",\n        "--with", "mcp<2",\n        "--with-requirements", "%s/requirements.txt",\n        "main.py"\n      ],\n      "env": {}\n    }' "$YT_DIR" "$YT_DIR"
     fi
     if [ "$PROFILE_FRONTEND" = 1 ]; then
       MCP_LIST="$MCP_LIST + chrome-devtools"

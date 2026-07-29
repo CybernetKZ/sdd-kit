@@ -28,7 +28,7 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/repo-audit.sh` | advisory clutter audit: extra MCP servers, foreign agent-tool configs (.cursor/.serena/…), stray skills/agents; runs at the end of bootstrap and via `make sdd-audit` |
-| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence; runs at the end of bootstrap |
+| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, and (profile) presence of per-service `.env` files a fresh clone needs — paths only, never secret values; runs at the end of bootstrap |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine); + chrome-devtools for frontend profiles |
 | `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket → OpenSpec change → implement → test-cases doc → tests → manual check → review → PR |
 | `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (collect_incident.py) → root-cause doc (bug/misuse/infra) → OpenSpec change → fix + regression test → verify against the incident |
@@ -47,6 +47,8 @@ target directory name matches a profile, bootstrap additionally:
   `openspec/config.yaml` — `openspec validate` stays green on machines/CI
   without the store; `openspec doctor` tells you how to register it;
 - skips Python tooling for non-Python repos (`PROFILE_SKIP_PY=1`);
+- seeds `.claude/expected-env` from `PROFILE_ENV_FILES` so `sdd-doctor` warns when
+  a per-service `.env` a fresh clone needs is missing (WBN lists all 8 services);
 - for the store repo itself (`PROFILE_IS_STORE=1`): minimal install — local
   registration + a strict-validate CI gate, nothing else.
 
@@ -79,19 +81,26 @@ repo.
 
 Repo assets are bootstrap.sh's job; personal tooling lives on each developer's
 machine (baking it into every repo bloats context and duplicates state). Run
-once per machine — every tool is opt-in with a y/N question:
+once per machine:
 
 ```bash
-sdd-kit/setup-dev.sh
+sdd-kit/setup-dev.sh             # core stack installs by default [Y/n]
+sdd-kit/setup-dev.sh --minimal   # old behavior: everything opt-in [y/N]
 ```
 
-Offered: **ponytail** (plugin: minimal working solutions, saves tokens),
-**rtk** (shell-output compressor + global hook), **gh-axi** and
-**chrome-devtools-axi** (agent-ergonomic CLI wrappers, ~/.claude/skills),
-**ast-grep** (AST codemods for bulk mechanical refactors),
-**Graphify** (repo knowledge graph; PyPI name `graphifyy`), **Headroom**
-(context compression MCP — real win is context-window space, not cost: cached
-input re-reads already cost ~10%; it appends, so the cache prefix survives).
+**Core stack (default install — quality up, token spend down):**
+**ponytail** (plugin: minimal working solutions, saves tokens),
+**rtk** (shell-output compressor + global hook),
+**Graphify** (repo knowledge graph — faster/cheaper code analysis; PyPI name
+`graphifyy`), **Headroom** (context compression MCP — real win is
+context-window space, not cost: cached input re-reads already cost ~10%; it
+appends, so the cache prefix survives), **serena** (semantic code-navigation
+MCP via uvx: symbol-level lookup instead of whole-file reads).
+`make sdd-doctor` warns when a core tool is missing.
+
+**Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
+(agent-ergonomic CLI wrappers, ~/.claude/skills), **ast-grep** (AST codemods
+for bulk mechanical refactors).
 
 Not offered: **caveman** (only a benchmark arm inside the ponytail repo, not a
 standalone tool — ponytail covers it), **grill-with-docs** (team practice, not

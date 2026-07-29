@@ -99,12 +99,35 @@ if [ -n "$ROOT" ]; then
       warn "youtrack MCP declared but no token in ${YT_DIR:-<dir>}/.env"
     fi
   fi
+
+  # Per-service .env files a fresh clone needs to run the stack (paths only,
+  # never secrets). List is seeded by the profile into .claude/expected-env.
+  if [ -f .claude/expected-env ]; then
+    ENV_MISSING=0
+    while IFS= read -r ef; do
+      [ -n "$ef" ] || continue
+      [ -f "$ef" ] || { warn "missing env file: $ef (copy from a working clone; docker compose won't start without it)"; ENV_MISSING=1; }
+    done < .claude/expected-env
+    [ "$ENV_MISSING" = 0 ] && ok "all expected per-service .env present"
+  fi
 fi
 
-# ------------------------------------------------- optional personal tools (info)
-for t in rtk graphify; do
-  command -v "$t" >/dev/null 2>&1 && echo "  info: $t installed (personal tool)" || true
+# --------------------------------------- core personal tools (default stack)
+# Installed by default via sdd-kit/setup-dev.sh: quality up, token spend down.
+for t in rtk graphify headroom; do
+  if command -v "$t" >/dev/null 2>&1; then ok "$t installed (core personal tool)"
+  else warn "$t missing — run sdd-kit/setup-dev.sh (installs the default tool stack)"; fi
 done
+if claude mcp list 2>/dev/null | grep -q '^serena:'; then
+  ok "serena MCP registered (core personal tool)"
+else
+  warn "serena MCP not registered — run sdd-kit/setup-dev.sh"
+fi
+if grep -qs '"ponytail@ponytail"' "$HOME/.claude/settings.json" 2>/dev/null; then
+  ok "ponytail plugin enabled (core personal tool)"
+else
+  warn "ponytail plugin not enabled — run sdd-kit/setup-dev.sh"
+fi
 
 echo "[sdd-doctor] summary: $PASS ok, $WARN warning(s), $FAIL failure(s)"
 if [ "$FAIL" -eq 0 ] && [ "$WARN" -eq 0 ]; then
