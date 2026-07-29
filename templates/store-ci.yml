@@ -1,0 +1,18 @@
+# Installed by sdd-kit/bootstrap.sh (store profile).
+# Gate for the central OpenSpec store: every spec must validate strictly.
+name: store-ci
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate all specs (strict)
+        run: npx -y @fission-ai/openspec@1.6.0 validate --all --strict
