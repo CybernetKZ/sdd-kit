@@ -49,19 +49,20 @@ Tool call'ы, их длительность и объём вывода	claude_co
 Для верификации: после запуска проверьте, что в бэкенд пришла метрика claude_code.session.count; если нет — claude --debug покажет ошибки экспорта. Учтите, что цифры стоимости — приблизительные (для точного биллинга — консоль).
 Транскрипты сессий лежат в ~/.claude/projects/*/*.jsonl и их можно парсить как fallback, но формат внутренний и меняется между версиями — не строить на нём основной пайплайн.
 
+0. какая модель
 1. Task success - Прошёл acceptance criteria из тикета: да/нет + градация (0/0.5/1)
 2. Human interventions - Сколько раз человек вмешался и перенаправил. Лучший единичный прокси реальной пользы
 3. Rejected edits - Сколько правок вы отклонили (снимается автоматически)
 4. Time-to-mergeable - До состояния PR, который вы бы реально влили
 5. Review rounds - Число циклов ревью до approve
-6. token input (uncached)
-7. token output
-8. token cacheCreation
-9. token cacheRead
-10. Cache hit rate = cacheRead / (input + cacheRead)
-11. Число turn'ов агента 
-12. число tool call'ов
-13. Разбивка tool call'ов: Read / Grep / Glob / Edit / Bash
+6. token input (uncached) / модель  / модель 
+7. token output / модель 
+8. token cacheCreation / модель 
+9. token cacheRead / модель 
+10. Cache hit rate = cacheRead / (input + cacheRead) / модель 
+11. Число turn'ов агента  / модель 
+12. число tool call'ов / модель 
+13. Разбивка tool call'ов: Read / Grep / Glob / Edit / Bash / модель 
 14. Отношение «прочитано файлов : изменено файлов»
 15. Число компактификаций и pre/post токены
 16. Пиковое заполнение окна
