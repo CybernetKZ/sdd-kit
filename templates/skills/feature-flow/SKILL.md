@@ -27,17 +27,24 @@ contract/logic mistakes) — so step 1 exists to catch that BEFORE any code.
   - cross-service contracts (`openspec show <spec> --type spec --store cybernet-specs`).
 - Output: a list of contradictions, gaps, and questions for the analyst
   (Dina/Olga) or business owner. Post as a ticket comment (ask the user first).
-- Do NOT start coding while blocking questions are open. Non-blocking
-  assumptions: write them down explicitly and proceed.
+- Blocking questions stop the DECISION, not the hands: while the author
+  answers, build a prototype on the recommended answer — explicitly marked
+  as a prototype, with a request to verify it. The answer either confirms
+  the direction or the prototype is cheaply discarded. The prototype lives
+  behind the same OpenSpec change and never bypasses gates; nothing merges
+  while a blocking question is open. Non-blocking assumptions: write them
+  down explicitly and proceed.
 
 ## 1b. Pick the tier (ADR-0010)
 
-Tiers scale preparation depth only. Gates never change: spec, tests,
-sdd-check, review, CI apply on every tier; no spec-guard bypass.
+Tiers scale preparation depth only. Gates never change: spec, QA tests
+before code, sdd-check, review, CI apply on every tier; no spec-guard
+bypass. Tasks genuinely differ — a small clear edit ships via light right
+away; a risky or cross-service one earns the full grill.
 
 | Tier | What it means |
 |---|---|
-| light | minimal change (why + what + regression test); skip the plan grill and the test-cases doc |
+| light | minimal change (why + what + a Scenario for the regression test); skip the plan grill. QA still writes the test |
 | standard | this skill as written |
 | deep | + architecture research before planning (compare options, write an ADR) + the grill is mandatory |
 
@@ -67,18 +74,22 @@ sdd-check, review, CI apply on every tier; no spec-guard bypass.
   sharp questions and the accepted answers, one line per decision. It
   archives with the change, so the "why option B" history survives.
 
-## 3. Tests first (RED before implementation)
+## 3. QA writes the tests — before implementation (QA-SDD-PROCESS.md)
 
-- This is a skill requirement, not a CI gate: write the tests from the plan
-  BEFORE implementing, run them, and show the RED run in your report.
-- Standard/deep: write the test-cases doc first — "what to check and how"
-  for the tester/reviewer (see `postman-collections/*/docs/WEB-*-Test-Cases.md`
-  for the shape): happy paths, error paths, permissions, data states,
-  curl/newman snippets. Then pytest for unit/integration per plan; newman
-  (Postman collection) for e2e API flows where the repo uses them.
-- Light tier: one regression test that reproduces the bug/gap and fails on
-  the current code — that IS the RED.
-- Tests assert real behavior, not mock-echo. Paste failures honestly.
+Developers do NOT write tests. The change (manifest) goes to the QA flow
+before any implementation code:
+
+- QA validates the manifest: every Requirement has at least one measurable
+  Scenario (WHEN/THEN), edge cases are covered (invalid input, permissions,
+  empty values, repeated calls), no conflict with existing contracts.
+  A manifest that fails validation comes BACK to you — fix the Scenarios,
+  not the tests. Your job in step 2 is to write Scenarios QA can test.
+- QA writes one test (or an explicit skip with a reason) per Scenario, each
+  carrying a tracer comment `openspec: <change> / Requirement / Scenario`;
+  an independent agent then adversarially checks every test for green stubs.
+- Tests must be RED before implementation — QA shows the RED run.
+- Light tier: the manifest's single Scenario yields one regression test that
+  reproduces the bug/gap and fails on the current code — that IS the RED.
 
 ## 4. Implement
 
@@ -87,7 +98,9 @@ sdd-check, review, CI apply on every tier; no spec-guard bypass.
   + a `Why long-lived:` line in the PR body for a deliberate exception).
 - Code and spec deltas move together — the spec is part of the change.
 - Commit normally: the pre-commit hook runs ruff, hygiene checks, `make sdd-check`.
-- Run the tests; fix the implementation (not the tests) until green.
+- The QA tests already exist — run them locally while implementing; fix the
+  implementation until green. Never edit the tests: they are QA's. A test
+  that looks wrong goes back to QA with the Scenario it traces to.
 
 ## 4b. Feature flags and contract migrations (ADR-0007, ADR-0011)
 
@@ -111,7 +124,7 @@ sdd-check, review, CI apply on every tier; no spec-guard bypass.
 
 ## 5. Manual testing
 
-- Run the test-cases doc yourself against a local/stage environment before review.
+- Walk the QA Scenarios yourself against a local/stage environment before review.
 
 ## 6. Review
 
@@ -125,8 +138,9 @@ sdd-check, review, CI apply on every tier; no spec-guard bypass.
 ## 7. Pull request
 
 - Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
-- Body: what changed, why, test plan (link the test-cases doc).
-- Blocking gates: sdd-gate + tests + the TBD gates (branch age, PR size).
+- Body: what changed, why, test plan (link the QA tests/Scenarios).
+- Blocking gates: sdd-gate + QA tests + the traceability gate (each Scenario
+  ⇄ one test) + the QA quality gate + the TBD gates (branch age, PR size).
   Autoreview AI comments are advisory — address them like review findings,
   they do not block the merge by themselves.
 
@@ -136,7 +150,7 @@ sdd-check, review, CI apply on every tier; no spec-guard bypass.
   (youtrack MCP).
 - Leave a comment for the tester: what to check and how — crystal clear,
   ONE paragraph max. Include the feature-flag name if there is one and a
-  link to the test-cases doc (standard/deep).
+  link to the QA Scenarios/tests (standard/deep).
 - QA verifies on stage (the flag is already ON there). Enabling the flag in
   prod happens after QA — then archive the change and schedule the
   flag-removal PR by its `expires`.
