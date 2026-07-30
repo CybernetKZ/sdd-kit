@@ -10,6 +10,12 @@ Incidents arrive as loose Telegram messages ("странно, не было end_
 a real code bug, client misuse (9000 campaigns of 1 call each), or devops —
 do not assume which until the data says so.
 
+Incidents default to the **light tier** (ADR-0010): minimal change, no plan
+grill, no test-cases doc — but every gate still applies (spec, regression
+test, sdd-check, review, CI; no spec-guard bypass). The developer may raise
+the tier if the fix turns out to be architectural — write the tier and why
+into the change.
+
 ## 1. Collect the evidence first
 
 - Bugs filed through the RAISE intake process (ADR-0009) carry a structured
@@ -43,14 +49,28 @@ do not assume which until the data says so.
 - Keep the fix minimal and in scope of the incident; adjacent findings go to
   TODO/NOTE with the ticket id.
 
-## 4. Implement + regression test
+## 4. Regression test first, then the fix (ADR-0010)
 
-- Branch `bugfix/WEB-XXXX`. The regression test comes WITH the fix: it must
-  fail on the pre-fix code and pass after (name it after the ticket).
+- Branch `bugfix/WEB-XXXX` off dev.
+- Write the regression test BEFORE the fix: it reproduces the incident and
+  fails on the current code. Run it and show the RED in your report — that is
+  the light tier's tests-first requirement (skill rule, not a CI gate).
+  Name the test after the ticket.
+- Then implement the fix and run the test until green. Fix the
+  implementation, not the test.
 - Commit normally — hooks run ruff, hygiene checks, `make sdd-check`.
 
 ## 5. Verify against the incident
 
 - Re-run the scenario from the incident doc (or the collector on a staging
   reproduction) and record the before/after in the ticket/PR body.
-- Open the PR with the incident doc linked; merge only green.
+- Open the PR with the incident doc linked. Blocking gates: sdd-gate + tests
+  (+ TBD gates); autoreview AI comments are advisory.
+
+## 6. Handoff (ADR-0011)
+
+- After the PR is merged to dev, move the ticket to `status: ready_to_test`
+  (youtrack MCP) and archive the change.
+- Leave a comment for the tester: what to check and how — crystal clear, ONE
+  paragraph max. For incidents the reproduction steps are already in the
+  RAISE bug report — point at them plus the before/after evidence.

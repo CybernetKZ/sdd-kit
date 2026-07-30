@@ -20,18 +20,19 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | OpenSpec init (`--tools claude`); specs + delta-changes live here |
-| `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + spec-lint; every failure prints a concrete `next:` step |
-| `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request |
+| `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + spec-lint + `sdd-flags`; every failure prints a concrete `next:` step |
+| `templates/feature_flags.py` (copy when first needed) | flag registry with owner/ticket/`expires` (ADR-0007): `make sdd-flags` warns 7 days past expiry, then fails CI; cross-repo contract flags keep `expires` in the store spec (`spec=` instead of a date) |
+| `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request; + `tbd-gates` job (ADR-0006): branch age (warn >2 days, fail >5) and PR size (fail >1500 changed lines, per-repo via profile) — escape labels `long-lived-ok`/`xl-ok` require a `Why …:` reason in the PR body |
 | `.github/workflows/autoreview.yml` | PR auto-review: ruff → reviewdog inline comments + AI review via headless `claude -p`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting |
 | `.claude/agents/*-reviewer.md` | python/fastapi/database/code reviewers used by the AI review step |
-| `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`) and a `git commit --no-verify` blocker |
+| `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` — active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/repo-audit.sh` | advisory clutter audit: extra MCP servers, foreign agent-tool configs (.cursor/.serena/…), stray skills/agents; runs at the end of bootstrap and via `make sdd-audit` |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, and (profile) presence of per-service `.env` files a fresh clone needs — paths only, never secret values; runs at the end of bootstrap |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine); + chrome-devtools for frontend profiles |
-| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket → OpenSpec change → implement → test-cases doc → tests → manual check → review → PR |
-| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (collect_incident.py) → root-cause doc (bug/misuse/infra) → OpenSpec change → fix + regression test → verify against the incident |
+| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket → pick tier (light/standard/deep, ADR-0010) → OpenSpec change + grill → tests first (RED) → implement → manual check → review → PR → ready_to_test handoff |
+| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (collect_incident.py) → root-cause doc (bug/misuse/infra — misuse/infra: the doc is the deliverable) → OpenSpec change → regression test first, then fix → verify against the incident → ready_to_test handoff |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) — installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
 | `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
 

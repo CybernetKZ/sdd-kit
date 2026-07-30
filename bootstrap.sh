@@ -34,6 +34,7 @@ PROFILE_FRONTEND=0         # 1 = frontend repo: add chrome-devtools MCP to .mcp.
 PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
 PROFILE_SPEC_GUARD_PATHS=""
 PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
+PROFILE_PR_XL_LINES=""     # per-repo PR size limit for the tbd-gates CI job (default 1500, ADR-0006)
 if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
   # shellcheck disable=SC1090
   . "$KIT/profiles/$REPO_NAME.env"
@@ -227,6 +228,12 @@ fi
 
 # ------------------------------------------------------- 6. CI gate on pull request
 put sdd-ci.yml .github/workflows/sdd-ci.yml
+# per-repo PR size limit (ADR-0006): patch the default only on first install
+if [ -n "$PROFILE_PR_XL_LINES" ] && grep -q "PR_XL_LINES: 1500" .github/workflows/sdd-ci.yml; then
+  sed -i.bak "s/PR_XL_LINES: 1500/PR_XL_LINES: $PROFILE_PR_XL_LINES/" .github/workflows/sdd-ci.yml
+  rm -f .github/workflows/sdd-ci.yml.bak
+  say "patched: PR_XL_LINES=$PROFILE_PR_XL_LINES in sdd-ci.yml (profile: $REPO_NAME)"
+fi
 
 # ----------------------------------------- 6b. ruff config (only when none exists)
 if [ "$PROFILE_SKIP_PY" = 1 ]; then
@@ -241,6 +248,7 @@ fi
 # ------------------------------------------------- 7. Claude Code hooks (repo-local)
 put block-no-verify.js .claude/hooks/block-no-verify.js
 put format-py.js .claude/hooks/format-py.js
+put pre-compact.js .claude/hooks/pre-compact.js
 if [ "$PROFILE_LIVING_SPEC" = 1 ]; then
   # LIVING SPEC repos: no spec-guard (internal work is not openspec-gated);
   # the pre-commit LIVING-SPEC check enforces the spec-doc discipline instead.
