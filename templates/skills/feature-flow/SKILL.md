@@ -12,6 +12,15 @@ contract/logic mistakes) — so step 1 exists to catch that BEFORE any code.
 ## 1. Task intake — interrogate the ticket first
 
 - Read the ticket (youtrack MCP: `get_issue WEB-XXXX` + comments).
+- Planned tasks arrive through the RAISE intake process (ADR-0009) and should
+  carry the request form: current problem, expected outcome, alternatives
+  considered, RICE score. Pull those fields into the change's why-section —
+  the requester already wrote that context.
+- Form missing or incomplete: list the missing fields, post questions for the
+  ticket author WITH your recommended answers, and continue working on the
+  recommended answers in parallel. Stop and wait ONLY on serious business
+  forks (pricing, client commitments, data deletion). Validating requests is
+  the RAISE process owner's job, not yours.
 - Cross-check every claim against reality:
   - the code (does this already exist? does it conflict with current logic?),
   - repo specs (`openspec view`, `openspec/specs/`),
@@ -26,14 +35,35 @@ contract/logic mistakes) — so step 1 exists to catch that BEFORE any code.
 - `/opsx:propose "WEB-XXXX: <what changes>"` — proposal + spec deltas + tasks.
 - Reference the ticket id in the change. Spec-guard requires this active
   change before code edits in guarded paths.
+- Size the change for a 2-day branch (ADR-0006). Bigger than that: split it
+  into several changes with independent value; a feature flag hides the
+  unfinished whole (see 3b).
 - Interrogate the plan before implementing (grill it): edge cases, rollback,
   migrations, cross-service impact. Fix the plan, not the code later.
 
 ## 3. Implement
 
 - Branch: `feature/WEB-XXXX` (or `bugfix/WEB-XXXX`) off dev.
+- Branches live ≤2 days; CI warns at 2 and fails at 5 (label `long-lived-ok`
+  + a `Why long-lived:` line in the PR body for a deliberate exception).
 - Code and spec deltas move together — the spec is part of the change.
 - Commit normally: the pre-commit hook runs ruff, hygiene checks, `make sdd-check`.
+
+## 3b. Feature flags and contract migrations (ADR-0007)
+
+- Work that spans branches or repos ships dark behind a flag: register it in
+  `feature_flags.py` (owner, ticket, `expires`), access only via
+  `is_enabled("name")`. `make sdd-flags` fails CI once a flag outlives
+  `expires` + 7 days. "Delete the flag" is a task in the same change's tasks.md.
+- Touching a FIXED contract (frontend api/v1, external WebAPI, redis
+  streams)? The change MUST carry an expand/contract plan:
+  new fields optional → both sides read → flag flips the producer → old
+  fields removed before `expires`. For cross-repo flags the `expires` date
+  lives in the contract spec in the central store; use `spec=` in the
+  registry instead of a local date.
+- Large replacement (HubTalk, Asterisk removal): branch by abstraction — an
+  interface over the current supplier, a config flag picks the
+  implementation, the abstraction is deleted after cutover.
 
 ## 4. Test-cases doc
 

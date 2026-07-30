@@ -12,6 +12,10 @@ do not assume which until the data says so.
 
 ## 1. Collect the evidence first
 
+- Bugs filed through the RAISE intake process (ADR-0009) carry a structured
+  ticket: environment, Dialogue ID, steps, actual vs expected result,
+  priority (low…critical). Read those fields from the ticket first instead of
+  re-interrogating the reporter; ask only for what the template left empty.
 - Get the call/campaign uuid from the report (ask if missing — one precise
   question, not a thread).
 - Run the incident collector (WBN):
@@ -33,6 +37,9 @@ do not assume which until the data says so.
 - For a code bug: plan as an OpenSpec change (`/opsx:propose "WEB-XXXX: <fix>"`)
   once a ticket exists. If the observed behavior contradicts a spec, say which
   requirement; if the spec itself was wrong, the change must update the spec too.
+- Urgent status speeds up PRIORITIZATION, not development (ADR-0009): the
+  spec is still mandatory, just minimal — why + what + the regression test.
+  There is no spec-guard bypass for urgent work.
 - Keep the fix minimal and in scope of the incident; adjacent findings go to
   TODO/NOTE with the ticket id.
 

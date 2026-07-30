@@ -17,6 +17,11 @@ TODO: 2-4 sentences — why this repository exists and who consumes it.
 
 TODO: a short "directory — responsibility" tree. One line per module.
 
+## Resuming after compaction or a new session
+
+If `.claude/last-session-state.md` exists, read it first — it holds the active
+OpenSpec change and uncommitted work from before the last context compaction.
+
 ## Specs and contracts
 
 - Capability specs for this repository: `openspec/specs/`

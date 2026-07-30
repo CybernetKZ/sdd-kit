@@ -16,6 +16,16 @@ if [ "${SDD_ALLOW_PROTECTED:-0}" != "1" ]; then
   esac
 fi
 
+# branch age (ADR-0006): warn-only echo of the CI gate — rebase daily, split big changes
+case "$BRANCH" in
+  dev|main|master|prod|stage) ;;
+  *)
+    if MB=$(git merge-base origin/dev HEAD 2>/dev/null); then
+      AGE=$(( ( $(date +%s) - $(git show -s --format=%ct "$MB") ) / 86400 ))
+      [ "$AGE" -gt 2 ] && echo "pre-commit: WARN — branch diverged from dev $AGE days ago; rebase or split the OpenSpec change (CI fails at 5 days)" >&2
+    fi ;;
+esac
+
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 
 # new git submodules / nested repos are almost always an accident here

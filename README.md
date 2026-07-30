@@ -92,15 +92,16 @@ sdd-kit/setup-dev.sh --minimal   # old behavior: everything opt-in [y/N]
 **ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook),
 **Graphify** (repo knowledge graph — faster/cheaper code analysis; PyPI name
-`graphifyy`), **Headroom** (context compression MCP — real win is
+`graphify`), **Headroom** (context compression MCP — real win is
 context-window space, not cost: cached input re-reads already cost ~10%; it
-appends, so the cache prefix survives), **serena** (semantic code-navigation
-MCP via uvx: symbol-level lookup instead of whole-file reads).
+appends, so the cache prefix survives), **ast-grep** (AST codemods for bulk
+mechanical refactors).
 `make sdd-doctor` warns when a core tool is missing.
 
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
-(agent-ergonomic CLI wrappers, ~/.claude/skills), **ast-grep** (AST codemods
-for bulk mechanical refactors).
+(agent-ergonomic CLI wrappers, ~/.claude/skills), **serena** (semantic
+code-navigation MCP via uvx — an earlier trial left `.serena/` litter that
+repo-audit flags, so it stays opt-in).
 
 Not offered: **caveman** (only a benchmark arm inside the ponytail repo, not a
 standalone tool — ponytail covers it), **grill-with-docs** (team practice, not

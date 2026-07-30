@@ -5,8 +5,8 @@
 # CORE tools (quality up, token spend down) install BY DEFAULT [Y/n]:
 #   ponytail (lean code), rtk (shell-output compression), graphify (repo
 #   knowledge graph: faster/cheaper code analysis), headroom (context
-#   compression MCP), serena (semantic code navigation MCP).
-# OPTIONAL tools stay opt-in [y/N]: gh-axi, chrome-devtools-axi, ast-grep.
+#   compression MCP), ast-grep (structural codemods).
+# OPTIONAL tools stay opt-in [y/N]: gh-axi, chrome-devtools-axi, serena.
 #
 # Flags/env: --minimal (everything becomes opt-in), SDD_KIT_ASSUME_YES=1
 # (core installs without questions; optional still asks / skips on no-TTY).
@@ -91,17 +91,15 @@ elif ask_core "Install Headroom? (context compression MCP)"; then
     || say "headroom install failed — see https://github.com/chopratejas/headroom"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ------------------------------------------------------------------ 5. serena
-# Semantic code navigation/editing MCP (LSP-backed): find_symbol /
-# references instead of reading whole files — fewer tokens, better targeting.
-if claude mcp list 2>/dev/null | grep -q '^serena:'; then
-  say "ok:      serena MCP already registered"
-elif ask_core "Install serena? (semantic code navigation MCP via uvx)"; then
-  claude mcp add --scope user serena -- \
-      uvx --from "git+https://github.com/oraios/serena" \
-      serena start-mcp-server --context ide-assistant \
-    && { DONE=$((DONE+1)); say "installed: serena user-scope MCP entry (uvx, no local install needed)"; } \
-    || say "serena registration failed — see https://github.com/oraios/serena"
+# ---------------------------------------------------------------- 5. ast-grep
+# AST-based structural search & rewrite (codemods) — the only code-rewriting
+# tool in the stack; language-agnostic (Python + the React frontend).
+if command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1; then
+  say "ok:      ast-grep already installed"
+elif ask_core "Install ast-grep? (structural codemods for bulk mechanical refactors)"; then
+  uv tool install ast-grep-cli \
+    && { DONE=$((DONE+1)); say "installed: ast-grep (binary: ast-grep / sg)"; } \
+    || say "ast-grep install failed — see https://github.com/ast-grep/ast-grep"
 else SKIPPED=$((SKIPPED+1)); fi
 
 # ================================ OPTIONAL (opt-in) ==========================
@@ -127,15 +125,18 @@ elif ask "Install chrome-devtools-axi? (browser debug loop for frontend work)"; 
     || say "install failed — see https://github.com/kunchenguid/chrome-devtools-axi"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ---------------------------------------------------------------- 8. ast-grep
-# AST-based structural search & rewrite (codemods) — the only code-rewriting
-# tool in the stack; language-agnostic (Python + the React frontend).
-if command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1; then
-  say "ok:      ast-grep already installed"
-elif ask "Install ast-grep? (structural codemods for bulk mechanical refactors)"; then
-  uv tool install ast-grep-cli \
-    && { DONE=$((DONE+1)); say "installed: ast-grep (binary: ast-grep / sg)"; } \
-    || say "ast-grep install failed — see https://github.com/ast-grep/ast-grep"
+# ------------------------------------------------------------------ 8. serena
+# Semantic code navigation/editing MCP (LSP-backed): find_symbol /
+# references instead of reading whole files — fewer tokens, better targeting.
+# Opt-in: an earlier team trial left .serena/ litter that repo-audit flags.
+if claude mcp list 2>/dev/null | grep -q '^serena:'; then
+  say "ok:      serena MCP already registered"
+elif ask "Install serena? (semantic code navigation MCP via uvx; leaves .serena/ dirs — repo-audit flags them)"; then
+  claude mcp add --scope user serena -- \
+      uvx --from "git+https://github.com/oraios/serena" \
+      serena start-mcp-server --context ide-assistant \
+    && { DONE=$((DONE+1)); say "installed: serena user-scope MCP entry (uvx, no local install needed)"; } \
+    || say "serena registration failed — see https://github.com/oraios/serena"
 else SKIPPED=$((SKIPPED+1)); fi
 
 say "summary: $DONE installed, $SKIPPED declined"

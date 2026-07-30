@@ -1,7 +1,14 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
 # Installed by sdd-kit/bootstrap.sh.
 
-.PHONY: sdd-check sdd-audit sdd-doctor sdd-review
+.PHONY: sdd-check sdd-audit sdd-doctor sdd-review sdd-flags
+
+# Feature-flag expiry gate (ADR-0007): every registered flag has a death date.
+# No feature_flags.py in the repo -> nothing to check, passes.
+sdd-flags:
+	@FILES=$$(git ls-files '*feature_flags.py' 2>/dev/null); \
+	if [ -z "$$FILES" ]; then echo "sdd-flags: no flag registry — OK"; else \
+	for f in $$FILES; do python3 "$$f" --check || exit 1; done; fi
 
 # AI review of your current branch vs dev, on YOUR machine with YOUR
 # subscription login (no shared tokens; CI AI-step stays optional).
@@ -34,4 +41,5 @@ sdd-check:
 		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; \
 	fi
 	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py >/dev/null || { echo "next: run python3 .claude/scripts/spec-lint.py for the full JSON report"; exit 1; }; fi
-	@echo "sdd-check: OK — all gates passed (AGENTS.md, openspec validate, spec-lint)"
+	@$(MAKE) --no-print-directory sdd-flags
+	@echo "sdd-check: OK — all gates passed (AGENTS.md, openspec validate, spec-lint, sdd-flags)"
