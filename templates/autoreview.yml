@@ -76,7 +76,8 @@ jobs:
           git diff "origin/${{ github.base_ref }}"...HEAD > /tmp/pr.diff
           claude -p "Read /tmp/pr.diff (a pull-request diff of this repository).
           Review it following the rules in .claude/agents/python-reviewer.md,
-          .claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md
+          .claude/agents/fastapi-reviewer.md, .claude/agents/database-reviewer.md
+          and .claude/agents/code-reviewer.md
           (read them first; apply each where relevant). Repo context: AGENTS.md.
           Also Read /tmp/tools.txt - static-tool leads (radon/complexipy/vulture/semgrep)
           for the changed files; verify each lead in code before reporting it.

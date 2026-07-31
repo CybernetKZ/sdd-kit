@@ -24,15 +24,15 @@ warn() { WARNINGS=$((WARNINGS + 1)); emit warn clutter "$@"; }
 
 [ "$JSON" = 0 ] && echo "[repo-audit] $(basename "$(pwd)")"
 
-# 1. MCP servers: only the project set (context7, youtrack, chrome-devtools for frontend) is expected.
+# 1. MCP servers: only the project set (context7, youtrack) is expected.
 if [ -f .mcp.json ]; then
   EXTRA=$(python3 -c "
 import json
-allowed = {'context7', 'youtrack', 'chrome-devtools'}
+allowed = {'context7', 'youtrack'}
 servers = set(json.load(open('.mcp.json')).get('mcpServers', {}))
 print(' '.join(sorted(servers - allowed)))
 " 2>/dev/null)
-  [ -n "$EXTRA" ] && warn mcp.extra ".mcp.json has extra MCP servers: $EXTRA (expected: context7, youtrack, chrome-devtools)" "remove them from .mcp.json or justify in AGENTS.md"
+  [ -n "$EXTRA" ] && warn mcp.extra ".mcp.json has extra MCP servers: $EXTRA (expected: context7, youtrack)" "remove them from .mcp.json or justify in AGENTS.md"
 else
   warn mcp.missing ".mcp.json is missing" "run sdd-kit/bootstrap.sh"
 fi

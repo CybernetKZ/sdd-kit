@@ -34,7 +34,7 @@ flowchart TD
     %% ============ INTAKE + TIER ============
     subgraph INTAKE["1 · Check / inspect + tier (feature-flow 1, 1b · incident-flow 1, 2)"]
         READ["Interrogate the ticket:<br/>cross-check claims against code & specs;<br/>missing RICE form = warn, not block"]
-        INC["Bug only: collect evidence<br/>(collect_incident.py) -> root-cause doc"]
+        INC["Bug only: collect evidence<br/>(CybernetKZ/incident_collect,<br/>needs its .env configured) -> root-cause doc"]
         CLASS{"Root cause?"}
         STOPDOC(["Client misuse / infra: the root-cause<br/>doc IS the deliverable. Ticket comment +<br/>status via youtrack-mcp; the ticket author /<br/>process owner closes it, not the dev<br/>(interim decision, ADR-0012)"])
         Q{"Serious business fork?"}

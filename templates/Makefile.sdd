@@ -19,7 +19,8 @@ sdd-review:
 	@test -s /tmp/sdd-review.diff || { echo "sdd-review: 0 changes vs $(SDD_REVIEW_BASE) — nothing to review"; exit 0; }
 	@claude -p "Read /tmp/sdd-review.diff (diff of this branch vs $(SDD_REVIEW_BASE)). \
 	Review it following the rules in .claude/agents/python-reviewer.md, \
-	.claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md \
+	.claude/agents/fastapi-reviewer.md, .claude/agents/database-reviewer.md \
+	and .claude/agents/code-reviewer.md \
 	(read them first; apply each where relevant). Repo context: AGENTS.md. \
 	Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix. \
 	If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \

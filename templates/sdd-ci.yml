@@ -26,7 +26,7 @@ jobs:
     env:
       BRANCH_WARN_DAYS: 2
       BRANCH_FAIL_DAYS: 5
-      PR_XL_LINES: 1500   # per-repo override: bootstrap patches this from profiles/<repo>.env
+      PR_XL_LINES: 1500   # edit here if this repo genuinely needs a different limit
     steps:
       - uses: actions/checkout@v4
         with:

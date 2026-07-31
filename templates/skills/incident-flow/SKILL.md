@@ -25,9 +25,11 @@ why into the change.
   re-interrogating the reporter; ask only for what the template left empty.
 - Get the call/campaign uuid from the report (ask if missing - one precise
   question, not a thread).
-- Run the incident collector (WBN):
-  `extra_scripts/incident_collect/collect_incident.py <uuid>` - pulls logs,
-  Redis state, and DB rows for the call/campaign.
+- Run the incident collector
+  (https://github.com/CybernetKZ/incident_collect):
+  `collect_incident.py <uuid>` - pulls logs, Redis state, and DB rows for
+  the call/campaign. First run: clone the repo and fill in its `.env`
+  (connection settings) per its README.
 - Read what came back BEFORE forming a theory.
 
 ## 2. Root-cause document

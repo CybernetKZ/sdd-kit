@@ -30,11 +30,9 @@ REPO_NAME="$(basename "$REPO")"
 PROFILE_STORE=0            # 1 = wire this repo to the central spec store
 PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
 PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
-PROFILE_FRONTEND=0         # 1 = frontend repo: add chrome-devtools MCP to .mcp.json
 PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
 PROFILE_SPEC_GUARD_PATHS=""
 PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
-PROFILE_PR_XL_LINES=""     # per-repo PR size limit for the tbd-gates CI job (default 1500, ADR-0006)
 if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
   # shellcheck disable=SC1090
   . "$KIT/profiles/$REPO_NAME.env"
@@ -228,12 +226,6 @@ fi
 
 # ------------------------------------------------------- 6. CI gate on pull request
 put sdd-ci.yml .github/workflows/sdd-ci.yml
-# per-repo PR size limit (ADR-0006): patch the default only on first install
-if [ -n "$PROFILE_PR_XL_LINES" ] && grep -q "PR_XL_LINES: 1500" .github/workflows/sdd-ci.yml; then
-  sed -i.bak "s/PR_XL_LINES: 1500/PR_XL_LINES: $PROFILE_PR_XL_LINES/" .github/workflows/sdd-ci.yml
-  rm -f .github/workflows/sdd-ci.yml.bak
-  say "patched: PR_XL_LINES=$PROFILE_PR_XL_LINES in sdd-ci.yml (profile: $REPO_NAME)"
-fi
 
 # ----------------------------------------- 6b. ruff config (only when none exists)
 if [ "$PROFILE_SKIP_PY" = 1 ]; then
@@ -324,10 +316,6 @@ else
       # --with mcp<2: youtrack-mcp needs mcp.server.fastmcp, removed in mcp 2.x
       # (requirements.txt says mcp>=1.11.0, so a fresh uv env silently breaks).
       printf ',\n    "youtrack": {\n      "type": "stdio",\n      "command": "uv",\n      "args": [\n        "run",\n        "--directory", "%s",\n        "--no-project",\n        "--with", "mcp<2",\n        "--with-requirements", "%s/requirements.txt",\n        "main.py"\n      ],\n      "env": {}\n    }' "$YT_DIR" "$YT_DIR"
-    fi
-    if [ "$PROFILE_FRONTEND" = 1 ]; then
-      MCP_LIST="$MCP_LIST + chrome-devtools"
-      printf ',\n    "chrome-devtools": {\n      "type": "stdio",\n      "command": "npx",\n      "args": ["-y", "chrome-devtools-mcp@latest"]\n    }'
     fi
     printf '\n  }\n}\n'
   } > .mcp.json
