@@ -45,7 +45,6 @@ ALLOWED_KEYS = frozenset(
 
 META_RE = re.compile(r"^<!--\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(.*?)\s*-->\s*$")
 VERIFIED_RE = re.compile(r"^>\s*Last verified:\s*(\S+)\s*\(commit\s+([0-9a-fA-F]{6,40})\)")
-SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".mypy_cache", "build", "dist"}
 
 
 def git(root: Path, *args: str) -> tuple[bool, str]:
@@ -59,39 +58,16 @@ def git(root: Path, *args: str) -> tuple[bool, str]:
     return done.returncode == 0, done.stdout
 
 
-def python_index(root: Path) -> dict[str, list[str]]:
-    """basename (without .py) -> repo-relative paths of every .py file."""
-    index: dict[str, list[str]] = {}
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if name.endswith(".py"):
-                rel = str(Path(dirpath, name).relative_to(root))
-                index.setdefault(name[:-3], []).append(rel)
-    return index
+def resolve_anchor(anchor: str, root: Path) -> list[str]:
+    """Resolve one `enforced` anchor to an existing repo-relative file.
 
-
-def snake_case(name: str) -> str:
-    step = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", step).lower()
-
-
-def resolve_anchor(anchor: str, root: Path, index: dict[str, list[str]]) -> list[str]:
-    """Resolve one `enforced` anchor to existing repo-relative source files."""
-    anchor = anchor.strip()
-    if "/" in anchor or anchor.endswith(".py") or re.search(r"\.py:\d+$", anchor):
-        path = anchor.split(":", 1)[0]
-        return [path] if (root / path).is_file() else []
-
-    symbol = anchor.split("(", 1)[0].strip()
-    segment = symbol.split(".", 1)[0]
-    hits = index.get(snake_case(segment), [])
-    if hits:
-        return sorted(hits)
-    # Fallback for bare `function()` anchors: find the definition in tracked sources.
-    pattern = rf"^\s*(class|def|async def)\s+{re.escape(segment)}\b"
-    ok, out = git(root, "grep", "-lE", pattern, "--", "*.py")
-    return sorted(out.split()) if ok else []
+    Anchors are file paths: `path/to/file.py` or `path/to/file.py:123`.
+    ponytail: the fuzzy symbol resolver (CamelCase->file index + git grep)
+    was dropped - write a path in the spec; bring resolution back only if
+    writing paths actually hurts.
+    """
+    path = anchor.strip().split(":", 1)[0]
+    return [path] if (root / path).is_file() else []
 
 
 def parse_spec(path: Path) -> dict:
@@ -171,11 +147,11 @@ def parse_spec(path: Path) -> dict:
     return spec
 
 
-def check_freshness(spec: dict, root: Path, index: dict[str, list[str]], cache: dict) -> dict:
+def check_freshness(spec: dict, root: Path, cache: dict) -> dict:
     anchors = sorted(set(spec["anchors"]))
     missing, files = [], set()
     for anchor in anchors:
-        resolved = resolve_anchor(anchor, root, index)
+        resolved = resolve_anchor(anchor, root)
         if resolved:
             files.update(resolved)
         else:
@@ -222,7 +198,6 @@ def main() -> int:
         print(f"spec-lint: no specs under {root}/openspec/specs - nothing to check", file=sys.stderr)
         return 0
 
-    index = python_index(root)
     cache: dict[str, list[str] | None] = {}
     results, seen_ids = [], {}
     for path in specs:
@@ -235,7 +210,7 @@ def main() -> int:
                                            "message": f"id {entry['id']!r} already used at {where}"})
             else:
                 seen_ids[entry["id"]] = f"{rel}:{entry['line']}"
-        freshness = check_freshness(spec, root, index, cache)
+        freshness = check_freshness(spec, root, cache)
         results.append({"spec": rel, "requirements": spec["requirements"],
                         "last_verified_date": spec["date"], "last_verified_commit": spec["commit"],
                         "violations": spec["violations"], **freshness})

@@ -58,17 +58,15 @@ def is_enabled(name: str) -> bool:
 # ponytail: env-var flags + this stdlib checker is the whole system; move to
 # openfeature-sdk + flagd only if %-rollout is ever actually needed.
 
-def _store_expires(spec: str, flag: str) -> str | None:
-    """Find `<flag> ... expires: YYYY-MM-DD` in the central store's spec."""
+def _store_expires(flag: str) -> str | None:
+    """Find `<flag> ... expires: YYYY-MM-DD` anywhere in the central store."""
     store = Path(os.environ.get("SDD_STORE_DIR", str(Path.home() / "cybernet/cybernet-specs")))
     if not store.is_dir():
         return None
+    # ponytail: one pass over every store .md - the store is small; scope the
+    # glob by spec name only if this scan ever gets slow.
     pat = re.compile(rf"{re.escape(flag)}.*?expires[:=]\s*(\d{{4}}-\d{{2}}-\d{{2}})")
-    for md in store.rglob(f"*{spec}*/**/*.md"):
-        m = pat.search(md.read_text(errors="ignore"))
-        if m:
-            return m.group(1)
-    for md in store.rglob("*.md"):  # fallback: spec name not a directory
+    for md in store.rglob("*.md"):
         m = pat.search(md.read_text(errors="ignore"))
         if m:
             return m.group(1)
@@ -81,7 +79,7 @@ def check() -> int:
     for name, meta in FLAGS.items():
         expires = meta.expires
         if meta.spec and not expires:
-            expires = _store_expires(meta.spec, name)
+            expires = _store_expires(name)
             if expires is None:
                 print(f"WARN: flag {name}: expires not found in store spec '{meta.spec}' "
                       f"(store missing or date not declared) - declare `expires:` in the contract spec")

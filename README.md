@@ -92,7 +92,6 @@ once per machine:
 
 ```bash
 sdd-kit/setup-dev.sh             # core stack installs by default [Y/n]
-sdd-kit/setup-dev.sh --minimal   # old behavior: everything opt-in [y/N]
 ```
 
 **Core stack (default install - quality up, token spend down):**

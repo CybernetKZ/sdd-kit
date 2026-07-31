@@ -93,7 +93,6 @@ https://cybernet.youtrack.cloud/users/me?tab=account-security, скрытно с
 
 ```bash
 sdd-kit/setup-dev.sh             # базовый набор ставится по умолчанию [Y/n]
-sdd-kit/setup-dev.sh --minimal   # старое поведение: всё по желанию [y/N]
 ```
 
 **Базовый набор (ставится по умолчанию - качество выше, расход токенов ниже):**

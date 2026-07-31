@@ -8,19 +8,16 @@
 #   compression MCP), ast-grep (structural codemods).
 # OPTIONAL tools stay opt-in [y/N]: gh-axi, chrome-devtools-axi, serena.
 #
-# Flags/env: --minimal (everything becomes opt-in), SDD_KIT_ASSUME_YES=1
-# (core installs without questions; optional still asks / skips on no-TTY).
+# Env: SDD_KIT_ASSUME_YES=1 (core installs without questions; optional
+# still asks / skips on no-TTY).
 # Repo-level assets are bootstrap.sh's job; nothing here touches a repo.
-# Usage: sdd-kit/setup-dev.sh [--minimal]
+# Usage: sdd-kit/setup-dev.sh
 set -u
-
-MINIMAL=0
-[ "${1:-}" = "--minimal" ] && MINIMAL=1
 
 say()  { echo "[setup-dev] $*"; }
 DONE=0; SKIPPED=0
 
-ask() { # opt-in [y/N] — optional tools, and everything under --minimal
+ask() { # opt-in [y/N] — optional tools
   local q="$1" answer=""
   if [ "${SDD_KIT_ASSUME_YES:-0}" = 1 ]; then return 0; fi
   if [ ! -t 0 ]; then say "no TTY — skipping question: $q"; return 1; fi
@@ -31,7 +28,6 @@ ask() { # opt-in [y/N] — optional tools, and everything under --minimal
 
 ask_core() { # default-yes [Y/n] — core tools; installs on no-TTY too
   local q="$1" answer=""
-  if [ "$MINIMAL" = 1 ]; then ask "$q"; return $?; fi
   if [ "${SDD_KIT_ASSUME_YES:-0}" = 1 ] || [ ! -t 0 ]; then return 0; fi
   printf '[setup-dev] %s [Y/n] ' "$q"
   read -r answer || answer=""
