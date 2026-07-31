@@ -42,5 +42,5 @@
 
 ## Флаги
 
-- **feature-флаг** - запись в `feature_flags.py` с owner/ticket/expires (ADR-0007). Конвенция сред: вкл в dev/stage, выкл в prod. Owner владеет всем циклом: включает в prod после вердикта QA и удаляет флаг по expires (ADR-0011, ADR-0013).
+- **feature-флаг** - запись `имя → expires` в `feature_flags.py`, включается переменной `FLAG_<NAME>=1` (по умолчанию выключен везде). Полный lifecycle - docstring `templates/feature_flags.py` + ADR-0007.
 - **просроченный флаг** - `expires` в прошлом: 7 дней WARN, потом FAIL (`make sdd-flags`).

@@ -25,7 +25,7 @@ Process:
      down? data written meanwhile?);
    - migrations: order vs deploy, backfill, blocking locks;
    - cross-service impact: contracts in the store, consumers, event shapes;
-   - the flag: name, owner, expires, behavior while OFF in prod (ADR-0011);
+   - the flag: name, `expires`, behavior while OFF in prod (ADR-0007);
    - testability: can QA write a failing test from every Scenario as
      written?
 3. A question the developer cannot answer is not a dead end: it becomes a

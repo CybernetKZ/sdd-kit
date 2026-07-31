@@ -109,23 +109,20 @@ flow before any implementation code:
 
 ## 4b. Feature flags and contract migrations (ADR-0007, ADR-0011)
 
-- Work that spans branches or repos ships dark behind a flag: register it in
-  `feature_flags.py` (owner, ticket, `expires`), access only via
-  `is_enabled("name")`. `make sdd-flags` fails CI once a flag outlives
-  `expires` + 7 days. "Delete the flag" is a task in the same change's tasks.md;
-  the removal itself is a small separate PR with no new change.
-- Environment convention: a new flag is ON in dev and stage, OFF in prod.
-  QA always sees the new behavior on stage; enabling in prod is a separate,
-  deliberate step after QA verification.
-- Touching a FIXED contract (frontend api/v1, external WebAPI, redis
-  streams)? The change MUST carry an expand/contract plan:
-  new fields optional -> both sides read -> flag flips the producer -> old
-  fields removed before `expires`. For cross-repo flags the `expires` date
-  lives in the contract spec in the central store; use `spec=` in the
-  registry instead of a local date.
-- Large replacement (HubTalk, Asterisk removal): branch by abstraction - an
-  interface over the current supplier, a config flag picks the
-  implementation, the abstraction is deleted after cutover.
+- Work that spans branches or repos ships dark behind a flag: `feature_flags.py`
+  maps flag name -> `expires` date, access only via `is_enabled("name")`, enable
+  with `FLAG_<NAME>=1`. Full lifecycle: the module docstring + ADR-0007.
+- OFF everywhere by default - the flag name and `FLAG_<NAME>=1` go in the QA
+  handoff comment (ADR-0011 §2, step 8).
+- `make sdd-flags` fails CI 7 days past `expires`; "delete the flag" is a task
+  in the same change's tasks.md.
+- Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
+  The change MUST carry an expand/contract plan (new fields optional -> both
+  sides read -> flag flips the producer -> old fields removed before `expires`);
+  cross-repo flags use the same `expires` date in both repos, written in the
+  contract spec (ADR-0007 §3).
+- Large replacement (HubTalk, Asterisk removal): branch by abstraction, deleted
+  after cutover (ADR-0007 §5).
 
 ## 5. Manual testing
 
@@ -154,8 +151,9 @@ flow before any implementation code:
 - After the PR is merged to dev, move the ticket to `status: ready_to_test`
   (youtrack MCP).
 - Leave a comment for the tester: what to check and how - crystal clear,
-  ONE paragraph max. Include the feature-flag name if there is one and a
-  link to the QA Scenarios/tests (standard/deep).
-- QA verifies on stage (the flag is already ON there). Enabling the flag in
-  prod happens after QA - then archive the change and schedule the
+  ONE paragraph max. Include the feature-flag name and how to enable it
+  (`FLAG_<NAME>=1`) if there is one, and a link to the QA Scenarios/tests
+  (standard/deep).
+- QA enables the flag on stage per that comment (`FLAG_<NAME>=1`). Enabling
+  the flag in prod happens after QA - then archive the change and schedule the
   flag-removal PR by its `expires`.

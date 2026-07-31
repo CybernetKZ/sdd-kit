@@ -80,7 +80,7 @@ flowchart TD
 
     %% ============ IMPLEMENT ============
     subgraph IMPL["4 · Implement (feature-flow 4, 4b · incident-flow 4)"]
-        CODE["Branch feature/WEB-XXXX off dev.<br/>Code + spec deltas move together.<br/>QA tests already exist - dev runs them<br/>locally while implementing.<br/>Epic: several small PRs behind a feature flag<br/>(flag ON in dev/stage, OFF in prod)"]
+        CODE["Branch feature/WEB-XXXX off dev.<br/>Code + spec deltas move together.<br/>QA tests already exist - dev runs them<br/>locally while implementing.<br/>Epic: several small PRs behind a feature flag<br/>(OFF everywhere until FLAG_NAME=1)"]
         RUN1["Run QA tests"]
         T1{"Green?"}
         FIX["Fix implementation<br/>(never the tests - they are QA's)"]
@@ -113,8 +113,8 @@ flowchart TD
         CI["Blocking: sdd-gate (-> make test (planned):<br/>linters + validate + pytest + contract tests),<br/>traceability gate (planned): each Scenario ⇄ one test,<br/>QA quality gate (planned, QA-SDD-PROCESS.md).<br/>Advisory: autoreview AI comments"]
         CIOK{"Blocking gates green?"}
         MERGE["Merge to dev"]
-        HANDOFF["Ticket -> status: ready_to_test<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check, flag name if any"]
-        QA["QA verifies on stage (flag is ON there);<br/>then the flag OWNER enables it in prod<br/>(same owner deletes it at expires, ADR-0013);<br/>change archived"]
+        HANDOFF["Ticket -> status: ready_to_test<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check, flag name + FLAG_NAME=1 if any"]
+        QA["QA verifies on stage (enables the flag<br/>with FLAG_NAME=1 per the handoff comment);<br/>then the flag owner enables it in prod<br/>(same owner deletes it at expires, ADR-0013);<br/>change archived"]
         PR --> CI --> CIOK
         CIOK -- "no" --> APPLY
         CIOK -- "yes" --> MERGE --> HANDOFF --> QA
@@ -151,7 +151,7 @@ flowchart LR
     ASTG(["ast-grep<br/>bulk mechanical refactors"]) -.-> P4
     CDA(["chrome-devtools-axi<br/>frontend debug/test loop"]) -.-> P4
     CDA -.-> P5
-    FLAGS(["feature_flags.py + make sdd-flags<br/>owner/ticket/expires registry"]) -.-> P4
+    FLAGS(["feature_flags.py + make sdd-flags<br/>name -> expires registry (ADR-0007)"]) -.-> P4
     FLAGS -.-> P6
     AGENTS(["reviewer agents + static report<br/>(ruff, radon, complexipy, vulture, semgrep)"]) -.-> P5
     AGENTS -.-> P6
