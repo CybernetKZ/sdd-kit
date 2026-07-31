@@ -1,6 +1,6 @@
 #!/bin/sh
 # sdd-kit git pre-commit hook: cheap hygiene checks + SDD gate.
-# Rationale for the check selection: refactor_v4/pre-commit-recommendations.md.
+# Rationale for the check selection: docs/pre-commit-recommendations.md.
 
 # protected branches: block direct commits to release branches, warn on dev
 # (branch protection on the server is the real gate — this is the local echo of it).

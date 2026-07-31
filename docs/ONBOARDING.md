@@ -1,8 +1,8 @@
 # Методичка: SDD-стек CybernetAI (WEB-2305)
 
-Обновлено: 2026-07-30. Решения — в `refactor_v4/ADR/` (0001…0011), план внедрения — в `refactor_v4/docs/NEXT_STEPS.md`.
-Схема всего процесса с точками подключения инструментов — `refactor_v4/sdd-kit/WORKFLOW.md`.
-Словарь терминов — `refactor_v4/docs/GLOSSARY.md`.
+Обновлено: 2026-07-30. Решения — в `ADR/` (0001…0011), план внедрения — в `NEXT_STEPS.md`.
+Схема всего процесса с точками подключения инструментов — `../WORKFLOW.md`.
+Словарь терминов — `GLOSSARY.md`.
 
 ## Что это и зачем
 
@@ -230,11 +230,11 @@ repo-audit его флагирует, поэтому только opt-in). Чт�
 
 ## Куда смотреть дальше
 
-- `refactor_v4/docs/NEXT_STEPS.md` — статус внедрения по репозиториям.
-- `refactor_v4/ADR/ADR-0001…0011` — почему всё устроено именно так
+- `NEXT_STEPS.md` — статус внедрения по репозиториям.
+- `ADR/ADR-0001…0011` — почему всё устроено именно так
   (0009 — RAISE-intake; 0010 — тиры и модели; 0011 — эпики за флагами и handoff).
-- `refactor_v4/sdd-kit/WORKFLOW.md` — вся схема процесса одной диаграммой (на английском).
-- `refactor_v4/sdd-kit/QA-SDD-PROCESS.md` — QA-процесс: валидация манифеста и тесты до кода.
-- `refactor_v4/docs/GLOSSARY.md` — словарь терминов.
-- `refactor_v4/sdd-kit/README.md` — что именно ставит bootstrap (на английском).
-- `refactor_v4/docs/pre-commit-recommendations.md` — почему хуки такие, а не pre-commit.com.
+- `../WORKFLOW.md` — вся схема процесса одной диаграммой (на английском).
+- `../QA-SDD-PROCESS.md` — QA-процесс: валидация манифеста и тесты до кода.
+- `GLOSSARY.md` — словарь терминов.
+- `../README.md` — что именно ставит bootstrap (на английском).
+- `pre-commit-recommendations.md` — почему хуки такие, а не pre-commit.com.

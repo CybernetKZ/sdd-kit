@@ -25,11 +25,11 @@ where an overlap exists (see dedup note under that table).
 
 | ID | Severity | Title | Source |
 |---|---|---|---|
-| WEB-2256-review(C1) | CRITICAL | Lease-loss race in shutdown can permanently drop post-commit webhook/archive-publish side effects | refactor_v4/reviews/WEB-2256-review.md |
-| WEB-2256-review(C2) | CRITICAL | Graceful shutdown closes shared Redis/RabbitMQ/DB clients while tasks may still be running past cancel_timeout | refactor_v4/reviews/WEB-2256-review.md |
-| WEB-2256-review(H1) | HIGH | Task drain budget (12s) far shorter than message budget (300s) strands in-flight calls >=10 min on every deploy | refactor_v4/reviews/WEB-2256-review.md |
-| WEB-2256-review(H2) | HIGH | Consumers start before shutdown manager registers them; SIGTERM during startup leaves consumers mid-message with no clean close | refactor_v4/reviews/WEB-2256-review.md |
-| NEXT_STEPS(wbn-ci) | HIGH | WBN CI does not run tests at all (pytest step missing from pipeline) | refactor_v4/NEXT_STEPS.md:135 |
+| WEB-2256-review(C1) | CRITICAL | Lease-loss race in shutdown can permanently drop post-commit webhook/archive-publish side effects | reviews/WEB-2256-review.md |
+| WEB-2256-review(C2) | CRITICAL | Graceful shutdown closes shared Redis/RabbitMQ/DB clients while tasks may still be running past cancel_timeout | reviews/WEB-2256-review.md |
+| WEB-2256-review(H1) | HIGH | Task drain budget (12s) far shorter than message budget (300s) strands in-flight calls >=10 min on every deploy | reviews/WEB-2256-review.md |
+| WEB-2256-review(H2) | HIGH | Consumers start before shutdown manager registers them; SIGTERM during startup leaves consumers mid-message with no clean close | reviews/WEB-2256-review.md |
+| NEXT_STEPS(wbn-ci) | HIGH | WBN CI does not run tests at all (pytest step missing from pipeline) | NEXT_STEPS.md:135 |
 
 ---
 
@@ -110,8 +110,8 @@ re-listed as separate frontend-side rows to avoid duplication.
 
 | ID | Severity | Title | Source |
 |---|---|---|---|
-| NEXT_STEPS(pca-code96) | HIGH | Confirmed bug: success code 96 is not conditionally skipped as intended (test_success_code_96_is_not_skipped fails) — vs voicemail_codes handling | refactor_v4/NEXT_STEPS.md:159 (also AGENTS.md Known issues per NEXT_STEPS notes) |
-| NEXT_STEPS(pca-await-sync) | MEDIUM | Suspected bug: an `await` on a sync method on the publish path (post-call-report-generation) | refactor_v4/NEXT_STEPS.md:159 |
+| NEXT_STEPS(pca-code96) | HIGH | Confirmed bug: success code 96 is not conditionally skipped as intended (test_success_code_96_is_not_skipped fails) — vs voicemail_codes handling | NEXT_STEPS.md:159 (also AGENTS.md Known issues per NEXT_STEPS notes) |
+| NEXT_STEPS(pca-await-sync) | MEDIUM | Suspected bug: an `await` on a sync method on the publish path (post-call-report-generation) | NEXT_STEPS.md:159 |
 
 ---
 
@@ -143,7 +143,7 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 | docs(1) | MEDIUM | EXTERNAL_CALL_CAMPAIGN_API.md advertises header `X-API-Key`; the gateway reads only `x-cybernet-api-key` (headers.py:27-29) — the doc conflated the external key with the unrelated internal static-key mechanism | external-webapi-authorization spec, Provenance |
 | docs(2) | MEDIUM | EXTERNAL_CALL_CAMPAIGN_API.md still lists `PUT /call-campaign/{uuid}/call-records`; only `/phone-number` exists in code (call_campaign.py:218,426) | external-call-campaign-api spec, Provenance |
 | docs(3) | MEDIUM | Source doc claims a new API key auto-deactivates the old one; code refuses with 409 and never auto-supersedes (web_api_service.py:137-148) — an integrator building rotation on the doc would break | external-webapi-authorization spec, Provenance |
-| docs(4) | LOW | WEB-2061 restriction note carries a lifting date (2026-06-09) already in the past — stale note, or the restriction was lifted long ago | refactor_v4/NEXT_STEPS.md |
+| docs(4) | LOW | WEB-2061 restriction note carries a lifting date (2026-06-09) already in the past — stale note, or the restriction was lifted long ago | NEXT_STEPS.md |
 
 ## Additions 2026-07-29 (post-call-processing re-mining vs main efbfec54)
 

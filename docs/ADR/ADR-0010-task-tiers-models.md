@@ -66,3 +66,10 @@ rebase); убрать RED из процесса (теряем «тест про�
 
 ADR-0006 (гейты ветки/PR), ADR-0009 (RAISE, intake), `sdd-kit/templates/skills/feature-flow`,
 `incident-flow`, `benchmark/report-m2.md` (цена оверхеда на багфиксах).
+
+## Примечание 2026-07-31
+
+Оба пути устарели. `sdd-kit/templates/skills/feature-flow` — лишний префикс после переезда
+sdd-kit (этот файл сам внутри sdd-kit), актуально: `templates/skills/feature-flow`.
+`benchmark/report-m2.md` переехал при архивации m1/m2, актуально:
+`benchmark/archive-m1-m2/report-m2.md`.

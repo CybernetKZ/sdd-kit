@@ -1,7 +1,7 @@
 # Дальнейшие шаги: внедрение SDD-стека
 
 Дата: 2026-07-27. Контекст: WEB-2305, решения — в ADR-0001…0005.
-Заготовка для репозиториев готова: `refactor_v4/sdd-kit/` (проверена на тестовом репозитории).
+Заготовка для репозиториев готова: `../` (проверена на тестовом репозитории).
 
 ## Что такое sdd-kit
 
@@ -157,7 +157,7 @@
       (reviewdog: ruff → строчные комментарии в PR; AI-ревью: `claude -p` читает дифф
       и правила из `.claude/agents/`, пишет один комментарий, только CRITICAL/HIGH)
       + 4 ревьюера в `.claude/agents/` (python, fastapi, database, code).
-      Разбор инструментов — `refactor_v4/archive/autoreviewer.md`. PR-Agent — запасной вариант.
+      Разбор инструментов — `archive/autoreviewer.md`. PR-Agent — запасной вариант.
 - [ ] Для запуска авто-ревью: закоммитить workflow + один раз выполнить
       `claude setup-token` на залогиненной машине и положить токен в секрет
       GitHub `CLAUDE_CODE_OAUTH_TOKEN`. Работаем по подписке Claude Code (OAuth),
@@ -271,7 +271,7 @@
       VA — .cursor и .serena; PCA — .serena; cybernet3.0 — чисто.
       Удалять или нет — решает Daniil (файлы могут быть личными/отслеживаемыми).
 
-- [x] Методичка для команды: `refactor_v4/ONBOARDING.md` (русский; установка,
+- [x] Методичка для команды: `ONBOARDING.md` (русский; установка,
       ежедневный цикл, шпаргалка команд, ruff, авторизация по подписке).
       Ссылка для команды: https://claude.ai/claude-code/onboard/LhGSXknq0pnB
 - [x] `ruff.toml` в kit: ставится только если у репо нет своего конфига ruff
@@ -346,7 +346,7 @@ sdd-kit переустановлен на свежий клон `~/dev/web-backe
 (code/opus + python/sonnet + database/sonnet) прогнаны по коммиту 3cc56e7c
 (WEB-2256, PCP shutdown refactor, 31 файл): 2 CRITICAL, 5 HIGH, 11 MEDIUM,
 ложные наводки статических инструментов отфильтрованы. Полный отчёт:
-`refactor_v4/reviews/WEB-2256-review.md`. Вердикт: WARNING — мержить после
+`reviews/WEB-2256-review.md`. Вердикт: WARNING — мержить после
 фиксов C1 (гонка lease → потеря вебхука навсегда), C2 (cleanup закрывает
 соединения под живыми задачами), H1 (drain 12с против бюджета сообщения 300с).
 
@@ -425,7 +425,7 @@ youtrack-mcp/context7, AGENTS.md-канон, авторевью с tools + пр�
   collect_incident.py, плюс prompt-management (промпты сейчас в коде/БД).
   Пилот на офлайн-сервисе, НЕ на realtime-движке.
   Это решение уровня команды/продукта — вынести отдельным предложением.
-  [x] Предложение написано 2026-07-29: `refactor_v4/docs/PROPOSAL_langfuse.md`
+  [x] Предложение написано 2026-07-29: `PROPOSAL_langfuse.md`
   (проблема→что даёт→почему Langfuse, а не Phoenix/Helicone→честная ops-цена:
   ClickHouse+S3 новые для нас→план пилота на офлайн-сервисе с go/no-go).
   Кандидаты пилота уточнены по коду: judge/аналитика в backend/ (openai уже в
@@ -447,7 +447,7 @@ Claude Code), phoenix (запасной вариант observability, если L
 
 ## Беклог дефектов, incident-flow, дисциплина ревью (2026-07-29)
 
-- [x] **`refactor_v4/docs/DEFECTS_BACKLOG.md`** — все находки майнинга и ревью в одном
+- [x] **`DEFECTS_BACKLOG.md`** — все находки майнинга и ревью в одном
   файле: 65 дефектов (4 CRITICAL / 20 HIGH / 41 MEDIUM), таблицы по репо
   (WBN 5, VA 15, frontend 11, c3.0 21, PCA 2, кросс-сервис WBN↔VA 11),
   каждая строка — готовый заголовок тикета + ссылка на источник.

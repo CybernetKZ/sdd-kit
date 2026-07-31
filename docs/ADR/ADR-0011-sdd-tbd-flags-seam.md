@@ -64,3 +64,9 @@ setup-dev.sh (serena в core). Решение: serena опциональна (y/
 
 ADR-0006 (гейты), ADR-0007 (флаги), ADR-0009 (RAISE), ADR-0010 (тиры),
 `sdd-kit/WORKFLOW.md`, `templates/skills/feature-flow`.
+
+## Примечание 2026-07-31
+
+`sdd-kit/WORKFLOW.md` и `sdd-kit/README.md` (упомянутый в разделе 5 выше) — лишний префикс
+после переезда sdd-kit (этот файл сам внутри sdd-kit). Актуальные пути от корня репозитория:
+`WORKFLOW.md`, `README.md`.

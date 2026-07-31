@@ -7,7 +7,7 @@
 Компания перешла на процесс подачи и приоритизации заявок «RAISE»
 (support.cyber-net.ai, статьи VB-A-92…96): единая форма заявки, оценка RICE,
 доска Voicebot + LLM, ежемесячный разбор бэклога, отдельные пути для срочных задач и багов.
-Локальная копия: `refactor_v4/RAISE-intake-process.md`.
+Локальная копия: `../RAISE-intake-process.md`.
 
 **Разводим имена.** В обиходе живут несколько «RAISE»:
 наш внутренний intake-процесс; мёртвая методология useraise.dev
@@ -50,3 +50,9 @@ SDD-стек (OpenSpec + гейты + store, ADR-0001…0003) решает, ка
 
 - ADR-0003 (принуждение), `sdd-kit/templates/skills/feature-flow`, `incident-flow`,
   `refactor_v4/RAISE-intake-process.md`, `sdd-kit/research-useraise-methodology.md`.
+
+## Примечание 2026-07-31
+
+Пути выше устарели после переезда sdd-kit в `/home/octrow/cybernet/sdd-kit` (этот файл сам
+теперь внутри sdd-kit). Актуальные пути от корня репозитория: `docs/RAISE-intake-process.md`,
+`research-useraise-methodology.md`, `templates/skills/feature-flow` (без префикса `sdd-kit/`).

@@ -59,17 +59,17 @@ Haiku 4.5 в этой задаче не использовать: контекс
 Choose an SDD (spec-driven development) stack for CybernetAI R&D and justify the
 choice with data.
 
-Read refactor_v4/TASK_SDD_SELECTION.md first — it is the source of truth for scope,
+Read ../TASK_SDD_SELECTION.md first — it is the source of truth for scope,
 weighted criteria, and the five open decisions.
 
 Deliverables:
-1. refactor_v4/OUR_PATTERNS.md — how our teams actually work, with numbers.
+1. ../OUR_PATTERNS.md — how our teams actually work, with numbers.
    Sources: dev merge history across web-backend-new, voice-agent-constructor-backend,
    voice-agent-postcall-analitics-backend, cybernet3.0; ~/.claude/projects (183 projects,
    1014 .jsonl, 2 GB) for where tokens go and which skills/MCP servers were never used
    once; web-backend-new/docs and shared_docs for what our specs and plans look like
    today. Tools for session history: rtk discover, /insights.
-2. refactor_v4/SDD_EVALUATION.md — one card per candidate plus a weighted matrix showing
+2. ../SDD_EVALUATION.md — one card per candidate plus a weighted matrix showing
    coverage of the four bottlenecks in §3 of the task. Candidates are cloned as sources
    under refactor_v4/ — read their prompt templates and actual mechanics, not just the
    README. GSD and ECC are already installed system-wide; evaluate them on equal footing.
@@ -112,10 +112,10 @@ with context and a recommendation for each.
 7504 строки LIVING SPEC, нумерация «ТЗ №N», changelog и тесты со ссылкой на номер,
 `make test` = lint_brand + lint_migrations + ruff + pytest.
 
-Прочие источники со сравнениями SDD-инструментов: `refactor_v4/archive/Spec-Driven-Development-Tools.md`,
+Прочие источники со сравнениями SDD-инструментов: `Spec-Driven-Development-Tools.md`,
 раздел Sources (15 ссылок).
 
-Продуктовый gap-анализ (UI, не бэкенд): `refactor_v4/WEB-2303-Hubtalk-comparison.md`,
+Продуктовый gap-анализ (UI, не бэкенд): `../WEB-2303-Hubtalk-comparison.md`,
 тикет https://support.cyber-net.ai/issue/Web-2303/Hubtalk-ai-platform-comparison
 
 ## 5. Поведенческие поправки под Fable 5
