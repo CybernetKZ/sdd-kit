@@ -1,4 +1,4 @@
-# Auto-review on pull requests (see refactor_v4/autoreviewer.md verdict).
+# Auto-review on pull requests (see docs/archive/autoreviewer.md verdict).
 # Layer 1 (deterministic): ruff -> reviewdog -> inline PR comments.
 # Layer 2 (logic): repo reviewer agents (.claude/agents/) via headless `claude -p`.
 #
