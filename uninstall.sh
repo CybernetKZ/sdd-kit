@@ -83,7 +83,7 @@ rm_ours "$KIT/templates/settings-living-spec.json" .claude/settings.json
 for f in spec-lint.py repo-audit.sh sdd-doctor.sh; do
   rm_ours "$KIT/templates/$f" ".claude/scripts/$f"
 done
-for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer planner plan-griller; do
+for a in backend-reviewer database-reviewer planner plan-griller; do
   rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
 done
 rm_ours "$KIT/templates/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md

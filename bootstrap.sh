@@ -271,7 +271,7 @@ put repo-audit.sh .claude/scripts/repo-audit.sh
 put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 
 # ------------------- 7b. agents: reviewers (autoreview) + planner/plan-griller
-for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer planner plan-griller; do
+for a in backend-reviewer database-reviewer planner plan-griller; do
   put "agents/$a.md" ".claude/agents/$a.md"
 done
 put autoreview.yml .github/workflows/autoreview.yml

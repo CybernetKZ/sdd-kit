@@ -6,7 +6,7 @@
 Local, uncommitted workflow rules live in `CLAUDE.local.md` (graph-first
 navigation, tool tiering, "never commit"). Extra Cursor skills for this repo:
 `.cursor/skills/` (`work-stack-backend`, `backend-workflow`, `fastapi-pro`,
-`python-pro`, `postgres`, `code-reviewer`, `security-audit`, ...).
+`python-pro`, `postgres`, `security-audit`, ...).
 
 ## What this service is
 

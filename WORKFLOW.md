@@ -94,7 +94,7 @@ flowchart TD
     subgraph VERIFY["5 · Verify & review (feature-flow 5, 6 · incident-flow 5)"]
         MANUAL["Manual testing: walk the QA Scenarios<br/>on local/stage; incident: re-run the<br/>incident scenario, record before/after"]
         SDDCHECK["make sdd-check green<br/>(AGENTS.md + openspec validate + spec-lint)"]
-        REVIEW["Review: reviewer agents on the diff<br/>(python/fastapi/database/code,<br/>ECC-derived, ours now)"]
+        REVIEW["Review: reviewer agents on the diff<br/>(backend-reviewer + database-reviewer,<br/>ECC-derived, ours now)"]
         SCOPE{"Findings in scope<br/>of the ticket?"}
         APPLY["Implement suggestions"]
         TODO["Add TODO/NOTE with ticket id<br/>(no silent scope creep)"]
@@ -246,7 +246,7 @@ A red test means one of three things, each with its own exit:
 | `AGENTS.md` (+`CLAUDE.md` symlink) | ambient context read by the agent in every phase; existence/size gated by sdd-check |
 | `planner` / `plan-griller` agents | phase 2 on opus (`model` frontmatter, ADR-0013): planner writes the change, plan-griller interrogates it |
 | `spec-miner` agent | repo onboarding only (seed specs one capability at a time), NOT in the per-task loop; OpenSpec has no built-in equivalent |
-| reviewer agents | ECC-derived (commit ec92b528), adapted - they replace the old `review-pr.md` prompt, locally (`make sdd-review`) and in CI autoreview |
+| reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, locally (`make sdd-review`) and in CI autoreview |
 
 ## No magic: prompts vs hooks (what actually enforces)
 

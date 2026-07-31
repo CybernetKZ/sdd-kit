@@ -6,7 +6,7 @@
 
 - `serena` удалён из списка mcpServers в `~/.claude.json`. Остались context7, headroom, youtrack.
 - Плагины `ecc@ecc` и `vercel@claude-plugins-official` выключены в `~/.claude/settings.json` (изменение вступит в силу со следующей сессии). Переменная `ECC_HOOK_PROFILE` удалена.
-- Ревьюеры и spec-miner скопированы локально, чтобы не зависеть от плагина ECC: `~/.claude/agents/{code,python,fastapi,database}-reviewer.md` и `spec-miner.md` (взяты с коммита ECC ec92b528).
+- Ревьюеры и spec-miner скопированы локально, чтобы не зависеть от плагина ECC: `~/.claude/agents/{code,python,fastapi,database}-reviewer.md` и `spec-miner.md` (взяты с коммита ECC ec92b528). *2026-07-31: в ките четыре ревьюера схлопнуты в два - `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy).*
 - Хук `block-no-verify.js` скопирован в `~/.claude/hooks/` и зарегистрирован в PreToolUse для Bash-команд. Хук проверен: на команду с `--no-verify` он завершается с кодом exit 2 (запрещает), на обычный commit - с exit 0 (пропускает).
 - rtk: файл `~/.claude/RTK.md` удалён, ссылка на него (`@RTK.md`) убрана из `~/.claude/CLAUDE.md`, хук `rtk-rewrite.sh` снят с PreToolUse (раньше он писал предупреждение на каждый вызов Bash).
 - Раздел про ECC в `~/.claude/CLAUDE.md` переписан под локально скопированных агентов.
@@ -25,7 +25,7 @@
 | serena MCP | удалить | 0 вызовов за всю историю |
 | youtrack MCP | **оставить** | 0 вызовов, но тикеты - центр рабочего процесса (60% документов привязаны к id тикета WEB-...); неиспользование - это проблема привычки, а не признак ненужности; пересмотреть решение через квартал |
 | chrome-devtools MCP (в составе ECC), плагин vercel, коннекторы claude_ai_* | удалить / отключить | 0 вызовов |
-| ECC целиком (271 скилл, 67 агентов) | сократить до нескольких ревьюеров (python/fastapi/database/code-reviewer) и spec-miner; зафиксировать версию на коммите ec92b528 | реально использовался только ecc:code-review (3 вызова); ревьюеры и spec-miner входят в выбранный стек инструментов |
+| ECC целиком (271 скилл, 67 агентов) | сократить до нескольких ревьюеров (python / fastapi / database / общий) и spec-miner; зафиксировать версию на коммите ec92b528 | реально использовался только ecc:code-review (3 вызова); ревьюеры и spec-miner входят в выбранный стек инструментов |
 | RTK.md (инструкция в глобальном CLAUDE.md) | удалить инструкцию | сам rtk не установлен - инструкция мёртвая, но она всё равно занимает место в контексте каждой сессии |
 | GSD | оставить установленным | 9 реальных вызовов gsd:* - это единственный фреймворк, которым реально пользовались; кандидат на роль слоя фаз (описано в `../archive/SDD_EVALUATION.md`) |
 | context7, searxng, postgres-readonly, headroom, claude-in-chrome | оставить | 101 / 80 / 48 / 43 / 5 вызовов соответственно - ими реально пользуются |

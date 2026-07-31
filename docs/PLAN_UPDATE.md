@@ -24,16 +24,16 @@
 
 Решение: флаги **остаются** (пока действует FAIL>5д на возраст ветки — это единственный клапан для эпиков), но только как dead-flag reaper.
 
-- [ ] 2.1 `templates/feature_flags.py`: `FLAGS: dict[str, str]` (имя → expires ISO-дата); `is_enabled()` как есть; `check()` только expires + `GRACE_DAYS=7`. Удалить `FlagMeta`, `owner`, `ticket`, `spec=`, `_store_expires()` (rglob-скан store).
-- [ ] 2.2 Обновить docstring — он становится каноном lifecycle (owner/ticket живут в OpenSpec change и git blame; кросс-репо = одинаковая дата в двух репо + строка в контракт-спеке).
-- [ ] 2.3 Решить установку (0.5): добавить `put feature_flags.py` в bootstrap.sh **или** оставить ручное копирование, но написать это в README и убрать иллюзию «гейт работает» (сейчас `make sdd-flags` всегда зелёный в свежем репо). Рекомендация: `put` — одна строка, гейт становится настоящим.
-- [ ] 2.4 Синхронизировать доки:
+- [x] 2.1 `templates/feature_flags.py`: `FLAGS: dict[str, str]` (имя → expires ISO-дата); `is_enabled()` как есть; `check()` только expires + `GRACE_DAYS=7`. Удалить `FlagMeta`, `owner`, `ticket`, `spec=`, `_store_expires()` (rglob-скан store).
+- [x] 2.2 Обновить docstring — он становится каноном lifecycle (owner/ticket живут в OpenSpec change и git blame; кросс-репо = одинаковая дата в двух репо + строка в контракт-спеке).
+- [x] 2.3 Решить установку (0.5): добавить `put feature_flags.py` в bootstrap.sh **или** оставить ручное копирование, но написать это в README и убрать иллюзию «гейт работает» (сейчас `make sdd-flags` всегда зелёный в свежем репо). Рекомендация: `put` — одна строка, гейт становится настоящим.
+- [x] 2.4 Синхронизировать доки:
   - ADR-0007: убрать «pydantic-settings», описать актуальный минимум; примечание о минимизации (6.1);
   - ADR-0011 §2 + WORKFLOW.md + GLOSSARY.md + feature-flow SKILL: вычеркнуть неимплементированную конвенцию «ON в dev/stage»; заменить на «имя флага и `FLAG_X=1` — в handoff-комментарии QA» (6.2);
   - ADR-0013 §1: примечание, что поля owner в коде больше нет (владелец — из change);
   - ADR/README.md: строка про 0007 (6.1);
   - lifecycle флага в остальных доках (WORKFLOW, ONBOARDING, GLOSSARY, SKILL §4b) сократить до 1 предложения + ссылка на ADR-0007 (6.5).
-- [ ] 2.5 Промпты: `plan-griller.md:28` — спрашивать только name/expires/поведение при OFF; `feature-flow` §4b сжать до ~5 строк + ссылки на ADR-0007/0011.
+- [x] 2.5 Промпты: `plan-griller.md:28` — спрашивать только name/expires/поведение при OFF; `feature-flow` §4b сжать до ~5 строк + ссылки на ADR-0007/0011.
 
 **Проверка**: `python3 feature_flags.py --check` — self-test (пустой реестр OK, флаг без expires FAIL, просроченный >7д FAIL); `make sdd-flags` в репо с реестром реально падает на просроченном флаге.
 
@@ -41,12 +41,12 @@
 
 ## Фаза 3. Ревьюеры 4 → 2
 
-- [ ] 3.1 Создать `templates/agents/backend-reviewer.md` (~120–150 строк, sonnet): слить python-reviewer + fastapi-reviewer + из code-reviewer взять анти-шум блок (confidence >80%, pre-report gate, «ноль находок — валидный результат») и бекенд-чеклист. Единые критерии вердикта: **Block = CRITICAL, Warning = HIGH** (разрешить противоречие в пользу code-reviewer). Read-only tools.
-- [ ] 3.2 Почистить `database-reviewer.md`: удалить Supabase/RLS/`auth.uid()`-контент; убрать Write/Edit из tools; те же критерии вердикта.
-- [ ] 3.3 Удалить `code-reviewer.md`, `python-reviewer.md`, `fastapi-reviewer.md` из templates и из bootstrap.sh (установка агентов).
-- [ ] 3.4 Общие блоки (Untrusted input, Spec Compliance, Review discipline, Tool-assisted checks) — один канонический текст в обоих оставшихся агентах, без вариаций (4.2). Параметризовать базу диффа: `${BASE_BRANCH:-origin/dev}` вместо хардкода (4.7).
-- [ ] 3.5 Обновить ссылки на 4 ревьюеров: `feature-flow` шаг 6, `incident-flow`, `autoreview.yml` (Task-промпт), `Makefile.sdd` (sdd-review), AGENTS.md-шаблон, README/WORKFLOW.
-- [ ] 3.6 Висячие ссылки (4.4): убрать «see skill: python-patterns / postgres-patterns / database-migrations»; `QA-SDD-PROCESS.md` — либо `put` в bootstrap, либо инлайн 3–4 правил QA в скиллы (рекомендация: инлайн, файл остаётся в ките как target-процесс).
+- [x] 3.1 Создать `templates/agents/backend-reviewer.md` (~120–150 строк, sonnet): слить python-reviewer + fastapi-reviewer + из code-reviewer взять анти-шум блок (confidence >80%, pre-report gate, «ноль находок — валидный результат») и бекенд-чеклист. Единые критерии вердикта: **Block = CRITICAL, Warning = HIGH** (разрешить противоречие в пользу code-reviewer). Read-only tools.
+- [x] 3.2 Почистить `database-reviewer.md`: удалить Supabase/RLS/`auth.uid()`-контент; убрать Write/Edit из tools; те же критерии вердикта.
+- [x] 3.3 Удалить `code-reviewer.md`, `python-reviewer.md`, `fastapi-reviewer.md` из templates и из bootstrap.sh (установка агентов).
+- [x] 3.4 Общие блоки (Untrusted input, Spec Compliance, Review discipline, Tool-assisted checks) — один канонический текст в обоих оставшихся агентах, без вариаций (4.2). Параметризовать базу диффа: `${BASE_BRANCH:-origin/dev}` вместо хардкода (4.7).
+- [x] 3.5 Обновить ссылки на 4 ревьюеров: `feature-flow` шаг 6, `incident-flow`, `autoreview.yml` (Task-промпт), `Makefile.sdd` (sdd-review), AGENTS.md-шаблон, README/WORKFLOW.
+- [x] 3.6 Висячие ссылки (4.4): убрать «see skill: python-patterns / postgres-patterns / database-migrations»; `QA-SDD-PROCESS.md` — либо `put` в bootstrap, либо инлайн 3–4 правил QA в скиллы (рекомендация: инлайн, файл остаётся в ките как target-процесс).
 
 **Проверка**: `grep -r "python-reviewer\|fastapi-reviewer\|code-reviewer" templates/ bootstrap.sh` — пусто (кроме changelog/архива); тестовое ревью диффа двумя агентами.
 

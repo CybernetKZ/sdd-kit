@@ -79,7 +79,7 @@ away; a risky or cross-service one earns the full grill.
   sharp questions and the accepted answers, one line per decision. It
   archives with the change, so the "why option B" history survives.
 
-## 3. QA writes the tests - before implementation (QA-SDD-PROCESS.md)
+## 3. QA writes the tests - before implementation
 
 Developers do NOT write tests. The change (its spec delta) goes to the QA
 flow before any implementation code:
@@ -131,7 +131,8 @@ flow before any implementation code:
 ## 6. Review
 
 - `make sdd-check` green, then run the reviewer agents
-  (`.claude/agents/{python,fastapi,database,code}-reviewer.md`) on the diff -
+  (`.claude/agents/backend-reviewer.md` and, when the diff touches SQL, the
+  ORM or migrations, `.claude/agents/database-reviewer.md`) on the diff -
   or open the PR and let autoreview do it.
 - Fix CRITICAL/HIGH that are in scope of the ticket. Out-of-scope findings:
   add `TODO`/`NOTE` with the ticket id, do not silently expand scope.

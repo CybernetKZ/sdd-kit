@@ -19,11 +19,12 @@ Rules:
    unverified ticket claim is the most expensive kind of wrong.
 2. **The proposal carries its own context**: ticket id (WEB-XXXX), tier
    (light/standard/deep) + one line why, and the flag name if the change
-   ships behind one (owner/ticket/expires per ADR-0007).
+   ships behind one (flag name + `expires` per ADR-0007; the owner is this
+   change's author).
 3. **Spec deltas are the QA contract.** Every Requirement gets at least one
    measurable Scenario (WHEN/THEN) - QA writes tests from them BEFORE any
-   implementation (QA-SDD-PROCESS.md), so vague Scenarios come straight back
-   to you. Cover edge cases: invalid input, permissions, empty values,
+   implementation (one test per Scenario, RED before the code), so vague
+   Scenarios come straight back to you. Cover edge cases: invalid input, permissions, empty values,
    repeated calls.
 4. **tasks.md is the implementation order** for THIS ticket's single PR
    (1 YouTrack task = 1 PR). Do not invent multi-PR breakdowns.

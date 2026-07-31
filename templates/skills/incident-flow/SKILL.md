@@ -12,10 +12,15 @@ do not assume which until the data says so.
 
 Incidents default to the **light tier** (ADR-0010): minimal change, no plan
 grill - but every gate still applies (spec, QA-written regression test,
-sdd-check, review, CI; no spec-guard bypass). Developers do NOT write tests -
-QA does, from the change's Scenario (QA-SDD-PROCESS.md). The developer may
-raise the tier if the fix turns out to be architectural - write the tier and
-why into the change.
+sdd-check, review, CI; no spec-guard bypass). The developer may raise the tier
+if the fix turns out to be architectural - write the tier and why into the
+change.
+
+QA rules that apply here (same as feature-flow): QA validates the spec delta,
+not the code; one test per Scenario with a tracer comment
+`openspec: <change> / Requirement / Scenario`; tests are written before the
+code and must be RED first; a red test is fixed in the code, never in the
+test.
 
 ## 1. Collect the evidence first
 
@@ -57,7 +62,7 @@ why into the change.
 
 - Branch `bugfix/WEB-XXXX` off dev.
 - The regression test comes BEFORE the fix, and QA writes it - not the
-  developer (QA-SDD-PROCESS.md). Hand the change with its incident Scenario
+  developer. Hand the change with its incident Scenario
   to the QA flow; QA validates the Scenario is measurable, writes the test
   (tracer comment `openspec: <change> / Requirement / Scenario`, named after
   the ticket), and shows the RED run - it must fail on the current code.
