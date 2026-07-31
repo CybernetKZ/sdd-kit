@@ -72,7 +72,7 @@ put() { # put <template> <destination> — copies only when the destination is m
 # The store repo needs only itself: local registration + validate gate. Nothing else.
 if [ "$PROFILE_IS_STORE" = 1 ]; then
   command -v git >/dev/null 2>&1 || fail "git not found. Install git and re-run."
-  OPENSPEC="npx -y @fission-ai/openspec@1.6.0"
+  OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
   command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
   if ! $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
     $OPENSPEC store register "$REPO" --id "$STORE_ID"
@@ -92,7 +92,7 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npx >/dev/null 2>&1; then
 fi
 
 # openspec CLI: prefer a global install, fall back to pinned npx (slower, no install).
-OPENSPEC="npx -y @fission-ai/openspec@1.6.0"
+OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
 if command -v openspec >/dev/null 2>&1; then
   OPENSPEC="openspec"
   say "found:   openspec CLI ($(openspec --version 2>/dev/null || echo 'version unknown'))"
@@ -171,6 +171,20 @@ if [ "$WANT_YOUTRACK" = 1 ]; then
   else
     skip "no YOUTRACK_API_TOKEN. Add YOUTRACK_URL and YOUTRACK_API_TOKEN to $YT_ENV manually (chmod 600). Token page: $YT_URL/users/me?tab=account-security"
   fi
+fi
+
+# -------------------- 2b. profile payload: pre-configured files for known repos
+# profiles/<repo-basename>/ may carry ready files (AGENTS.md, openspec config,
+# ...). Copied with the same never-overwrite rule; bootstrap's own generic
+# steps below then skip whatever the payload already provided.
+if [ -d "$KIT/profiles/$REPO_NAME" ]; then
+  (cd "$KIT/profiles/$REPO_NAME" && find . -type f) | sed 's|^\./||' | while IFS= read -r rel; do
+    if [ -e "$rel" ]; then say "exists:  $rel (left alone)"; else
+      mkdir -p "$(dirname "$rel")"
+      cp "$KIT/profiles/$REPO_NAME/$rel" "$rel"
+      say "created: $rel (profile payload)"
+    fi
+  done
 fi
 
 # --------------- 3. agent context: AGENTS.md is canonical, CLAUDE.md a symlink
@@ -253,8 +267,8 @@ put spec-lint.py .claude/scripts/spec-lint.py
 put repo-audit.sh .claude/scripts/repo-audit.sh
 put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 
-# ---------------------------------------- 7b. auto-review: agents + PR workflow
-for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer; do
+# ------------------- 7b. agents: reviewers (autoreview) + planner/plan-griller
+for a in python-reviewer fastapi-reviewer database-reviewer code-reviewer planner plan-griller; do
   put "agents/$a.md" ".claude/agents/$a.md"
 done
 put autoreview.yml .github/workflows/autoreview.yml

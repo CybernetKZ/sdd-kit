@@ -58,21 +58,24 @@ away; a risky or cross-service one earns the full grill.
 ## 2. Plan as an OpenSpec change
 
 - Deep tier first: research architecture options (context7 for library/API
-  docs), compare them, record the decision as an ADR. Use a strong model
-  (opus/fable) for research, planning, and grilling; the implementation runs
+  docs), compare them, record the decision as an ADR. Model binding is
+  automatic: plan and grill run as the `planner` / `plan-griller` subagents
+  (`model: opus` in their frontmatter, ADR-0013); the implementation runs
   on the session model; bulk mechanical steps can drop to haiku.
-- `/opsx:propose "WEB-XXXX: <what changes>"` - proposal + spec deltas + tasks.
+- Run the `planner` agent: `/opsx:propose "WEB-XXXX: <what changes>"` -
+  proposal + spec deltas + tasks.
 - Reference the ticket id in the change. Spec-guard requires this active
   change before code edits in guarded paths.
-- Size the change for a 2-day branch (ADR-0006). Bigger than that: several
-  small PRs under ONE change, dark behind a feature flag (see 4b). The change
-  stays active across all the epic's PRs and is archived when the flag is
+- Size the change for a 2-day branch (ADR-0006). Bigger than that is an
+  epic: split into YouTrack tasks (1 task = 1 PR, ADR-0013), all PRs dark
+  behind ONE feature flag under ONE change (see 4b). The change stays
+  active across all the epic's PRs and is archived when the flag is
   enabled in prod by default (ADR-0011).
-- Standard/deep: interrogate the plan before implementing (grill it): an
-  agent asks the questions - edge cases, rollback, migrations, cross-service
-  impact - and the developer answers; anything the developer cannot answer
-  becomes a question to the ticket author. Fix the plan, not the
-  code later. Record the grill as a `## Grill` section in proposal.md - the
+- Standard/deep: interrogate the plan before implementing: the
+  `plan-griller` agent asks the questions - edge cases, rollback,
+  migrations, cross-service impact - and the developer answers; anything
+  the developer cannot answer becomes a question to the ticket author.
+  Fix the plan, not the code later. Record the grill as a `## Grill` section in proposal.md - the
   sharp questions and the accepted answers, one line per decision. It
   archives with the change, so the "why option B" history survives.
 

@@ -30,7 +30,7 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `templates/feature_flags.py` (copy when first needed) | flag registry with owner/ticket/`expires` (ADR-0007): `make sdd-flags` warns 7 days past expiry, then fails CI; cross-repo contract flags keep `expires` in the store spec (`spec=` instead of a date) |
 | `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request; + `tbd-gates` job (ADR-0006): branch age (warn >2 days, fail >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
 | `.github/workflows/autoreview.yml` | PR auto-review: ruff -> reviewdog inline comments + AI review via headless `claude -p`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting |
-| `.claude/agents/*-reviewer.md` | python/fastapi/database/code reviewers used by the AI review step |
+| `.claude/agents/` | python/fastapi/database/code reviewers (AI review step) + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
@@ -49,6 +49,9 @@ target directory name matches a profile, bootstrap additionally:
 
 - seeds `.spec-guard-paths` with the repo's real production-code prefixes
   (tests/docs/migrations/helm values stay unguarded);
+- copies a payload directory `profiles/<repo-basename>/` if one exists -
+  pre-configured files for that repo (a filled-in `AGENTS.md`, openspec
+  config, ...), never overwriting existing files;
 - wires the central spec store: clones it if missing (with permission),
   registers it (`openspec store register`), and appends `references:` to
   `openspec/config.yaml` - `openspec validate` stays green on machines/CI
@@ -98,10 +101,7 @@ sdd-kit/setup-dev.sh             # core stack installs by default [Y/n]
 **ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook),
 **Graphify** (repo knowledge graph - faster/cheaper code analysis; PyPI name
-`graphify`), **Headroom** (context compression MCP - real win is
-context-window space, not cost: cached input re-reads already cost ~10%; it
-appends, so the cache prefix survives), **ast-grep** (AST codemods for bulk
-mechanical refactors).
+`graphify`), **ast-grep** (AST codemods for bulk mechanical refactors).
 `make sdd-doctor` warns when a core tool is missing.
 
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
@@ -112,7 +112,9 @@ repo-audit flags, so it stays opt-in).
 Not offered: **caveman** (only a benchmark arm inside the ponytail repo, not a
 standalone tool - ponytail covers it), **grill-with-docs** (team practice, not
 a self-contained install), **Playwright** (chrome-devtools-axi covers the
-browser loop).
+browser loop), **Headroom** (dropped 2026-07-31: compresses ~0-2%, breaks the
+prompt-cache prefix, measured +45..62% cost - see
+[ADR-0014](docs/ADR/ADR-0014-drop-headroom.md)).
 
 ## Configuration
 

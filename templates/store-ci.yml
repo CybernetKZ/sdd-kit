@@ -15,4 +15,4 @@ jobs:
         with:
           node-version: 22
       - name: Validate all specs (strict)
-        run: npx -y @fission-ai/openspec@1.6.0 validate --all --strict
+        run: npx -y @fission-ai/openspec@1.7.0 validate --all --strict # openspec-pin

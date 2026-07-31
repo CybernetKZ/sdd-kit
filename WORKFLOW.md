@@ -53,8 +53,8 @@ flowchart TD
     %% ============ PLAN ============
     subgraph PLANNING["2 · Plan (OpenSpec change) (feature-flow 2 · incident-flow 3)"]
         RESEARCH["deep tier only: research architecture<br/>options, compare, write ADR"]
-        PLAN["/opsx:propose - proposal + spec deltas +<br/>tasks (ticket id, tier + why inside).<br/>Plan/grill/research run on opus/fable"]
-        GRILL["standard/deep: an AGENT grills the plan,<br/>the dev answers (ADR-0012) - edge cases,<br/>rollback, migrations, cross-service impact;<br/>unanswered -> question to the ticket author.<br/>Q&A recorded as '## Grill' section in proposal.md"]
+        PLAN["planner agent (opus): /opsx:propose -<br/>proposal + spec deltas + tasks<br/>(ticket id, tier + why inside)"]
+        GRILL["standard/deep: plan-griller agent (opus)<br/>grills the plan, the dev answers (ADR-0012) -<br/>edge cases, rollback, migrations, cross-service;<br/>unanswered -> question to the ticket author.<br/>Q&A recorded as '## Grill' section in proposal.md"]
         POK{"Plan holds?"}
         RESEARCH --> PLAN
         PLAN -- "standard/deep" --> GRILL --> POK
@@ -114,7 +114,7 @@ flowchart TD
         CIOK{"Blocking gates green?"}
         MERGE["Merge to dev"]
         HANDOFF["Ticket -> status: ready_to_test<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check, flag name if any"]
-        QA["QA verifies on stage (flag is ON there);<br/>then flag enabled in prod deliberately;<br/>change archived; flag-removal PR at expires"]
+        QA["QA verifies on stage (flag is ON there);<br/>then the flag OWNER enables it in prod<br/>(same owner deletes it at expires, ADR-0013);<br/>change archived"]
         PR --> CI --> CIOK
         CIOK -- "no" --> APPLY
         CIOK -- "yes" --> MERGE --> HANDOFF --> QA
@@ -184,17 +184,31 @@ override; the chosen tier + why goes into the change):
 | a regular feature inside one service | standard |
 | cross-service change, data migration, new architecture, unknown territory | deep |
 
-Model binding is pinned in the skills/agents, not in people's memory:
-plan/grill/research -> opus/fable; implementation -> session model;
-reviewer agents -> `model` frontmatter; mechanical steps -> haiku.
+Model binding is pinned in agent frontmatter, not in people's memory:
+plan and grill run as the `planner` / `plan-griller` subagents
+(`.claude/agents/`, `model: opus` - installed by bootstrap, ADR-0013);
+implementation -> session model; reviewer agents -> their `model`
+frontmatter; mechanical steps -> haiku.
 
-## Epics (ADR-0011, ADR-0012)
+## Epics (ADR-0011, ADR-0012, ADR-0013)
 
-Epic mode = one OpenSpec change, several small PRs behind a feature flag.
-An epic is declared **in the ticket** at intake. Independently of the
-ticket, suspect an epic whenever the plan predicts crossing the ADR-0006
+The unit of work is fixed: **1 YouTrack task = 1 PR**. An epic is split
+into YouTrack tasks at intake (declared in the tracker, not invented in
+tasks.md) - the epic's breakdown and progress live in YouTrack. One OpenSpec
+change spans the whole epic behind one feature flag (ADR-0011); each task's
+PR moves its slice of code and runs the QA tests that already exist.
+Exception to 1:1: follow-up fix PRs for an already-accepted feature may
+ride the original task.
+
+Suspect an undeclared epic whenever the plan predicts crossing the ADR-0006
 gates - >1500 changed lines or >2 days of work for a single PR - and
-confirm with the ticket author before starting.
+confirm the split with the ticket author before starting.
+
+QA for an epic (ADR-0013): tests are written ONCE for the whole change
+(all Scenarios, before the first PR); Scenarios not yet implemented stay
+as explicit skips or run behind the OFF flag. Intermediate merges do NOT
+ping QA - the single `ready_to_test` handoff happens when the whole change
+is done on stage.
 
 ## QA availability (ADR-0012)
 
@@ -204,6 +218,12 @@ they launch the **independent QA agent** (per QA-SDD-PROCESS.md) in a
 separate context. The adversarial check stays mandatory, and the PR
 notes that tests were agent-generated without human QA validation -
 human QA catches up before the flag is enabled in prod.
+
+For flagless changes (typical light tier) the catch-up point is the
+release: **`ready_to_test` holds the release** (ADR-0013) - before
+deploying dev to prod, the release checklist verifies in YouTrack that no
+shipped ticket is still in `ready_to_test` without a human QA verdict.
+This is a process rule (like RAISE), not a CI gate.
 
 ## Disputed tests (ADR-0012)
 
@@ -224,6 +244,7 @@ A red test means one of three things, each with its own exit:
 | `incident-flow` skill | IS phases 1-6 for bugs (steps 1->6 marked on the phase titles); owns the misuse/infra terminal exit; defaults to light tier |
 | `QA-SDD-PROCESS.md` | IS phase 3 and the test-related CI gates: QA validates the spec delta and writes tests before implementation; developers do not write tests |
 | `AGENTS.md` (+`CLAUDE.md` symlink) | ambient context read by the agent in every phase; existence/size gated by sdd-check |
+| `planner` / `plan-griller` agents | phase 2 on opus (`model` frontmatter, ADR-0013): planner writes the change, plan-griller interrogates it |
 | `spec-miner` agent | repo onboarding only (seed specs one capability at a time), NOT in the per-task loop; OpenSpec has no built-in equivalent |
 | reviewer agents | ECC-derived (commit ec92b528), adapted - they replace the old `review-pr.md` prompt, locally (`make sdd-review`) and in CI autoreview |
 
@@ -264,7 +285,6 @@ Installed per developer machine by `setup-dev.sh` (core stack, default-yes):
 |---|---|
 | **rtk** | compresses shell output in every Bash call (global hook) |
 | **ponytail** | minimal working solutions; less code, fewer tokens (plugin) |
-| **Headroom** | context compression on long sessions (append-only - prompt cache survives) |
 | **ast-grep** | structural codemods for bulk mechanical refactors |
 | **spec-guard + pre-commit hooks** | block code edits without an active OpenSpec change (not in conversation_flow - LIVING SPEC exception); ruff, hygiene, `make sdd-check` on commit |
 
@@ -280,6 +300,7 @@ Last verified: 2026-07-31. Update this table when a planned piece goes live.
 |---|---|
 | bootstrap assets: `make sdd-check`, spec-guard, pre-commit hooks, `sdd-ci.yml` (incl. tbd-gates), autoreview, spec-lint, repo-audit, sdd-doctor | shipped by sdd-kit - live in a repo once bootstrapped |
 | `feature-flow` / `incident-flow` skills | shipped (`templates/skills/`) |
+| `planner` / `plan-griller` agents (model binding for plan/grill) | shipped (`templates/agents/`, ADR-0013) |
 | RAISE intake (form, RICE, board) | company process being introduced (ADR-0009) |
 | `make test` single CI entry point (ADR-0003) | **planned** - not yet implemented in any repo |
 | QA-SDD-PROCESS running in practice (QA writes tests before code) | **planned** - process defined, not yet running in a team repo |

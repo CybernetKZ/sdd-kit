@@ -43,5 +43,5 @@ ADR, эпики, stories, kanban-доска, продолжение сессий
 ## Связано
 
 - ADR-0001 (store), ADR-0002 (AGENTS.md), ADR-0004 (чистка обвеса),
-  REPORT_TBD_PROJECTSTORE.md (полный аудит с путями в код плагина),
+  archive/REPORT_TBD_PROJECTSTORE.md (полный аудит с путями в код плагина),
   строка "отклонено" в ../archive/SDD_EVALUATION.md.

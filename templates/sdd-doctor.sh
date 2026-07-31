@@ -105,7 +105,7 @@ if [ -n "$ROOT" ]; then
 
   if [ -f openspec/config.yaml ] && grep -q '^references:' openspec/config.yaml; then
     STORE_ID="$(sed -n 's/^[[:space:]]*-[[:space:]]*//p' openspec/config.yaml | head -1)"
-    OPENSPEC="openspec"; command -v openspec >/dev/null 2>&1 || OPENSPEC="npx -y @fission-ai/openspec@1.6.0"
+    OPENSPEC="openspec"; command -v openspec >/dev/null 2>&1 || OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
     if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
       ok repo.store "store '$STORE_ID' registered"
     else
@@ -137,7 +137,7 @@ fi
 # --------------------------------------- core personal tools (default stack)
 # Installed by default via sdd-kit/setup-dev.sh: quality up, token spend down.
 GROUP="personal"
-for t in rtk graphify headroom ast-grep; do
+for t in rtk graphify ast-grep; do
   if command -v "$t" >/dev/null 2>&1; then ok "personal.$t" "$t installed (core personal tool)"
   else warn "personal.$t" "$t missing" "run sdd-kit/setup-dev.sh (installs the default tool stack)"; fi
 done

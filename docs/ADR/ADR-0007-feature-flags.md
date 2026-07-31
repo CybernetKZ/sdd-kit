@@ -43,4 +43,4 @@
 ## Связано
 
 - ADR-0001 (центральный store), ADR-0005 (пробел по HubTalk-бэкенду - от него зависит,
-  возможен ли dual-write на стороне телефонии), ADR-0006, REPORT_TBD_PROJECTSTORE.md.
+  возможен ли dual-write на стороне телефонии), ADR-0006, archive/REPORT_TBD_PROJECTSTORE.md.

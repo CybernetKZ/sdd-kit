@@ -4,8 +4,8 @@
 #
 # CORE tools (quality up, token spend down) install BY DEFAULT [Y/n]:
 #   ponytail (lean code), rtk (shell-output compression), graphify (repo
-#   knowledge graph: faster/cheaper code analysis), headroom (context
-#   compression MCP), ast-grep (structural codemods).
+#   knowledge graph: faster/cheaper code analysis), ast-grep (structural
+#   codemods).
 # OPTIONAL tools stay opt-in [y/N]: gh-axi, chrome-devtools-axi, serena.
 #
 # Env: SDD_KIT_ASSUME_YES=1 (core installs without questions; optional
@@ -74,20 +74,10 @@ elif ask_core "Install Graphify? (codebase knowledge graph; PyPI package is 'gra
     || say "graphify install failed — see https://github.com/safishamsi/graphify"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ---------------------------------------------------------------- 4. Headroom
-# Context compression MCP. Real win is context-window space, not cost
-# (cached input re-reads already cost ~10%). PyPI name is headroom-ai —
-# plain 'headroom' is an unrelated package.
-if command -v headroom >/dev/null 2>&1; then
-  say "ok:      headroom already installed"
-elif ask_core "Install Headroom? (context compression MCP)"; then
-  uv tool install headroom-ai \
-    && claude mcp add --scope user headroom -- headroom mcp serve \
-    && { DONE=$((DONE+1)); say "installed: headroom + user-scope MCP entry"; } \
-    || say "headroom install failed — see https://github.com/chopratejas/headroom"
-else SKIPPED=$((SKIPPED+1)); fi
+# Headroom was removed from the stack — see docs/ADR/ADR-0014-drop-headroom.md
+# (compresses ~0-2%, breaks the prompt-cache prefix, net +45..62% cost).
 
-# ---------------------------------------------------------------- 5. ast-grep
+# ---------------------------------------------------------------- 4. ast-grep
 # AST-based structural search & rewrite (codemods) — the only code-rewriting
 # tool in the stack; language-agnostic (Python + the React frontend).
 if command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1; then
@@ -100,7 +90,7 @@ else SKIPPED=$((SKIPPED+1)); fi
 
 # ================================ OPTIONAL (opt-in) ==========================
 
-# ------------------------------------------------------------------ 6. gh-axi
+# ------------------------------------------------------------------ 5. gh-axi
 # Agent-ergonomic gh wrapper: compact TOON output, next-step hints.
 # Prereq: gh CLI authenticated.
 if [ -d "$HOME/.claude/skills/gh-axi" ]; then
@@ -111,7 +101,7 @@ elif ask "Install gh-axi? (compact GitHub CLI output for agents; needs gh auth)"
     || say "gh-axi install failed — see https://github.com/kunchenguid/gh-axi"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ----------------------------------------------------- 7. chrome-devtools-axi
+# ----------------------------------------------------- 6. chrome-devtools-axi
 # Browser-debugging wrapper over chrome-devtools-mcp (frontend work).
 if [ -d "$HOME/.claude/skills/chrome-devtools-axi" ]; then
   say "ok:      chrome-devtools-axi skill already installed"
@@ -121,7 +111,7 @@ elif ask "Install chrome-devtools-axi? (browser debug loop for frontend work)"; 
     || say "install failed — see https://github.com/kunchenguid/chrome-devtools-axi"
 else SKIPPED=$((SKIPPED+1)); fi
 
-# ------------------------------------------------------------------ 8. serena
+# ------------------------------------------------------------------ 7. serena
 # Semantic code navigation/editing MCP (LSP-backed): find_symbol /
 # references instead of reading whole files — fewer tokens, better targeting.
 # Opt-in: an earlier team trial left .serena/ litter that repo-audit flags.

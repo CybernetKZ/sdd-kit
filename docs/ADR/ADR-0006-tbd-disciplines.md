@@ -46,7 +46,7 @@
 
 ## Связано
 
-- ADR-0003 (принуждение), ADR-0007 (feature-флаги), REPORT_TBD_PROJECTSTORE.md (исследование с источниками).
+- ADR-0003 (принуждение), ADR-0007 (feature-флаги), archive/REPORT_TBD_PROJECTSTORE.md (исследование с источниками).
 
 ## Примечание 2026-07-31
 

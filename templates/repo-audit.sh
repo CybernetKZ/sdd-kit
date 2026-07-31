@@ -54,12 +54,12 @@ if [ -d .claude/skills ]; then
   done
 fi
 
-# 4. Agents: the four sdd-kit reviewers are expected; anything else is worth a look.
+# 4. Agents: the sdd-kit set (4 reviewers + planner + plan-griller) is expected.
 if [ -d .claude/agents ]; then
   for a in .claude/agents/*.md; do
     [ -f "$a" ] || continue
     name=$(basename "$a" .md)
-    case "$name" in python-reviewer|fastapi-reviewer|database-reviewer|code-reviewer) ;;
+    case "$name" in python-reviewer|fastapi-reviewer|database-reviewer|code-reviewer|planner|plan-griller) ;;
       *) note agent.extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
     esac
   done

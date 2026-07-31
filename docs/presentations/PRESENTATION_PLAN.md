@@ -121,7 +121,7 @@
   задачи (медианный pull request - 3-7 файлов) чаще всего обходят правила.
 
 ### Слайд 10. Ветки, размер изменений и feature-флаги
-(источник: REPORT_TBD_PROJECTSTORE.md, решения ADR-0006/0007)
+(источник: archive/REPORT_TBD_PROJECTSTORE.md, решения ADR-0006/0007)
 - Оставляем схему "ветка -> pull request -> dev". Прямые коммиты в основную ветку -
   нет: они отключают все проверки.
 - Новые дисциплины: возраст ветки (предупреждение после 2 дней, блокировка после 5),
@@ -189,4 +189,4 @@
 
 ### Слайд 17. Вопросы и ссылки
 - Web-2305 в YouTrack; документы: ../archive/OUR_PATTERNS.md, ../archive/SDD_EVALUATION.md,
-  ../REPORT_TBD_PROJECTSTORE.md, ../../WORKFLOW.md, ADR-0001...0011.
+  ../archive/REPORT_TBD_PROJECTSTORE.md, ../../WORKFLOW.md, ADR-0001...0011.
