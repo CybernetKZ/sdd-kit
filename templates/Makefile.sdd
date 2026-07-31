@@ -1,7 +1,7 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
 # Installed by sdd-kit/bootstrap.sh.
 
-.PHONY: sdd-check sdd-audit sdd-doctor sdd-review sdd-flags
+.PHONY: sdd-check sdd-doctor sdd-review sdd-flags
 
 # Feature-flag expiry gate (ADR-0007): every registered flag has a death date.
 # No feature_flags.py in the repo -> nothing to check, passes.
@@ -12,21 +12,15 @@ sdd-flags:
 
 # AI review of your current branch vs dev, on YOUR machine with YOUR
 # subscription login (no shared tokens; CI AI-step stays optional).
+# The prompt itself lives in .claude/scripts/review-prompt.md — one canonical
+# text shared with .github/workflows/autoreview.yml.
 SDD_REVIEW_BASE ?= dev
 sdd-review:
 	@command -v claude >/dev/null || { echo "FAIL: claude CLI not found"; echo "next: install Claude Code and log in"; exit 1; }
+	@test -f .claude/scripts/review-prompt.md || { echo "FAIL: .claude/scripts/review-prompt.md is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; }
 	@git diff "$(SDD_REVIEW_BASE)"...HEAD > /tmp/sdd-review.diff
 	@test -s /tmp/sdd-review.diff || { echo "sdd-review: 0 changes vs $(SDD_REVIEW_BASE) — nothing to review"; exit 0; }
-	@claude -p "Read /tmp/sdd-review.diff (diff of this branch vs $(SDD_REVIEW_BASE)). \
-	Review it following the rules in .claude/agents/backend-reviewer.md \
-	and .claude/agents/database-reviewer.md \
-	(read them first; apply each where relevant). Repo context: AGENTS.md. \
-	Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix. \
-	If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \
-	--allowedTools "Read,Grep,Glob"
-
-sdd-audit:
-	@sh .claude/scripts/repo-audit.sh
+	@claude -p "$$(cat .claude/scripts/review-prompt.md)" --allowedTools "Read,Grep,Glob"
 
 sdd-doctor:
 	@bash .claude/scripts/sdd-doctor.sh
@@ -41,6 +35,10 @@ sdd-check:
 	else \
 		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; \
 	fi
-	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py >/dev/null || { echo "next: run python3 .claude/scripts/spec-lint.py for the full JSON report"; exit 1; }; fi
+	@# spec-lint is ADVISORY here: it exits 0 unless SPEC_LINT_STRICT=1, so its
+	@# output is a report, not a gate. Its findings are printed, never swallowed.
+	@# TODO: set SPEC_LINT_STRICT=1 in CI (sdd-ci.yml) once the specs stabilize —
+	@# then this becomes a real gate and the summary line below must say so.
+	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py; fi
 	@$(MAKE) --no-print-directory sdd-flags
-	@echo "sdd-check: OK — all gates passed (AGENTS.md, openspec validate, spec-lint, sdd-flags)"
+	@echo "sdd-check: OK — sdd-check passed (AGENTS.md, openspec validate, sdd-flags; spec-lint advisory)"
