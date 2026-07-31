@@ -1,4 +1,4 @@
-# CI for sdd-kit itself: lint every script/template, then a real bootstrap
+# CI for sdd-kit itself: lint every script/template, then a real install.sh
 # smoke test on an empty repository.
 name: ci
 on:
@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck all shell scripts
-        run: shellcheck -S warning bootstrap.sh uninstall.sh setup-dev.sh templates/*.sh
+        run: shellcheck -S warning install.sh bootstrap.sh uninstall.sh setup-dev.sh templates/*.sh
       - name: bash syntax
         run: |
-          bash -n bootstrap.sh uninstall.sh setup-dev.sh
+          bash -n install.sh bootstrap.sh uninstall.sh setup-dev.sh
           for f in templates/pre-commit-hook.sh templates/sdd-doctor.sh; do
             bash -n "$f"
           done
@@ -45,22 +45,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: bootstrap an empty repo (no TTY, auto-yes; no uv -> youtrack skipped)
+      - name: install into an empty repo (no TTY, auto-yes; no uv -> youtrack skipped)
         run: |
           git init -q /tmp/smoke-repo
-          SDD_KIT_ASSUME_YES=1 ./bootstrap.sh /tmp/smoke-repo
-      - name: gates work in the bootstrapped repo
+          SDD_KIT_ASSUME_YES=1 ./install.sh --repo-only /tmp/smoke-repo
+      - name: gates work in the installed repo
         run: |
           cd /tmp/smoke-repo
           make sdd-check
           make sdd-doctor || true   # advisory: warns on a bare runner, never blocks
           test -x .git/hooks/pre-commit
           grep -q "sdd-check" .git/hooks/pre-commit
-      - name: bootstrap is idempotent (second run changes nothing)
+      - name: install is idempotent (second run changes nothing)
         run: |
           cd /tmp/smoke-repo
           find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/before.md5
-          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/bootstrap.sh /tmp/smoke-repo
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/install.sh --repo-only /tmp/smoke-repo
           find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/after.md5
           diff /tmp/before.md5 /tmp/after.md5
       - name: uninstall round-trips to an empty repo

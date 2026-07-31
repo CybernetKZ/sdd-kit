@@ -164,3 +164,5 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 | wbn-goal(8) | MEDIUM | get_due_goal_deadline_members() is unbounded (no BATCH_SIZE, unlike every other sweep) | web-backend-new/openspec/specs/goal-achievement/spec.md |
 | va-tmpl(1) | MEDIUM | delete_template idempotency (repeat delete -> 404) contradicts sibling delete_agent (repeat delete -> success) - inconsistent contract between domains | voice-agent-constructor-backend/openspec/specs/agent-template/spec.md |
 | va-tmpl(2) | MEDIUM | System templates (is_system=True) allow the same PUT mutations as regular ones with no identity-field lock, unlike PCA system templates | voice-agent-constructor-backend/openspec/specs/agent-template/spec.md |
+
+- **uninstall.sh + SDD_KIT_ASSUME_YES=1**: без вопросов отвечает «да» на «Unregister central store» и снимает регистрацию реального store на машине (найдено при smoke-тесте фазы 6, поведение существовало и раньше). Нужен guard: unregister только при явном `--force` или интерактивном yes.

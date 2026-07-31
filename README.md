@@ -1,8 +1,8 @@
 # sdd-kit
 
-Bootstrap for spec-driven development (SDD) in a repository - new or
-existing. One script, idempotent: never overwrites existing files, only adds
-what is missing.
+Installer for spec-driven development (SDD) in a repository - new or existing.
+One script (`install.sh`), idempotent: never overwrites existing files, only
+adds what is missing.
 
 **Where to start:**
 
@@ -12,19 +12,28 @@ what is missing.
 
 ## Usage
 
+One command, from inside the repo you want to set up:
+
 ```bash
-sdd-kit/bootstrap.sh /path/to/repo   # per repository: SDD assets, gates, hooks
-sdd-kit/setup-dev.sh                 # per developer machine: recommended personal tools (opt-in)
-sdd-kit/uninstall.sh /path/to/repo   # reverse bootstrap: put the repo back the way it was
+sdd-kit/install.sh                   # repo assets + developer machine tools
+sdd-kit/install.sh --repo-only       # repo assets only (path arg optional: defaults to cwd)
+sdd-kit/install.sh --machine-only    # only the personal tools on this machine
+sdd-kit/uninstall.sh /path/to/repo   # reverse the repo half: put the repo back the way it was
 sdd-kit/uninstall.sh --force /path/to/repo  # also delete kit files that were modified since install
 ```
 
-Re-running is safe. Without a TTY, questions are skipped with instructions;
-`SDD_KIT_ASSUME_YES=1` auto-confirms installs (never the YouTrack token).
+Re-running is safe. Every question has a default and plain Enter accepts it
+(`[Y/n]` = yes, `[y/N]` = no). `SDD_KIT_ASSUME_YES=1` or no TTY takes all the
+defaults without asking; in that mode nothing that downloads and runs remote
+code is executed — the command to run yourself is printed instead. The YouTrack
+token is only ever read from an interactive prompt.
+
+`bootstrap.sh` and `setup-dev.sh` still work as deprecated shims for
+`--repo-only` / `--machine-only` and will be removed after one release.
 
 ## Uninstall
 
-`uninstall.sh` reverses bootstrap with one safety rule: a file is deleted
+`uninstall.sh` reverses the repo install with one safety rule: a file is deleted
 only when it is byte-identical to the kit template (or profile payload) that
 installed it - anything the team modified is kept, with a WARN and the exact
 manual command. `--force` deletes the kit-installed files even when modified
@@ -32,7 +41,7 @@ manual command. `--force` deletes the kit-installed files even when modified
 are team content and are never force-deleted. The `CLAUDE.md -> AGENTS.md`
 rename is offered back;
 `openspec/` (specs + changes) and the central store registration are touched
-only after an explicit yes. On an untouched bootstrap the round trip is
+only after an explicit yes. On an untouched install the round trip is
 clean: `git status` shows the repo exactly as before install.
 
 ## What it installs
@@ -50,7 +59,7 @@ clean: `git status` shows the repo exactly as before install.
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |
-| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of bootstrap; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
+| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
 | `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> QA validates the spec delta and writes tests BEFORE code (QA-SDD-PROCESS.md; developers do not write tests) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
 | `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by QA from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
@@ -59,8 +68,8 @@ clean: `git status` shows the repo exactly as before install.
 
 ## Profiles
 
-`profiles/<repo-basename>.env` tailors the bootstrap for known repos. When the
-target directory name matches a profile, bootstrap additionally:
+`profiles/<repo-basename>.env` tailors the install for known repos. When the
+target directory name matches a profile, install.sh additionally:
 
 - seeds `.spec-guard-paths` with the repo's real production-code prefixes
   (tests/docs/migrations/helm values stay unguarded);
@@ -90,7 +99,7 @@ https://cybernet.youtrack.cloud/users/me?tab=account-security, reads the token
 hidden, and stores it only in youtrack-mcp's `.env` (chmod 600) - never in the
 repo.
 
-## After bootstrap (manual)
+## After install (manual)
 
 1. Fill the TODOs in `AGENTS.md`.
 2. Create `.spec-guard-paths` (code path prefixes, one per line) to enable
@@ -101,14 +110,14 @@ repo.
    machine-level - no shared GitHub secret. Run reviews locally with
    `make sdd-review`; the CI AI-step skips (in seconds) when no secret exists.
 
-## Per-developer tools: setup-dev.sh
+## Per-developer tools: install.sh --machine-only
 
-Repo assets are bootstrap.sh's job; personal tooling lives on each developer's
-machine (baking it into every repo bloats context and duplicates state). Run
-once per machine:
+The repo half installs repo assets; personal tooling lives on each developer's
+machine (baking it into every repo bloats context and duplicates state). It runs
+as part of a plain `install.sh`, or on its own:
 
 ```bash
-sdd-kit/setup-dev.sh             # core stack installs by default [Y/n]
+sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 ```
 
 **Core stack (default install - quality up, token spend down):**
@@ -171,9 +180,10 @@ Reviewer agents and spec-miner are adapted from
 ## Layout
 
 ```
-bootstrap.sh          per-repo installer
-uninstall.sh          per-repo uninstaller (reverses bootstrap, keeps team edits)
-setup-dev.sh          per-developer machine setup (personal tools, opt-in)
+install.sh            installer: --repo-only (repo assets) / --machine-only (dev tools)
+uninstall.sh          per-repo uninstaller (reverses install.sh, keeps team edits)
+bootstrap.sh          deprecated shim -> install.sh --repo-only
+setup-dev.sh          deprecated shim -> install.sh --machine-only
 profiles/             per-repo overrides: spec-guard paths, store wiring, py/no-py
 templates/            everything installed into repos (English-only)
   agents/             reviewer agents for autoreview

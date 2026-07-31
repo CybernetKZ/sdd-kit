@@ -1,4 +1,4 @@
-# Installed by sdd-kit/bootstrap.sh (store profile).
+# Installed by sdd-kit/install.sh (store profile).
 # Gate for the central OpenSpec store: every spec must validate strictly.
 name: store-ci
 on:

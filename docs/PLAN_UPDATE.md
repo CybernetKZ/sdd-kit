@@ -81,7 +81,7 @@
 
 ## Фаза 6. Единый install.sh + чистка bootstrap / pre-commit
 
-- [ ] 6.0 **Объединить `bootstrap.sh` + `setup-dev.sh` → `install.sh`** — один вход с вопросами, Enter = дефолт:
+- [x] 6.0 **Объединить `bootstrap.sh` + `setup-dev.sh` → `install.sh`** — один вход с вопросами, Enter = дефолт:
   - Один хелпер `ask "вопрос" default` (`[Y/n]` / `[y/N]`), Enter принимает дефолт; `SDD_KIT_ASSUME_YES=1` = все дефолты без вопросов (для CI-smoke); no-TTY = дефолты, но **без** молчаливых `curl|sh`-установок (то, что сейчас делает `ask_core`).
   - Структура — две секции с общим профилем и общими зависимостями:
     1. **Repo** (бывший bootstrap): openspec, youtrack-mcp, AGENTS.md, hooks, агенты, скиллы, CI, pre-commit — как сейчас, вопросы только там, где они уже есть (установить openspec глобально? продолжить без YouTrack? токен?).
@@ -90,14 +90,14 @@
   - Идемпотентность сохраняется: never-overwrite `put()`, повторный прогон — ноль изменений.
   - Обновить README/README_RU/ONBOARDING (инструкция установки — одна команда) и CI кита (`ci.yml`: shellcheck + bootstrap-smoke зовут `install.sh`).
 - [x] ~~6.1~~ ОТМЕНЁН (payload-механизм теперь используется: profiles/voice-agent-constructor-backend/) — Удалить мёртвый шаг 2b «profile payload» (`bootstrap.sh:176-188`) (0.1).
-- [ ] 6.2 `PROFILE_STORE=1` — дефолт в bootstrap; убрать строку из 6 профилей (0.2).
-- [ ] 6.3 Один источник openspec-пина: git-check и `OPENSPEC=` до store-ветки, убрать дубли строк 74-76 (0.3).
-- [ ] 6.4 LIVING-SPEC-вставка в pre-commit: заменить python3-хередок конкатенацией шаблонов при установке; guard `grep -q "make sdd-check"` при кастомном хуке (0.4).
-- [ ] 6.5 `pre-commit-hook.sh:20-27`: убрать warn возраста ветки (эхо CI с хардкодом `origin/dev`, врёт для PR не-в-dev) (2.6).
-- [ ] 6.6 `pre-commit-hook.sh:106`: гонять `make sdd-check` только если staged задевает `openspec/|AGENTS.md|feature_flags.py` — убирает npx-резолв на каждый коммит (2.7).
-- [ ] 6.7 `.gitignore`: `**/.ruff_cache/`, `**/__pycache__/`; удалить кэши из дерева (0.6).
-- [ ] 6.8 ~~Слить `ask`/`ask_core`~~ — поглощается 6.0 (0.7). Отдельно остаётся: вычистить остатки headroom из machine-секции (ADR-0014 принят, но headroom ещё упоминается в setup-dev.sh).
-- [ ] 6.9 `incident-flow/SKILL.md`: переписать как diff от feature-flow (~30 строк: улики → root-cause → light-тир) (4.6).
+- [x] 6.2 `PROFILE_STORE=1` — дефолт в bootstrap; убрать строку из 6 профилей (0.2).
+- [x] 6.3 Один источник openspec-пина: git-check и `OPENSPEC=` до store-ветки, убрать дубли строк 74-76 (0.3).
+- [x] 6.4 LIVING-SPEC-вставка в pre-commit: заменить python3-хередок конкатенацией шаблонов при установке; guard `grep -q "make sdd-check"` при кастомном хуке (0.4).
+- [x] 6.5 `pre-commit-hook.sh:20-27`: убрать warn возраста ветки (эхо CI с хардкодом `origin/dev`, врёт для PR не-в-dev) (2.6).
+- [x] 6.6 `pre-commit-hook.sh:106`: гонять `make sdd-check` только если staged задевает `openspec/|AGENTS.md|feature_flags.py` — убирает npx-резолв на каждый коммит (2.7).
+- [x] 6.7 `.gitignore`: `**/.ruff_cache/`, `**/__pycache__/`; удалить кэши из дерева (0.6).
+- [x] 6.8 ~~Слить `ask`/`ask_core`~~ — поглощается 6.0 (0.7). Отдельно остаётся: вычистить остатки headroom из machine-секции (ADR-0014 принят, но headroom ещё упоминается в setup-dev.sh).
+- [x] 6.9 `incident-flow/SKILL.md`: переписать как diff от feature-flow (~30 строк: улики → root-cause → light-тир) (4.6).
 
 **Проверка**: CI кита (`.github/workflows/ci.yml`) зелёный — shellcheck, smoke `SDD_KIT_ASSUME_YES=1 ./install.sh --repo-only` на пустом репо, идемпотентность (md5-diff двух прогонов); no-TTY-прогон не выполняет ни одного `curl|sh`; в smoke-репо больше нет `settings-living-spec.json`, `format-py.js`, 4 старых ревьюеров.
 

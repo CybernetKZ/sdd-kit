@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Fragment inserted into .git/hooks/pre-commit by bootstrap.sh (not standalone).
+# Fragment concatenated into .git/hooks/pre-commit by sdd-kit/install.sh (not standalone).
 # LIVING SPEC discipline (conversation_flow): production code touched ->
 # docs/DOCUMENTATION.md (spec + changelog section) must be touched too. Warn-only.
 if [ -f .spec-guard-paths ]; then

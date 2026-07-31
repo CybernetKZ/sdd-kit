@@ -67,7 +67,7 @@ jobs:
           npm install -g @anthropic-ai/claude-code
           git diff "origin/${{ github.base_ref }}"...HEAD > /tmp/sdd-review.diff
           # One canonical prompt, shared with `make sdd-review` (installed by
-          # sdd-kit/bootstrap.sh). Fallback inline if the repo predates it.
+          # sdd-kit/install.sh). Fallback inline if the repo predates it.
           if [ -f .claude/scripts/review-prompt.md ]; then
             PROMPT="$(cat .claude/scripts/review-prompt.md)"
           else

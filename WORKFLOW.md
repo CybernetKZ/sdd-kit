@@ -279,7 +279,7 @@ OpenSpec change, and merging still requires the full flow.
 
 ## Cross-cutting tools (active in every phase)
 
-Installed per developer machine by `setup-dev.sh` (core stack, default-yes):
+Installed per developer machine by `install.sh --machine-only` (core stack, default-yes):
 
 | Tool | What it does |
 |---|---|

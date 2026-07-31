@@ -1,5 +1,5 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
-# Installed by sdd-kit/bootstrap.sh.
+# Installed by sdd-kit/install.sh.
 
 .PHONY: sdd-check sdd-doctor sdd-review sdd-flags
 
@@ -17,7 +17,7 @@ sdd-flags:
 SDD_REVIEW_BASE ?= dev
 sdd-review:
 	@command -v claude >/dev/null || { echo "FAIL: claude CLI not found"; echo "next: install Claude Code and log in"; exit 1; }
-	@test -f .claude/scripts/review-prompt.md || { echo "FAIL: .claude/scripts/review-prompt.md is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; }
+	@test -f .claude/scripts/review-prompt.md || { echo "FAIL: .claude/scripts/review-prompt.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
 	@git diff "$(SDD_REVIEW_BASE)"...HEAD > /tmp/sdd-review.diff
 	@test -s /tmp/sdd-review.diff || { echo "sdd-review: 0 changes vs $(SDD_REVIEW_BASE) — nothing to review"; exit 0; }
 	@claude -p "$$(cat .claude/scripts/review-prompt.md)" --allowedTools "Read,Grep,Glob"
@@ -25,15 +25,17 @@ sdd-review:
 sdd-doctor:
 	@bash .claude/scripts/sdd-doctor.sh
 
-# openspec-pin: the npx call below pins the openspec version
+# openspec-pin: the npx call below pins the openspec version. This pin is
+# independent of install.sh's on purpose — this file runs standalone inside the
+# target repo (pre-commit, CI), with no sdd-kit checkout around. Bump both.
 sdd-check:
-	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; }
+	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
 	@if [ -d openspec ]; then \
 		npx -y @fission-ai/openspec@1.7.0 validate --all --strict || { echo "next: fix the specs listed above, then re-run make sdd-check"; exit 1; }; \
 	else \
-		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/bootstrap.sh on this repo"; exit 1; \
+		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; \
 	fi
 	@# spec-lint is ADVISORY here: it exits 0 unless SPEC_LINT_STRICT=1, so its
 	@# output is a report, not a gate. Its findings are printed, never swallowed.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SDD uninstall for a repository: reverses bootstrap.sh.
+# SDD uninstall for a repository: reverses install.sh --repo-only.
 # Usage: sdd-kit/uninstall.sh [--force] /path/to/repo
 #
 # Safety rule: a file is deleted ONLY when it is byte-identical to the kit
@@ -108,17 +108,17 @@ rm_ours "$KIT/templates/autoreview.yml" .github/workflows/autoreview.yml
 rm_ours "$KIT/templates/Makefile.sdd" Makefile.sdd
 if [ -f Makefile ] && grep -q "Makefile.sdd" Makefile; then
   sed -i.bak '/-include Makefile.sdd/d' Makefile && rm -f Makefile.bak
-  # drop the blank line the bootstrap append left at EOF
+  # drop the blank line the install-time append left at EOF
   printf '%s' "$(cat Makefile)" > Makefile.tmp
   if [ -s Makefile.tmp ]; then printf '\n' >> Makefile.tmp; fi
   mv Makefile.tmp Makefile
   say "removed: '-include Makefile.sdd' line from Makefile"
-  # bootstrap-created Makefile contained only that line — drop it when empty
+  # installer-created Makefile contained only that line — drop it when empty
   [ -s Makefile ] || { rm Makefile; say "removed: Makefile (was include-only)"; }
 fi
 
 # ------------------------------------------------------------- 4. small files
-# ruff.toml may be the repo's OWN config (bootstrap installs the kit one only
+# ruff.toml may be the repo's OWN config (the installer adds the kit one only
 # when none exists) — force applies only when it carries the kit header.
 if [ -f ruff.toml ] && ! cmp -s "$KIT/templates/ruff.toml" ruff.toml \
    && ! head -1 ruff.toml | grep -q '^# Ruff defaults for'; then
@@ -165,7 +165,7 @@ if [ -f AGENTS.md ]; then
   if cmp -s "$KIT/templates/AGENTS.md" AGENTS.md \
      || { [ -f "$KIT/profiles/$REPO_NAME/AGENTS.md" ] && cmp -s "$KIT/profiles/$REPO_NAME/AGENTS.md" AGENTS.md; }; then
     rm AGENTS.md; REMOVED=$((REMOVED+1)); say "removed: AGENTS.md (unmodified kit/payload copy)"
-  elif [ ! -e CLAUDE.md ] && ask "Rename AGENTS.md back to CLAUDE.md? (bootstrap renamed it on install)"; then
+  elif [ ! -e CLAUDE.md ] && ask "Rename AGENTS.md back to CLAUDE.md? (the installer renamed it on install)"; then
     if git ls-files --error-unmatch AGENTS.md >/dev/null 2>&1; then
       git mv AGENTS.md CLAUDE.md
     else
@@ -174,7 +174,7 @@ if [ -f AGENTS.md ]; then
     say "renamed: AGENTS.md -> CLAUDE.md"
   else
     KEPT=$((KEPT+1)); warn "kept: AGENTS.md (has team content)"
-    echo "        next: mv AGENTS.md CLAUDE.md  # if bootstrap renamed your CLAUDE.md on install" >&2
+    echo "        next: mv AGENTS.md CLAUDE.md  # if the installer renamed your CLAUDE.md on install" >&2
   fi
 fi
 

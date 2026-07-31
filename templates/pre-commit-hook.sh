@@ -16,15 +16,9 @@ if [ "${SDD_ALLOW_PROTECTED:-0}" != "1" ]; then
   esac
 fi
 
-# branch age (ADR-0006): warn-only echo of the CI gate — rebase daily, split big changes
-case "$BRANCH" in
-  dev|main|master|prod|stage) ;;
-  *)
-    if MB=$(git merge-base origin/dev HEAD 2>/dev/null); then
-      AGE=$(( ( $(date +%s) - $(git show -s --format=%ct "$MB") ) / 86400 ))
-      [ "$AGE" -gt 2 ] && echo "pre-commit: WARN — branch diverged from dev $AGE days ago; rebase or split the OpenSpec change (CI fails at 5 days)" >&2
-    fi ;;
-esac
+# Branch age (ADR-0006) is NOT checked here: the CI tbd-gates job owns that
+# signal and knows the real PR base — this hook could only guess origin/dev,
+# which lied for every branch not targeting dev.
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 
@@ -102,5 +96,12 @@ list(yaml.safe_load_all(open(sys.argv[1])))" "$f" 2>/dev/null \
   done
 fi
 
-# SDD gate: AGENTS.md + openspec validate + spec-lint (warn-only by default)
-make sdd-check || { echo "pre-commit: make sdd-check failed — commit blocked" >&2; exit 1; }
+# SDD gate: AGENTS.md + openspec validate + spec-lint (warn-only by default).
+# Only for commits that can actually change the outcome — the openspec CLI
+# resolve (npx) costs seconds on every unrelated commit otherwise. CI runs the
+# same gate on the whole PR regardless.
+if echo "$STAGED" | grep -qE 'openspec/|(^|/)AGENTS\.md$|(^|/)feature_flags\.py$|(^|/)Makefile\.sdd$'; then
+  make sdd-check || { echo "pre-commit: make sdd-check failed — commit blocked" >&2; exit 1; }
+else
+  echo "pre-commit: make sdd-check skipped (no spec-related changes staged)"
+fi

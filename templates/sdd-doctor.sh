@@ -94,16 +94,16 @@ if [ -n "$ROOT" ]; then
   cd "$ROOT" || exit 1
 
   [ -f AGENTS.md ] && ok repo.agents-md "AGENTS.md present" \
-    || warn repo.agents-md "AGENTS.md missing" "run sdd-kit/bootstrap.sh $ROOT"
+    || warn repo.agents-md "AGENTS.md missing" "run sdd-kit/install.sh --repo-only $ROOT"
   [ -f .claude/settings.json ] && ok repo.hooks "Claude hooks configured (.claude/settings.json)" \
-    || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/bootstrap.sh $ROOT"
+    || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   [ -f .spec-guard-paths ] && ok repo.spec-guard "spec-guard enabled ($(wc -l < .spec-guard-paths | tr -d ' ') guarded path(s))" \
     || warn repo.spec-guard "no .spec-guard-paths — spec-guard hook is a no-op" "create .spec-guard-paths (code path prefixes, one per line)"
 
   if [ -f .git/hooks/pre-commit ] && grep -q sdd-check .git/hooks/pre-commit 2>/dev/null; then
     ok repo.pre-commit "pre-commit hook runs sdd-check"
   else
-    warn repo.pre-commit "pre-commit hook missing or lacks sdd-check" "run sdd-kit/bootstrap.sh $ROOT"
+    warn repo.pre-commit "pre-commit hook missing or lacks sdd-check" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
 
   if [ -f openspec/config.yaml ] && grep -q '^references:' openspec/config.yaml; then
@@ -156,7 +156,7 @@ print(' '.join(sorted(servers - allowed)))
       ok audit.mcp "MCP servers: only context7/youtrack"
     fi
   else
-    warn audit.mcp-missing ".mcp.json is missing" "run sdd-kit/bootstrap.sh $ROOT"
+    warn audit.mcp-missing ".mcp.json is missing" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
 
   # 2. Configs of other agent tools — dead weight unless the team actually uses them.
