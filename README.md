@@ -41,16 +41,16 @@ clean: `git status` shows the repo exactly as before install.
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | OpenSpec init (`--tools claude`); specs + delta-changes live here |
-| `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + spec-lint + `sdd-flags`; every failure prints a concrete `next:` step |
+| `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags` (blocking) + spec-lint (advisory until `SPEC_LINT_STRICT=1`); every failure prints a concrete `next:` step |
 | `feature_flags.py` | minimal flag registry (ADR-0007): flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails CI. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
 | `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request; + `tbd-gates` job (ADR-0006): branch age (warn >2 days, fail >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
-| `.github/workflows/autoreview.yml` | PR auto-review: ruff -> reviewdog inline comments + AI review via headless `claude -p`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting |
+| `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
 | `.claude/agents/` | `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
-| `.claude/scripts/repo-audit.sh` | advisory clutter audit: extra MCP servers, foreign agent-tool configs (.cursor/.serena/...), stray skills/agents; runs at the end of bootstrap and via `make sdd-audit`; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
-| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, and (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values; runs at the end of bootstrap; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
+| `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |
+| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of bootstrap; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
 | `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> QA validates the spec delta and writes tests BEFORE code (QA-SDD-PROCESS.md; developers do not write tests) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
 | `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by QA from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
@@ -99,8 +99,7 @@ repo.
 4. GitHub: make `sdd-gate` a required check, enable branch protection on dev.
 5. AI review auth (subscription, no API key): tokens are PER-DEVELOPER,
    machine-level - no shared GitHub secret. Run reviews locally with
-   `make sdd-review`; the CI AI-step skips gracefully when no secret exists
-   (reviewdog/ruff always runs).
+   `make sdd-review`; the CI AI-step skips (in seconds) when no secret exists.
 
 ## Per-developer tools: setup-dev.sh
 
@@ -122,7 +121,7 @@ sdd-kit/setup-dev.sh             # core stack installs by default [Y/n]
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
 (agent-ergonomic CLI wrappers, ~/.claude/skills), **serena** (semantic
 code-navigation MCP via uvx - an earlier trial left `.serena/` litter that
-repo-audit flags, so it stays opt-in).
+the sdd-doctor audit section flags, so it stays opt-in).
 
 Not offered: **caveman** (only a benchmark arm inside the ponytail repo, not a
 standalone tool - ponytail covers it), **grill-with-docs** (team practice, not
@@ -137,7 +136,6 @@ prompt-cache prefix, measured +45..62% cost - see
 - `YOUTRACK_MCP_DIR` - where youtrack-mcp lives (default search: ~/dev, ~/cybernet).
 - `SDD_KIT_ASSUME_YES=1` - auto-confirm installs in non-TTY runs (never the token).
 - `SPEC_LINT_STRICT=1` - make spec freshness/metadata violations blocking.
-- `SDD_AUDIT_STRICT=1` - make repo-audit warnings blocking.
 - `SDD_ALLOW_PROTECTED=1` - one-off bypass of the protected-branch commit guard.
 - `SDD_STORE_ID` / `SDD_STORE_DIR` / `SDD_STORE_GIT` - central spec store id,
   local checkout path, and clone URL (defaults: cybernet-specs,
@@ -160,10 +158,10 @@ concrete `next:` command suggestion on every failure path.
 
 No magic: "skills"/"rules"/"plugins" are prompts injected into the model's
 context - advisory by nature, the model can ignore them. Hooks
-(pre-commit, PreToolUse/PostToolUse) are deterministic code and cannot be
+(pre-commit, PreToolUse/PreCompact) are deterministic code and cannot be
 ignored. Enforcement therefore lives only in hooks + CI gates, and every
 installed piece must be verifiable (a gate, a log line, a measured
-artifact) - `repo-audit` removes what never runs.
+artifact) - the `sdd-doctor` audit section names what never runs.
 
 ## Attribution
 

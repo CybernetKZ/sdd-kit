@@ -45,15 +45,15 @@ sdd-kit/uninstall.sh --force /path/to/repo  # удалить файлы кита
 |---|---|
 | `AGENTS.md` (+ симлинк `CLAUDE.md`) | Главный контекст для ИИ-агентов, до 500 строк; существующий `CLAUDE.md` переименовывается, а не теряется |
 | `openspec/` | Инициализация OpenSpec; здесь живут спецификации и дельта-изменения (delta-changes) |
-| `Makefile.sdd` (+ `-include` в Makefile) | Команда `make sdd-check`: проверяет, что `AGENTS.md` существует и ≤500 строк + `openspec validate --all --strict` + spec-lint + `sdd-flags`; при любой ошибке выводит конкретный шаг `next:` |
+| `Makefile.sdd` (+ `-include` в Makefile) | Команда `make sdd-check`: проверяет, что `AGENTS.md` существует и ≤500 строк + `openspec validate --all --strict` + `sdd-flags` (блокируют) + spec-lint (консультативно, пока не включён `SPEC_LINT_STRICT=1`); при любой ошибке выводит конкретный шаг `next:` |
 | `feature_flags.py` | Минимальный реестр фича-флагов (ADR-0007): имя флага -> дата `expires`, включение через `FLAG_<NAME>=1`, чтение только через `is_enabled()`; `make sdd-flags` предупреждает 7 дней после истечения срока, потом роняет CI. Lifecycle описан в docstring модуля; не забудь `git add` - гейт смотрит на файлы в индексе |
 | `.github/workflows/sdd-ci.yml` | Обязательная SDD-проверка для каждого pull request; + джоба `tbd-gates` (ADR-0006): возраст ветки (предупреждение >2 дней, ошибка >5) и размер PR (ошибка >1500 изменённых строк; если репозиторию нужен другой порог - поправь `PR_XL_LINES` в самом workflow) - метки-обходы `long-lived-ok`/`xl-ok` требуют причину `Why ...:` в описании PR |
-| `.github/workflows/autoreview.yml` | Автоматическое ревью PR: ruff -> инлайн-комментарии через reviewdog + ИИ-ревью через headless `claude -p`, которому подаётся отчёт статических анализаторов (radon, complexipy, vulture, semgrep security patterns), и он обязан его проверить перед публикацией |
+| `.github/workflows/autoreview.yml` | Автоматическое ревью PR: ИИ-ревью через headless `claude -p` с общим промптом `.claude/scripts/review-prompt.md`, которому подаётся отчёт статических анализаторов (radon, complexipy, vulture, semgrep security patterns), и он обязан его проверить перед публикацией; без секрета `CLAUDE_CODE_OAUTH_TOKEN` job завершается за секунды |
 | `.claude/agents/` | `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy) для шага ИИ-ревью + `planner` и `plan-griller` (план и гриль фазы 2 на opus через `model` frontmatter, ADR-0013) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (блокирует правки кода без активной `openspec/changes/<id>/`), блокировщик `git commit --no-verify` и пакет выживания при PreCompact (`.claude/last-session-state.md` - активное изменение + незакоммиченная работа, чтобы агенты продолжали работу после компакции; идея из ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | Защита от коммитов в защищённые ветки (main/master/prod/stage блокируются, dev предупреждает; `SDD_ALLOW_PROTECTED=1` обходит), автофикс+форматирование ruff для застейдженного Python, проверки гигиены (маркеры слияния, файлы >5 МБ, `breakpoint()`, паттерны секретов/токенов, новые сабмодули, битый JSON/TOML/YAML) + `make sdd-check` (если хук уже есть, сливается вручную) |
-| `.claude/scripts/repo-audit.sh` | Консультативный аудит мусора: лишние MCP-серверы, чужие конфиги агентских инструментов (.cursor/.serena/...), лишние skills/agents; запускается в конце bootstrap и через `make sdd-audit`; находки в формате `{level, group, code, message, next}` с точной командой-исправлением, `--json` для машин (ADR-0008) |
+| `.claude/scripts/review-prompt.md` | Единственный канонический промпт ИИ-ревью: его читают и `make sdd-review`, и `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | Доктор окружения (`make sdd-doctor`): нужные утилиты (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI и авторизация, регистрация в сторе, токен youtrack, наличие хуков/pre-commit, и (по профилю) наличие файлов `.env` для каждого сервиса, нужных свежему клону - только пути, никогда не значения секретов; запускается в конце bootstrap; находки в формате `{level, group, code, message, next}` с точной командой-исправлением, `--json` для машин (ADR-0008) |
 | `.mcp.json` | MCP-серверы проекта: context7 + youtrack (пути подобраны под эту машину) |
 | `.claude/skills/feature-flow/` | Командный процесс "от тикета до PR" в виде skill: разбор тикета YouTrack -> выбор тира (light/standard/deep, ADR-0010) -> OpenSpec change + грилль -> QA проверяет спек-дельту и пишет тесты ДО кода (QA-SDD-PROCESS.md; разработчики тесты не пишут) -> реализация -> ручная проверка -> ревью -> PR -> хендофф ready_to_test |
@@ -100,7 +100,7 @@ https://cybernet.youtrack.cloud/users/me?tab=account-security, скрытно с
 4. В GitHub: сделать `sdd-gate` обязательной проверкой, включить защиту ветки dev.
 5. Авторизация для ИИ-ревью (по подписке, без API-ключа): токены выдаются НА КАЖДОГО разработчика, на уровне
    машины - без общего секрета GitHub. Запускать ревью локально через `make sdd-review`; ИИ-шаг в CI аккуратно
-   пропускается, если секрета нет (reviewdog/ruff всегда выполняются).
+   пропускается (за секунды), если секрета нет.
 
 ## Инструменты для каждого разработчика: setup-dev.sh
 
@@ -120,7 +120,7 @@ sdd-kit/setup-dev.sh             # базовый набор ставится п
 
 **По желанию (y/N):** **gh-axi** и **chrome-devtools-axi**
 (удобные для агента CLI-обёртки, ~/.claude/skills), **serena** (MCP для семантической навигации по коду через
-uvx - от прошлой пробы остался мусор `.serena/`, который ловит repo-audit, поэтому по умолчанию не ставится).
+uvx - от прошлой пробы остался мусор `.serena/`, который ловит секция audit в sdd-doctor, поэтому по умолчанию не ставится).
 
 Не предлагается: **caveman** (это просто один из бенчмарк-вариантов внутри репозитория ponytail, а не отдельный
 инструмент - ponytail его уже покрывает), **grill-with-docs** (командная практика, а не самостоятельная установка),
@@ -134,7 +134,6 @@ uvx - от прошлой пробы остался мусор `.serena/`, ко�
 - `YOUTRACK_MCP_DIR` - где лежит youtrack-mcp (поиск по умолчанию: ~/dev, ~/cybernet).
 - `SDD_KIT_ASSUME_YES=1` - автоподтверждение установок при запуске без TTY (кроме токена).
 - `SPEC_LINT_STRICT=1` - сделать нарушения свежести/метаданных спецификаций блокирующими.
-- `SDD_AUDIT_STRICT=1` - сделать предупреждения repo-audit блокирующими.
 - `SDD_ALLOW_PROTECTED=1` - разовый обход защиты коммитов в защищённые ветки.
 - `SDD_STORE_ID` / `SDD_STORE_DIR` / `SDD_STORE_GIT` - id центрального стора спецификаций,
   путь локальной копии и URL клона (по умолчанию: cybernet-specs,
@@ -155,9 +154,9 @@ uvx - от прошлой пробы остался мусор `.serena/`, ко�
 
 Никакой магии: "skills"/"rules"/"plugins" - это промпты, добавляемые в контекст модели, - они
 рекомендательные по своей природе, модель может их проигнорировать. Хуки
-(pre-commit, PreToolUse/PostToolUse) - это детерминированный код, и его игнорировать нельзя. Поэтому всё
+(pre-commit, PreToolUse/PreCompact) - это детерминированный код, и его игнорировать нельзя. Поэтому всё
 принудительное живёт только в хуках и CI-проверках, и каждая установленная часть должна быть проверяемой
-(проверка, строка в логе, измеримый артефакт) - `repo-audit` убирает всё, что никогда не запускается.
+(проверка, строка в логе, измеримый артефакт) - секция audit в `sdd-doctor` показывает всё, что никогда не запускается.
 
 ## Attribution
 

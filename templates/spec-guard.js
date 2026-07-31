@@ -22,13 +22,8 @@ process.stdin.on('end', () => {
   const file = input?.tool_input?.file_path;
   if (!file) process.exit(0);
 
-  // Walk up from the edited file to find the repository root.
-  let dir = path.dirname(path.resolve(file));
-  let root = null;
-  while (dir !== path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, '.git'))) { root = dir; break; }
-    dir = path.dirname(dir);
-  }
+  // Repository root comes from Claude Code (same as pre-compact.js).
+  const root = process.env.CLAUDE_PROJECT_DIR;
   if (!root) process.exit(0);
 
   const guardFile = path.join(root, '.spec-guard-paths');

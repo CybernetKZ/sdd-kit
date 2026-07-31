@@ -26,11 +26,11 @@
 
 ## Гейты и проверки
 
-- **гейт** - блокирующая проверка. Warn-only проверки (spec-lint до SPEC_LINT_STRICT, sdd-audit) гейтами не называем.
-- **make sdd-check** - локальная блокирующая проверка: AGENTS.md ≤500 строк + openspec validate + spec-lint. Бежит в pre-commit.
+- **гейт** - блокирующая проверка. Warn-only проверки (spec-lint до SPEC_LINT_STRICT, секция audit в sdd-doctor) гейтами не называем.
+- **make sdd-check** - локальная блокирующая проверка: AGENTS.md ≤500 строк + openspec validate + sdd-flags (spec-lint внутри - консультативный). Бежит в pre-commit.
 - **sdd-gate** - тот же sdd-check как required check в CI на PR.
 - **make test** - единая точка входа CI по ADR-0003: линтеры + sdd-check + pytest + контрактные тесты. Ещё не реализован ни в одном репо.
-- **autoreview** - PR-ревью в CI: reviewdog/ruff (всегда) + AI-ревью (advisory, скипается без токена). AI-ревью НЕ блокирует мерж; блокирует только sdd-gate/make test.
+- **autoreview** - PR-ревью в CI: AI-ревью (advisory, скипается без токена первым же шагом). AI-ревью НЕ блокирует мерж; блокирует только sdd-gate/make test.
 - **spec-guard** - PreToolUse-хук: код в guarded-путях не правится без активного change. Обхода нет ни для urgent, ни для light-тира.
 
 ## Ревью и приоритеты

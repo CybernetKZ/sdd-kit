@@ -21,6 +21,10 @@ try {
     .map((d) => d.name);
 } catch { /* no openspec — still useful for branch/diff state */ }
 
+// Diff base: the remote's default branch when known (origin/main, origin/dev, ...),
+// otherwise plain "dev". sh() swallows errors, so a missing base just yields "n/a".
+const base = (sh("git symbolic-ref --short refs/remotes/origin/HEAD") || "dev");
+
 const packet = [
   "# Session state before compaction (written by pre-compact hook)",
   `Written: ${new Date().toISOString()}`,
@@ -36,9 +40,9 @@ const packet = [
   sh("git status --short") || "clean",
   "```",
   "",
-  "## Diff vs dev (files)",
+  `## Diff vs ${base} (files)`,
   "```",
-  sh("git diff --stat dev...HEAD 2>/dev/null | tail -20") || "n/a",
+  sh(`git diff --stat ${base}...HEAD 2>/dev/null | tail -20`) || "n/a",
   "```",
   "",
   "Resume: read the active change's tasks.md and continue from the first unchecked task.",

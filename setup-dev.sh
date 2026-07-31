@@ -114,10 +114,10 @@ else SKIPPED=$((SKIPPED+1)); fi
 # ------------------------------------------------------------------ 7. serena
 # Semantic code navigation/editing MCP (LSP-backed): find_symbol /
 # references instead of reading whole files — fewer tokens, better targeting.
-# Opt-in: an earlier team trial left .serena/ litter that repo-audit flags.
+# Opt-in: an earlier team trial left .serena/ litter that the sdd-doctor audit flags.
 if claude mcp list 2>/dev/null | grep -q '^serena:'; then
   say "ok:      serena MCP already registered"
-elif ask "Install serena? (semantic code navigation MCP via uvx; leaves .serena/ dirs — repo-audit flags them)"; then
+elif ask "Install serena? (semantic code navigation MCP via uvx; leaves .serena/ dirs — sdd-doctor's audit flags them)"; then
   claude mcp add --scope user serena -- \
       uvx --from "git+https://github.com/oraios/serena" \
       serena start-mcp-server --context ide-assistant \

@@ -142,8 +142,10 @@ flow before any implementation code:
 
 - Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
 - Body: what changed, why, test plan (link the QA tests/Scenarios).
-- Blocking gates: sdd-gate + QA tests + the traceability gate (each Scenario
-  ⇄ one test) + the QA quality gate + the TBD gates (branch age, PR size).
+- Blocking gates today: sdd-gate + QA tests + the TBD gates (branch age, PR size).
+- Planned, not implemented yet (ADR-0012 p.8): the traceability gate (each
+  Scenario ⇄ one test) and the QA quality gate — treat them as review
+  discipline until they exist as CI checks.
   Autoreview AI comments are advisory - address them like review findings,
   they do not block the merge by themselves.
 

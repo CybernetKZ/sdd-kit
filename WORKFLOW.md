@@ -253,9 +253,9 @@ A red test means one of three things, each with its own exit:
 "Skills", "rules" and "plugins" are marketing names for prompts - instruction
 texts injected into the model's context, on every request or at key points.
 The model can ignore them: a prompt is advice, never a guarantee. Hooks
-(pre-commit, PreToolUse/PostToolUse) are ordinary deterministic code bound to
-events - e.g. auto-formatting after every agent code edit - and cannot be
-ignored.
+(pre-commit, PreToolUse/PreCompact) are ordinary deterministic code bound to
+events - e.g. blocking a code edit that has no active openspec change, or
+ruff autofix on staged Python before every commit - and cannot be ignored.
 
 Consequences:
 
@@ -289,7 +289,7 @@ Installed per developer machine by `setup-dev.sh` (core stack, default-yes):
 | **spec-guard + pre-commit hooks** | block code edits without an active OpenSpec change (not in conversation_flow - LIVING SPEC exception); ruff, hygiene, `make sdd-check` on commit |
 
 Opt-in (y/N): **gh-axi**, **chrome-devtools-axi**, **serena** (earlier trial
-left `.serena/` litter; repo-audit flags it). **caveman** is not installed -
+left `.serena/` litter; the sdd-doctor audit section flags it). **caveman** is not installed -
 it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 
 ## Status: what runs today vs what is planned
@@ -298,7 +298,7 @@ Last verified: 2026-07-31. Update this table when a planned piece goes live.
 
 | Component | Status |
 |---|---|
-| bootstrap assets: `make sdd-check`, spec-guard, pre-commit hooks, `sdd-ci.yml` (incl. tbd-gates), autoreview, spec-lint, repo-audit, sdd-doctor | shipped by sdd-kit - live in a repo once bootstrapped |
+| bootstrap assets: `make sdd-check`, spec-guard, pre-commit hooks, `sdd-ci.yml` (incl. tbd-gates), autoreview, spec-lint, sdd-doctor (incl. audit section) | shipped by sdd-kit - live in a repo once bootstrapped |
 | `feature-flow` / `incident-flow` skills | shipped (`templates/skills/`) |
 | `planner` / `plan-griller` agents (model binding for plan/grill) | shipped (`templates/agents/`, ADR-0013) |
 | RAISE intake (form, RICE, board) | company process being introduced (ADR-0009) |

@@ -63,7 +63,7 @@ openspec и т.п. bootstrap копирует их с тем же правило
 ## Последствия
 
 - Новые файлы: templates/agents/planner.md, plan-griller.md; bootstrap
-  ставит их, repo-audit ожидает.
+  ставит их, секция audit в sdd-doctor ожидает.
 - Правки: WORKFLOW.md (узлы PLAN/GRILL/QA, секции Epics, QA availability,
   Status), README/README_RU, GLOSSARY (эпик, флаг, handoff).
 - Payload-каталоги WBN и VA наполнены (2026-07-31): снапшоты выверенных
