@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# sdd-doctor: checks that the machine + repo have everything SDD work needs.
+# sdd-doctor: checks that the machine + repo have everything SDD work needs,
+# plus an `audit` section for agent-tooling clutter (merged from repo-audit.sh).
 # Advisory: exits 1 only when a REQUIRED tool is missing. Installed by sdd-kit.
 #
 # Finding format (ADR-0008, ported from ProjectStore's doctor): every check
@@ -132,19 +133,67 @@ if [ -n "$ROOT" ]; then
     done < .claude/expected-env
     [ "$ENV_MISSING" = 0 ] && ok repo.env-file "all expected per-service .env present"
   fi
-fi
 
-# --------------------------------------- core personal tools (default stack)
-# Installed by default via sdd-kit/setup-dev.sh: quality up, token spend down.
-GROUP="personal"
-for t in rtk graphify ast-grep; do
-  if command -v "$t" >/dev/null 2>&1; then ok "personal.$t" "$t installed (core personal tool)"
-  else warn "personal.$t" "$t missing" "run sdd-kit/setup-dev.sh (installs the default tool stack)"; fi
-done
-if grep -qs '"ponytail@ponytail"' "$HOME/.claude/settings.json" 2>/dev/null; then
-  ok personal.ponytail "ponytail plugin enabled (core personal tool)"
-else
-  warn personal.ponytail "ponytail plugin not enabled" "run sdd-kit/setup-dev.sh"
+  # ------------------------------------------------------------------ audit
+  # Clutter audit (merged from repo-audit.sh): agent-tooling that accumulates
+  # in a repo. All findings are warn/info — deleting is a human decision.
+  GROUP="audit"
+  [ "$JSON" = 0 ] && echo "--- audit ---"
+
+  # 1. MCP servers: only the project set (context7, youtrack) is expected.
+  if [ -f .mcp.json ]; then
+    EXTRA=$(python3 -c "
+import json
+allowed = {'context7', 'youtrack'}
+servers = set(json.load(open('.mcp.json')).get('mcpServers', {}))
+print(' '.join(sorted(servers - allowed)))
+" 2>/dev/null)
+    if [ -n "$EXTRA" ]; then
+      warn audit.mcp-extra ".mcp.json has extra MCP servers: $EXTRA (expected: context7, youtrack)" "remove them from .mcp.json or justify in AGENTS.md"
+    else
+      ok audit.mcp "MCP servers: only context7/youtrack"
+    fi
+  else
+    warn audit.mcp-missing ".mcp.json is missing" "run sdd-kit/bootstrap.sh $ROOT"
+  fi
+
+  # 2. Configs of other agent tools — dead weight unless the team actually uses them.
+  for d in .cursor .cursorrules .windsurf .windsurfrules .serena .aider .roo .clinerules GEMINI.md; do
+    [ -e "$d" ] && warn audit.foreign-config "foreign agent-tool config: $d" "delete if unused: rm -r $d"
+  done
+  [ -e CLAUDE.local.md ] && warn audit.claude-local "CLAUDE.local.md present (personal file, fine — must stay untracked)" "add CLAUDE.local.md to .git/info/exclude"
+
+  # 3. Skills: only the openspec-* set + the kit's flows are expected.
+  if [ -d .claude/skills ]; then
+    for s in .claude/skills/*/; do
+      [ -d "$s" ] || continue
+      name=$(basename "$s")
+      case "$name" in openspec-*|feature-flow|incident-flow) ;;
+        *) warn audit.skill-extra "unexpected skill: .claude/skills/$name" "delete if unused: rm -r .claude/skills/$name" ;;
+      esac
+    done
+  fi
+
+  # 4. Agents: the sdd-kit set (2 reviewers + planner + plan-griller) is expected.
+  if [ -d .claude/agents ]; then
+    for a in .claude/agents/*.md; do
+      [ -f "$a" ] || continue
+      name=$(basename "$a" .md)
+      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller) ;;
+        *) warn audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" "delete if unused: rm .claude/agents/$name.md" ;;
+      esac
+    done
+  fi
+
+  # 5. Local settings: plugins silently enabled per-repo are a common leftover.
+  if [ -f .claude/settings.local.json ]; then
+    PLUGINS=$(python3 -c "
+import json
+d = json.load(open('.claude/settings.local.json'))
+print(' '.join(sorted(k for k, v in d.get('enabledPlugins', {}).items() if v)) if isinstance(d.get('enabledPlugins'), dict) else ' '.join(d.get('enabledPlugins', [])))
+" 2>/dev/null)
+    [ -n "$PLUGINS" ] && warn audit.plugin-local "plugins enabled in .claude/settings.local.json: $PLUGINS" "keep only what this repo needs: edit .claude/settings.local.json"
+  fi
 fi
 
 # ------------------------------------------------------------------- output

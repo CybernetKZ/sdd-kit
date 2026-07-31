@@ -1,11 +1,12 @@
 # Auto-review on pull requests (see docs/archive/autoreviewer.md verdict).
-# Layer 1 (deterministic): ruff -> reviewdog -> inline PR comments.
-# Layer 2 (logic): repo reviewer agents (.claude/agents/) via headless `claude -p`.
+# Logic layer: repo reviewer agents (.claude/agents/) via headless `claude -p`,
+# fed a static-tool report it must verify before reporting.
+# Deterministic lint lives in pre-commit (ruff --fix) — not duplicated here.
 #
 # Auth: Claude Code SUBSCRIPTION (OAuth), NOT an Anthropic API key.
 # One-time setup: run `claude setup-token` on a logged-in machine and save the
 # printed token as the repo/org secret CLAUDE_CODE_OAUTH_TOKEN.
-# Layer 2 is skipped without the secret; never pass --bare (API-key-only mode).
+# The whole job is skipped without the secret; never pass --bare (API-key-only mode).
 name: autoreview
 
 on:
@@ -16,32 +17,32 @@ permissions:
   pull-requests: write
 
 jobs:
-  reviewdog-ruff:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: reviewdog/action-setup@v1
-      - name: ruff findings as inline PR comments
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          uvx ruff check --output-format concise . |
-            reviewdog -efm="%f:%l:%c: %m" -name=ruff \
-              -reporter=github-pr-review -level=warning -fail-level=none
-
   claude-review:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
     steps:
+      # First step on purpose: without the secret nothing below is worth the CI minutes.
+      - name: Skip when CLAUDE_CODE_OAUTH_TOKEN is not configured
+        id: key
+        run: |
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN secret missing - AI review skipped (create one with: claude setup-token)"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
         with:
           node-version: "22"
       - uses: astral-sh/setup-uv@v5
+        if: steps.key.outputs.present == 'true'
       - name: Static-tool report on changed Python files (radon, complexipy, vulture, semgrep)
+        if: steps.key.outputs.present == 'true'
         run: |
           FILES=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep '\.py$' || true)
           {
@@ -57,15 +58,6 @@ jobs:
               echo "no changed .py files"
             fi
           } > /tmp/tools.txt 2>&1
-      - name: Skip when CLAUDE_CODE_OAUTH_TOKEN is not configured
-        id: key
-        run: |
-          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN secret missing - AI review skipped (create one with: claude setup-token)"
-          else
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: AI review with repo reviewer agents
         if: steps.key.outputs.present == 'true'
         env:
@@ -73,17 +65,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           npm install -g @anthropic-ai/claude-code
-          git diff "origin/${{ github.base_ref }}"...HEAD > /tmp/pr.diff
-          claude -p "Read /tmp/pr.diff (a pull-request diff of this repository).
-          Review it following the rules in .claude/agents/backend-reviewer.md
-          and .claude/agents/database-reviewer.md
-          (read them first; apply each where relevant). Repo context: AGENTS.md.
-          Also Read /tmp/tools.txt - static-tool leads (radon/complexipy/vulture/semgrep)
-          for the changed files; verify each lead in code before reporting it.
-          semgrep security findings that verify as real are at least HIGH.
-          Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix.
-          If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues." \
-            --allowedTools "Read,Grep,Glob" > /tmp/review.md || true
+          git diff "origin/${{ github.base_ref }}"...HEAD > /tmp/sdd-review.diff
+          # One canonical prompt, shared with `make sdd-review` (installed by
+          # sdd-kit/bootstrap.sh). Fallback inline if the repo predates it.
+          if [ -f .claude/scripts/review-prompt.md ]; then
+            PROMPT="$(cat .claude/scripts/review-prompt.md)"
+          else
+            PROMPT="Read /tmp/sdd-review.diff and /tmp/tools.txt. Review following .claude/agents/backend-reviewer.md and .claude/agents/database-reviewer.md (read them first). Repo context: AGENTS.md. Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix. If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues."
+          fi
+          claude -p "$PROMPT" --allowedTools "Read,Grep,Glob" > /tmp/review.md || true
           {
             echo "## AI review (sdd-kit autoreview)"
             echo ""
