@@ -72,4 +72,4 @@ ADR-0006 (гейты ветки/PR), ADR-0009 (RAISE, intake), `sdd-kit/template
 Оба пути устарели. `sdd-kit/templates/skills/feature-flow` - лишний префикс после переезда
 sdd-kit (этот файл сам внутри sdd-kit), актуально: `templates/skills/feature-flow`.
 `benchmark/report-m2.md` переехал при архивации m1/m2, актуально:
-`benchmark/archive-m1-m2/report-m2.md`.
+`docs/archive/benchmark-m1-m2/report-m2.md`.
