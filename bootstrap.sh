@@ -256,19 +256,12 @@ fi
 
 # ------------------------------------------------- 7. Claude Code hooks (repo-local)
 put block-no-verify.js .claude/hooks/block-no-verify.js
-put format-py.js .claude/hooks/format-py.js
 put pre-compact.js .claude/hooks/pre-compact.js
-if [ "$PROFILE_LIVING_SPEC" = 1 ]; then
-  # LIVING SPEC repos: no spec-guard (internal work is not openspec-gated);
-  # the pre-commit LIVING-SPEC check enforces the spec-doc discipline instead.
-  put settings-living-spec.json .claude/settings.json
-else
-  put spec-guard.js .claude/hooks/spec-guard.js
-  put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
-fi
+put spec-guard.js .claude/hooks/spec-guard.js
+put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
 put spec-lint.py .claude/scripts/spec-lint.py
-put repo-audit.sh .claude/scripts/repo-audit.sh
 put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
+put review-prompt.md .claude/scripts/review-prompt.md
 
 # ------------------- 7b. agents: reviewers (autoreview) + planner/plan-griller
 for a in backend-reviewer database-reviewer planner plan-griller; do
@@ -339,11 +332,9 @@ else
   say "created: .mcp.json ($MCP_LIST)"
 fi
 
-# -------------------------------------------------------------- 10. repo audit
-# Advisory report: extra MCP servers, foreign agent-tool configs, stray skills.
-sh .claude/scripts/repo-audit.sh || true
-
-# -------------------------------------------- 10b. environment doctor (advisory)
+# ------------------------------- 10. environment doctor + repo audit (advisory)
+# Tools, repo wiring, and the clutter audit (extra MCP servers, foreign
+# agent-tool configs, stray skills/agents) in one report.
 bash .claude/scripts/sdd-doctor.sh || true
 
 # ------------------------------------------------------------------- 11. wrap up
@@ -354,7 +345,7 @@ say "  3) enable branch protection on dev (no direct pushes)"
 say "  4) seed the specs: run the spec-miner agent one capability at a time"
 say "  5) AI review runs locally: 'make sdd-review' (your own subscription login;"
 say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
-say "     skips gracefully without one, reviewdog/ruff always runs)"
+say "     (autoreview.yml) skips in seconds without one)"
 
 if [ "$SKIP_COUNT" -gt 0 ]; then
   say "skipped $SKIP_COUNT interactive step(s) — finish them later:"

@@ -75,14 +75,24 @@ if [ "$PROFILE_IS_STORE" = 1 ]; then
 fi
 
 # --------------------------------------------------- 1. hooks, scripts, agents
-for f in block-no-verify.js format-py.js pre-compact.js spec-guard.js; do
+for f in block-no-verify.js pre-compact.js spec-guard.js; do
   rm_ours "$KIT/templates/$f" ".claude/hooks/$f"
 done
 rm_ours "$KIT/templates/settings.json" .claude/settings.json
-rm_ours "$KIT/templates/settings-living-spec.json" .claude/settings.json
-for f in spec-lint.py repo-audit.sh sdd-doctor.sh; do
+for f in spec-lint.py sdd-doctor.sh review-prompt.md; do
   rm_ours "$KIT/templates/$f" ".claude/scripts/$f"
 done
+# repo-audit.sh was merged into sdd-doctor.sh — the template is gone, so it
+# cannot be byte-compared; leave the old copy and name the exact command.
+if [ -f .claude/scripts/repo-audit.sh ]; then
+  if [ "$FORCE" = 1 ]; then
+    rm .claude/scripts/repo-audit.sh; REMOVED=$((REMOVED+1))
+    say "removed: .claude/scripts/repo-audit.sh (retired: merged into sdd-doctor.sh)"
+  else
+    KEPT=$((KEPT+1)); warn "kept: .claude/scripts/repo-audit.sh (retired: merged into sdd-doctor.sh)"
+    echo "        next: rm .claude/scripts/repo-audit.sh" >&2
+  fi
+fi
 for a in backend-reviewer database-reviewer planner plan-griller; do
   rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
 done

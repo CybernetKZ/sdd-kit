@@ -16,7 +16,7 @@ jobs:
       - name: bash syntax
         run: |
           bash -n bootstrap.sh uninstall.sh setup-dev.sh
-          for f in templates/pre-commit-hook.sh templates/repo-audit.sh templates/sdd-doctor.sh; do
+          for f in templates/pre-commit-hook.sh templates/sdd-doctor.sh; do
             bash -n "$f"
           done
       - name: node syntax (hooks)
@@ -53,7 +53,7 @@ jobs:
         run: |
           cd /tmp/smoke-repo
           make sdd-check
-          make sdd-audit
+          make sdd-doctor || true   # advisory: warns on a bare runner, never blocks
           test -x .git/hooks/pre-commit
           grep -q "sdd-check" .git/hooks/pre-commit
       - name: bootstrap is idempotent (second run changes nothing)
