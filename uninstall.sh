@@ -75,7 +75,7 @@ if [ "$PROFILE_IS_STORE" = 1 ]; then
 fi
 
 # --------------------------------------------------- 1. hooks, scripts, agents
-for f in block-no-verify.js pre-compact.js spec-guard.js; do
+for f in block-no-verify.cjs pre-compact.cjs spec-guard.cjs block-no-verify.js pre-compact.js spec-guard.js; do
   rm_ours "$KIT/templates/$f" ".claude/hooks/$f"
 done
 rm_ours "$KIT/templates/settings.json" .claude/settings.json

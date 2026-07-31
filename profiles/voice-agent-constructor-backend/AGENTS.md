@@ -176,10 +176,10 @@ Repository root, outside `backend/`:
 - Config: `openspec/config.yaml` (`schema: spec-driven`).
 - **spec-guard is enabled in this repository** (ADR-0003, layer 2):
   `.spec-guard-paths` lists `backend/`, and `.claude/settings.json` wires
-  `.claude/hooks/spec-guard.js` as a `PreToolUse` hook on `Write|Edit`. Editing
+  `.claude/hooks/spec-guard.cjs` as a `PreToolUse` hook on `Write|Edit`. Editing
   any file under `backend/` is blocked unless an active change exists under
   `openspec/changes/<id>/`. Create the change first, then write code.
-- A second hook, `.claude/hooks/block-no-verify.js`, blocks git hook bypasses
+- A second hook, `.claude/hooks/block-no-verify.cjs`, blocks git hook bypasses
   (`--no-verify`) on `Bash`.
 - Cross-service contracts with WBN (RabbitMQ RPC actions, agent read model) are
   described in `docs/va-not-task/RPC_IMPLEMENTATION.md`,

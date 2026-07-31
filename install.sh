@@ -318,9 +318,9 @@ repo_section() {
   fi
 
   # --------------------------------------- 7. Claude Code hooks (repo-local)
-  put block-no-verify.js .claude/hooks/block-no-verify.js
-  put pre-compact.js .claude/hooks/pre-compact.js
-  put spec-guard.js .claude/hooks/spec-guard.js
+  put block-no-verify.cjs .claude/hooks/block-no-verify.cjs
+  put pre-compact.cjs .claude/hooks/pre-compact.cjs
+  put spec-guard.cjs .claude/hooks/spec-guard.cjs
   put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
   put spec-lint.py .claude/scripts/spec-lint.py
   put sdd-doctor.sh .claude/scripts/sdd-doctor.sh

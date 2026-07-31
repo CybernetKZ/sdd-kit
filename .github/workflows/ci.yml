@@ -20,7 +20,7 @@ jobs:
             bash -n "$f"
           done
       - name: node syntax (hooks)
-        run: for f in templates/*.js; do node --check "$f"; done
+        run: for f in templates/*.cjs; do node --check "$f"; done
       - name: python syntax (spec-lint)
         run: python3 -m py_compile templates/spec-lint.py
       - name: YAML templates parse
