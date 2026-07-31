@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Хвосты бенчмарка m1: дифф sdd + ruff-гейт + архив. Идемпотентно.
-# Запуск: bash refactor_v4/sdd-kit/benchmark/finish-tails.sh
+# Запуск: bash refactor_v4/sdd-kit/benchmark/archive-m1-m2/finish-tails.sh
 set -u
 cd /home/octrow/cybernet/refactor_v4/sdd-kit-claude/web-backend-new
 mkdir -p ~/bench/results-manual

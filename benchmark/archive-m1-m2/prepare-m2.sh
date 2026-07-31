@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Подготовка ручного бенчмарка m2 (WEB-2234): свежие клоны, .env, kit на arm B, проверки.
-# Запуск: bash refactor_v4/sdd-kit/benchmark/prepare-m2.sh
+# Запуск: bash refactor_v4/sdd-kit/benchmark/archive-m1-m2/prepare-m2.sh
 set -uo pipefail
 cd /home/octrow/cybernet/refactor_v4   # cwd вызова может быть внутри удаляемого клона
 

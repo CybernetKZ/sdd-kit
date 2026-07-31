@@ -9,7 +9,7 @@
 Порядок m2 (чередование с m1): **сначала sdd, потом nude**.
 Критерий финиша тот же, что в m1: код + тесты + ruff зелёный + «открыл бы PR».
 
-Подготовка: `! bash /home/octrow/cybernet/refactor_v4/sdd-kit/benchmark/prepare-m2.sh`
+Подготовка: `! bash /home/octrow/cybernet/refactor_v4/sdd-kit/benchmark/archive-m1-m2/prepare-m2.sh`
 Снапшот: `refactor_v4/logs/prep-m2-snapshot.txt` (SHA заполняется скриптом).
 
 ## Сессия 1 — sdd
