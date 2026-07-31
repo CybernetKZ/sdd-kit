@@ -177,7 +177,7 @@ binary files.
 
 Useful for keeping diffs small and preventing CI failures.
 
-Python lint + format — Ruff
+Python lint + format - Ruff
 Repo: https://github.com/astral-sh/ruff-pre-commit
 Docs: https://docs.astral.sh/ruff/rules/
 
@@ -187,7 +187,7 @@ It formats imports, enforces style rules, and catches common errors.
 
 Ensures consistent Python code across analytics and ML repos.
 
-SQL lint + format — SQLFluff
+SQL lint + format - SQLFluff
 Repo: https://github.com/sqlfluff/sqlfluff
 Docs: https://docs.sqlfluff.com/en/latest/production/pre_commit.html
 
@@ -195,30 +195,30 @@ SQLFluff standardizes SQL formatting and validates SQL structure.
 
 It is essential for dbt-based data pipelines and any analytics project where SQL readability matters.
 
-Security scan — detect-secrets
+Security scan - detect-secrets
 Repo: https://github.com/Yelp/detect-secrets
 
 Scans staged files and detects API keys, tokens, and credentials.
 
 Prevents leaking sensitive information into Git history.
 
-Spelling & text checks — codespell
+Spelling & text checks - codespell
 Repo: https://github.com/codespell-project/codespell
 
 Detects spelling mistakes in comments, docstrings, Markdown, configs, and SQL.
 
 Improves documentation quality and prevents typos from spreading across the repo.
 
-Docstring coverage — interrogate
+Docstring coverage - interrogate
 Repo: https://github.com/econchick/interrogate
 
 Checks whether modules, functions, and classes have docstrings.
 
-Supports thresholds ( — fail-under=70) to enforce minimal documentation coverage.
+Supports thresholds ( - fail-under=70) to enforce minimal documentation coverage.
 
 Useful for maintaining clarity in rapidly growing ML/ETL codebases.
 
-Static typing — mypy
+Static typing - mypy
 Repo: https://github.com/pre-commit/mirrors-mypy
 
 Analyzes Python type correctness.
@@ -227,14 +227,14 @@ Catches type mismatches, incorrect return types, and missing attributes before r
 
 Important for complex data pipelines, ML preprocessing, and services that depend on strict contracts.
 
-Python security analysis — bandit
+Python security analysis - bandit
 Repo: https://github.com/PyCQA/bandit
 
 Flags insecure patterns such as unsafe eval, weak cryptography, and injection-prone operations.
 
 Adds another layer of security before code reaches production.
 
-Commit message semantics — commitlint
+Commit message semantics - commitlint
 Repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
 
 Validates commit messages using the Conventional Commits specification.
@@ -265,7 +265,7 @@ MyPy can be slow on large codebases
 Interrogate creates noise in early projects with low docstring coverage
 Commitlint requires creating .commitlintrc.json or .commitlint.config.js
 Bandit gives false-positives on simple utility functions
-Codespell requires a whitelist for domain words (e.g. “dbt”, “Airflow”)
+Codespell requires a whitelist for domain words (e.g. "dbt", "Airflow")
 
 # Sources
 
@@ -277,7 +277,7 @@ Codespell requires a whitelist for domain words (e.g. “dbt”, “Airflow”)
 3. https://gatlenculp.medium.com/effortless-code-quality-the-ultimate-pre-commit-hooks-guide-for-2025-57ca501d9835
    Effortless Code Quality: Ultimate Pre-Commit Hooks Guide for 2025
 4. https://freedium-mirror.cfd/https://medium.com/@tej.g/strategic-git-setup-for-fastapi-flask-projects-an-architects-handbook-2955999cc4b1
-   Strategic Git Setup for FastAPI/Flask Projects: An Architect’s Handbook. this guide, we'll walk through essential Git
+   Strategic Git Setup for FastAPI/Flask Projects: An Architect's Handbook. this guide, we'll walk through essential Git
    setup steps and powerful development tools you should configure immediately for clean and maintainable code.
 5. https://github.com/best-doctor/pre-commit-hooks
    This repo contains BestDoctor's pre-commit hooks for python projects.
@@ -306,7 +306,7 @@ Codespell requires a whitelist for domain words (e.g. “dbt”, “Airflow”)
 - `pre-commit install` при повторном запуске молча перезапишет наш вписанный вручную sdd-check.
 - Главные плюсы фреймворка (мульти-язычные тулчейны, автообновление хуков) нам не нужны: один язык, версии уже пинованы
   в uv.lock.
-- Даже официальный шаблон FastAPI использует pre-commit в основном как YAML-обёртку над `uv run ruff/mypy` — это мы
+- Даже официальный шаблон FastAPI использует pre-commit в основном как YAML-обёртку над `uv run ruff/mypy` - это мы
   делаем и без него.
 
 Что добавить в наш существующий хук (дёшево, мало ложных срабатываний):
@@ -320,16 +320,16 @@ Codespell requires a whitelist for domain words (e.g. “dbt”, “Airflow”)
 
 Что не брать и почему:
 
-- bandit — много ложных срабатываний (это признаёт сам источник 1); вместо него можно включить S-правила ruff;
-- interrogate (покрытие докстрингами) — шумно на живой кодовой базе;
-- commitlint/commitizen — жёсткий гейт на формат коммитов без договорённости команды будет мешать; вернуться позже;
-- SQLFluff — сырой SQL мы почти не пишем (SQLAlchemy 2.0);
-- хуки под Django (best-doctor) — не наш стек;
-- zizmor (линтер безопасности GitHub Actions) — идея здравая, кандидат на потом.
+- bandit - много ложных срабатываний (это признаёт сам источник 1); вместо него можно включить S-правила ruff;
+- interrogate (покрытие докстрингами) - шумно на живой кодовой базе;
+- commitlint/commitizen - жёсткий гейт на формат коммитов без договорённости команды будет мешать; вернуться позже;
+- SQLFluff - сырой SQL мы почти не пишем (SQLAlchemy 2.0);
+- хуки под Django (best-doctor) - не наш стек;
+- zizmor (линтер безопасности GitHub Actions) - идея здравая, кандидат на потом.
 
 Когда пересмотреть: появится 5-6-й репозиторий, JS-фронтенд/ноутбуки в этих репо,
 или логика хуков начнёт дублироваться настолько, что общий версионируемый конфиг окупится.
-Если решение изменится — форкать конфиг из `full-stack-fastapi-template` (источник 9),
+Если решение изменится - форкать конфиг из `full-stack-fastapi-template` (источник 9),
 вставив `make sdd-check` первым local-хуком.
 
 ---
@@ -340,18 +340,18 @@ Codespell requires a whitelist for domain words (e.g. “dbt”, “Airflow”)
 (шаблон `sdd-kit/templates/pre-commit-hook.sh`, раскатано во все репо):
 
 - защита веток: прямой коммит в main/master/prod/stage блокируется,
-  в dev — предупреждение (пока команда не договорилась; серверный branch
-  protection остаётся главным гейтом); обход для сознательных исключений —
+  в dev - предупреждение (пока команда не договорилась; серверный branch
+  protection остаётся главным гейтом); обход для сознательных исключений -
   `SDD_ALLOW_PROTECTED=1`;
 - запрет новых сабмодулей/вложенных репозиториев (у нас уже была боль
   с личным репо внутри `web-backend-new/docs/`);
 - поиск секретов по паттернам токенов (sk-ant-, ghp_, github_pat_, AKIA,
-  xoxb- и т.п.) — шире, чем один private key;
+  xoxb- и т.п.) - шире, чем один private key;
 - валидация YAML и TOML рядом с JSON (мягко пропускается, если парсера нет).
 
 Из примера НЕ взято (сверх уже отклонённого вердиктом):
-- validate-pyproject — pyproject меняется редко, CI поймает;
-- check-case-conflict, shebang-проверки — команда на Linux, кейс редкий;
-- pytest-collect/pytest-fast как хук — тесты у нас требуют docker-окружения,
-  локальный хук будет либо падать зря, либо вечно пропускаться; место тестов — CI;
-- codespell — нужен вайтлист доменных слов, шум; пересмотреть при желании позже.
+- validate-pyproject - pyproject меняется редко, CI поймает;
+- check-case-conflict, shebang-проверки - команда на Linux, кейс редкий;
+- pytest-collect/pytest-fast как хук - тесты у нас требуют docker-окружения,
+  локальный хук будет либо падать зря, либо вечно пропускаться; место тестов - CI;
+- codespell - нужен вайтлист доменных слов, шум; пересмотреть при желании позже.

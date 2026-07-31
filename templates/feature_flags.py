@@ -2,7 +2,7 @@
 
 Every flag has an owner, a ticket, and a death date. `make sdd-flags` (part of
 `make sdd-check`) fails when a flag outlives its `expires` by more than the
-grace period: 7 days of WARN, then FAIL. Extending `expires` is a diff — it
+grace period: 7 days of WARN, then FAIL. Extending `expires` is a diff - it
 shows up in review.
 
 Cross-repo contract flags (producer and consumer in different repos): the
@@ -10,7 +10,7 @@ Cross-repo contract flags (producer and consumer in different repos): the
 set `spec=` instead of `expires=`. The checker reads the date from the store
 checkout; no store on the machine -> WARN, not FAIL.
 
-Usage in code — always through the accessor, never read settings inline
+Usage in code - always through the accessor, never read settings inline
 (keeps the call sites stable if we ever move to OpenFeature/flagd):
 
     from feature_flags import is_enabled
@@ -50,7 +50,7 @@ FLAGS: dict[str, FlagMeta] = {
 
 def is_enabled(name: str) -> bool:
     if name not in FLAGS:
-        raise KeyError(f"unknown feature flag: {name!r} — register it in FLAGS first")
+        raise KeyError(f"unknown feature flag: {name!r} - register it in FLAGS first")
     return os.environ.get(f"FLAG_{name.upper()}", "").lower() in ("1", "true", "yes")
 
 
@@ -84,11 +84,11 @@ def check() -> int:
             expires = _store_expires(meta.spec, name)
             if expires is None:
                 print(f"WARN: flag {name}: expires not found in store spec '{meta.spec}' "
-                      f"(store missing or date not declared) — declare `expires:` in the contract spec")
+                      f"(store missing or date not declared) - declare `expires:` in the contract spec")
                 warned += 1
                 continue
         if not expires:
-            print(f"FAIL: flag {name}: no expires date and no spec= — every flag has a death date")
+            print(f"FAIL: flag {name}: no expires date and no spec= - every flag has a death date")
             failed += 1
             continue
         over = (today - dt.date.fromisoformat(expires)).days
@@ -97,11 +97,11 @@ def check() -> int:
             print(f"next: delete the flag and its dead branch, or re-negotiate expires in review")
             failed += 1
         elif over > 0:
-            print(f"WARN: flag {name} expired {over} days ago — {GRACE_DAYS - over} days until this blocks CI")
+            print(f"WARN: flag {name} expired {over} days ago - {GRACE_DAYS - over} days until this blocks CI")
             warned += 1
     if failed:
         return 1
-    print(f"sdd-flags: {len(FLAGS)} flags, {warned} warnings, 0 expired past grace — OK")
+    print(f"sdd-flags: {len(FLAGS)} flags, {warned} warnings, 0 expired past grace - OK")
     return 0
 
 

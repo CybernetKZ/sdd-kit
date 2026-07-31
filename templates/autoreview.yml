@@ -62,7 +62,7 @@ jobs:
         run: |
           if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN secret missing — AI review skipped (create one with: claude setup-token)"
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN secret missing - AI review skipped (create one with: claude setup-token)"
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
@@ -78,11 +78,11 @@ jobs:
           Review it following the rules in .claude/agents/python-reviewer.md,
           .claude/agents/fastapi-reviewer.md and .claude/agents/database-reviewer.md
           (read them first; apply each where relevant). Repo context: AGENTS.md.
-          Also Read /tmp/tools.txt — static-tool leads (radon/complexipy/vulture/semgrep)
+          Also Read /tmp/tools.txt - static-tool leads (radon/complexipy/vulture/semgrep)
           for the changed files; verify each lead in code before reporting it.
           semgrep security findings that verify as real are at least HIGH.
           Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix.
-          If there are none, reply exactly: LGTM — no CRITICAL/HIGH issues." \
+          If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues." \
             --allowedTools "Read,Grep,Glob" > /tmp/review.md || true
           {
             echo "## AI review (sdd-kit autoreview)"

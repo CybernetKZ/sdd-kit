@@ -210,7 +210,7 @@ the RICE Score;
 effort;
 technical dependencies;
 available team capacity;
-the task’s impact on already planned work;
+the task's impact on already planned work;
 implementation risks and the consequences of postponement.
 Following the discussion, an agreed list of tasks for the next two sprints is created.
 
@@ -373,9 +373,9 @@ follow-up questions.
    Country Kazakhstan, Mexico, all countries of operation
    Task title One line describing the essence of the request, without implementation details
    Segment Debt Relief / Collections / Customer Service / Other
-   Current problem What happens without this functionality — 2–3 sentences. A specific use case is better than a general
+   Current problem What happens without this functionality - 2-3 sentences. A specific use case is better than a general
    statement.
-   Expected change How the process, customer experience, or agent workflow will work after implementation — 2–3
+   Expected change How the process, customer experience, or agent workflow will work after implementation - 2-3
    sentences.
    Urgency and rationale Regulatory deadline / contractual commitment to a customer / risk of losing a customer /
    competitive pressure / no urgency
@@ -399,7 +399,7 @@ RICE Score = (Reach × Impact × Confidence) ÷ Effort
 Impact Reference Scale
 
 Score Definition
-3 Massive impact — critically changes a product or business outcome
+3 Massive impact - critically changes a product or business outcome
 2 High impact
 1 Medium impact
 0.5 Low impact
@@ -407,9 +407,9 @@ Score Definition
 Confidence Reference Scale
 
 Score Definition
-100% High confidence — supported by data or measurements; estimates are reliable
-80% Medium confidence — there is a reasonable basis, but some assumptions remain
-50% Low confidence — largely a hypothesis or “moonshot”
+100% High confidence - supported by data or measurements; estimates are reliable
+80% Medium confidence - there is a reasonable basis, but some assumptions remain
+50% Low confidence - largely a hypothesis or "moonshot"
 
 3. Decision
    Owner
@@ -447,16 +447,16 @@ Agent: agent name
 
 Priority: low/medium/high/critical
 
-Low — a minor issue or improvement request. Does not affect business logic or calls. Examples: an unclear button in the
+Low - a minor issue or improvement request. Does not affect business logic or calls. Examples: an unclear button in the
 admin interface, a missing tooltip, a typo, or incorrect spacing.
-Medium — the issue affects a specific function but does not block the system as a whole. A workaround exists, or the
+Medium - the issue affects a specific function but does not block the system as a whole. A workaround exists, or the
 issue occurs only in some cases. Examples: the agent repeats the same phrase in a rare scenario; ASR misrecognizes some
 phrases on a noisy line; call reports update with a delay; RAG occasionally returns outdated answers; a CRM notification
 is not sent, but calls continue.
-High — a serious issue affecting key functionality and significantly degrading the user experience. No simple workaround
+High - a serious issue affecting key functionality and significantly degrading the user experience. No simple workaround
 is available. Examples: the dashboard does not update; some outbound calls are not initiated; TTS stops voicing
 responses after several turns; the agent cannot complete the scenario.
-Critical — the issue completely blocks the system or clients. Examples: telephony is unavailable; the platform is
+Critical - the issue completely blocks the system or clients. Examples: telephony is unavailable; the platform is
 unresponsive; inbound or outbound calls do not go through; the API returns 500 errors for all requests.
 Dialogue ID: in the format 55cf3be6-a570-4146-9a0e-fbc4b844210b
 
@@ -465,7 +465,7 @@ using the template below if necessary.
 
 Correct examples:
 
-ASR did not recognize the customer’s second utterance.
+ASR did not recognize the customer's second utterance.
 After being asked to speak Russian, the robot did not switch to another language.
 The call was not transferred to an operator, even though the expected robot behavior is described in the prompt and the
 call transfer function is configured.
@@ -479,8 +479,8 @@ Nothing works.
 Steps:
 
 Place an outbound call to the client.
-Wait for the agent’s greeting.
+Wait for the agent's greeting.
 Respond in Russian.
 Actual result: the agent remains silent for 10 seconds and then ends the call.
 
-Expected result: the agent should respond to the customer’s utterance.
+Expected result: the agent should respond to the customer's utterance.

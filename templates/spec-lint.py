@@ -219,7 +219,7 @@ def main() -> int:
     specs += sorted(p for p in (root / "openspec" / "specs").glob("*/*/spec.md"))
     if not specs:
         print(json.dumps({"specs": [], "totals": {}, "note": "no specs found"}))
-        print(f"spec-lint: no specs under {root}/openspec/specs — nothing to check", file=sys.stderr)
+        print(f"spec-lint: no specs under {root}/openspec/specs - nothing to check", file=sys.stderr)
         return 0
 
     index = python_index(root)

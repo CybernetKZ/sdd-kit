@@ -24,47 +24,47 @@ When invoked:
 
 ## Review Priorities
 
-### CRITICAL — Security
-- **SQL Injection**: f-strings in queries — use parameterized queries
-- **Command Injection**: unvalidated input in shell commands — use subprocess with list args
-- **Path Traversal**: user-controlled paths — validate with normpath, reject `..`
+### CRITICAL - Security
+- **SQL Injection**: f-strings in queries - use parameterized queries
+- **Command Injection**: unvalidated input in shell commands - use subprocess with list args
+- **Path Traversal**: user-controlled paths - validate with normpath, reject `..`
 - **Eval/exec abuse**, **unsafe deserialization**, **hardcoded secrets**
 - **Weak crypto** (MD5/SHA1 for security), **YAML unsafe load**
 
-### CRITICAL — Error Handling
-- **Bare except**: `except: pass` — catch specific exceptions
-- **Swallowed exceptions**: silent failures — log and handle
-- **Missing context managers**: manual file/resource management — use `with`
+### CRITICAL - Error Handling
+- **Bare except**: `except: pass` - catch specific exceptions
+- **Swallowed exceptions**: silent failures - log and handle
+- **Missing context managers**: manual file/resource management - use `with`
 
-### HIGH — Type Hints
+### HIGH - Type Hints
 - Public functions without type annotations
 - Using `Any` when specific types are possible
 - Missing `Optional` for nullable parameters
 
-### HIGH — Pythonic Patterns
+### HIGH - Pythonic Patterns
 - Use list comprehensions over C-style loops
 - Use `isinstance()` not `type() ==`
 - Use `Enum` not magic numbers
 - Use `"".join()` not string concatenation in loops
-- **Mutable default arguments**: `def f(x=[])` — use `def f(x=None)`
+- **Mutable default arguments**: `def f(x=[])` - use `def f(x=None)`
 
-### HIGH — Code Quality
+### HIGH - Code Quality
 - Functions > 50 lines, > 5 parameters (use dataclass)
 - Deep nesting (> 4 levels)
 - Duplicate code patterns
 - Magic numbers without named constants
 
-### HIGH — Concurrency
-- Shared state without locks — use `threading.Lock`
+### HIGH - Concurrency
+- Shared state without locks - use `threading.Lock`
 - Mixing sync/async incorrectly
-- N+1 queries in loops — batch query
+- N+1 queries in loops - batch query
 
-### MEDIUM — Best Practices
+### MEDIUM - Best Practices
 - PEP 8: import order, naming, spacing
 - Missing docstrings on public functions
 - `print()` instead of `logging`
-- `from module import *` — namespace pollution
-- `value == None` — use `value is None`
+- `from module import *` - namespace pollution
+- `value == None` - use `value is None`
 - Shadowing builtins (`list`, `dict`, `str`)
 
 ## Diagnostic Commands
@@ -119,14 +119,14 @@ When the repository contains `openspec/specs/`, verify the diff against the spec
 
 ## Tool-assisted checks
 
-Run static tools on the changed Python files only, and treat their output as leads to verify — not as ready findings:
+Run static tools on the changed Python files only, and treat their output as leads to verify - not as ready findings:
 
 ```bash
 FILES=$(git diff --name-only origin/dev...HEAD | grep "\.py$" || true)
 [ -n "$FILES" ] && uvx ruff check $FILES            # lint
 [ -n "$FILES" ] && uvx radon cc $FILES -s -a --min B  # cyclomatic complexity, B and worse
 [ -n "$FILES" ] && uvx complexipy $FILES || true    # cognitive complexity
-[ -n "$FILES" ] && uvx vulture $FILES || true       # dead code; <100% confidence hits are often false — verify in code
+[ -n "$FILES" ] && uvx vulture $FILES || true       # dead code; <100% confidence hits are often false - verify in code
 [ -n "$FILES" ] && uvx semgrep scan --config p/security-audit --config p/secrets --severity WARNING --quiet --text $FILES || true  # security patterns
 ```
 
@@ -134,10 +134,10 @@ Feed the results into the priority order: complexity hits -> "targeted complexit
 
 ## Review discipline (from no-mistakes; keeps noise out)
 
-- Do NOT report styling, formatting, linting, or type-checking issues — ruff
+- Do NOT report styling, formatting, linting, or type-checking issues - ruff
   and the static-tool report own those; re-deriving them wastes the review.
 - Tag every finding with an action: `auto-fix` (mechanical, does not change
-  the author's intent), `ask-user` (touches a deliberate decision — the
+  the author's intent), `ask-user` (touches a deliberate decision - the
   default when in doubt), or `no-op` (informational). Never silently expand
   an unlabeled finding into a fix.
 - Durable fix vs. authorized containment: before recommending a redesign,

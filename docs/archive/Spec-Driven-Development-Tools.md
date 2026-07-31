@@ -32,10 +32,10 @@ Maturity: Production (v1.3.1)
 Spec Type: Semi-living (delta markers)
 AI coding assistants are powerful but unpredictable when requirements live only in chat history. OpenSpec adds a
 lightweight spec layer so you agree on what to build before any code is written.
-Agree before you build — human and AI align on specs before code gets written
-Stay organized — each change gets its own folder with proposal, specs, design, and tasks
-Work fluidly — update any artifact anytime, no rigid phase gates
-Use your tools — works with 30+ AI assistants via slash commands
+Agree before you build - human and AI align on specs before code gets written
+Stay organized - each change gets its own folder with proposal, specs, design, and tasks
+Work fluidly - update any artifact anytime, no rigid phase gates
+Use your tools - works with 30+ AI assistants via slash commands
 
 https://github.com/github/spec-kit
 124k stars
@@ -48,7 +48,7 @@ Orchestration Scope: None (agent-agnostic)
 Best For: Greenfield projects / Cross-agent standardization
 Maturity: Production (v0.8.18)
 Spec Type: Static (markdown)
-An open source toolkit for building high-quality software with any AI coding agent — a ready-to-use spec-driven
+An open source toolkit for building high-quality software with any AI coding agent - a ready-to-use spec-driven
 process (or bring your own), endlessly extensible, community-driven, and built for your whole organization.
 
 https://github.com/bmad-code-org/bmad-method
@@ -93,7 +93,7 @@ Orchestration Scope: ?
 Best For: Disciplined autonomous dev
 Maturity: Active Dev (v5.1.0)
 Spec Type: ?
-MIT skills framework + methodology; brainstorm → plan → subagent TDD
+MIT skills framework + methodology; brainstorm -> plan -> subagent TDD
 Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable
 skills and some initial instructions that make sure your agent uses them.
 
@@ -122,10 +122,10 @@ Kilo Code - Open-source agentic platform with Memory Bank ($8M seed, 1.5M users)
 Conductor - macOS parallel agent runner using git worktrees
 PromptX - AI agent context platform via MCP (gap entry)
 MUSUBI - Maximally-rigorous SDD framework, marginal (~57 stars, stalled)
-MoAI-ADK - Go CLI wrapping Claude Code in a SPEC-First Plan→Run→Sync lifecycle with TDD gates (~1.1K stars)
+MoAI-ADK - Go CLI wrapping Claude Code in a SPEC-First Plan->Run->Sync lifecycle with TDD gates (~1.1K stars)
 Frame - Electron "Agentic Development Environment" orchestrating parallel agents in isolated worktrees
 GRACE - Contract-first Graph-RAG methodology as installable agent skills (XML artifacts, drift detection)
-GAAI - Governed autonomous delivery: Discovery → git-tracked backlog → Delivery daemon (source-available, ELv2)
+GAAI - Governed autonomous delivery: Discovery -> git-tracked backlog -> Delivery daemon (source-available, ELv2)
 Smart Ralph - Claude Code/Codex plugin layering spec phases on the Ralph autonomous loop
 
 ---

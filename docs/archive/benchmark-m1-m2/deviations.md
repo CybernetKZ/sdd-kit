@@ -1,25 +1,25 @@
 # Deviations & pre-run amendments
 
-- 2026-07-29 (pre-run): run command amended — added `--model sonnet` (explicit
+- 2026-07-29 (pre-run): run command amended - added `--model sonnet` (explicit
   pin; fresh config has no default) and `--allowedTools "Bash(*)"` (headless
   acceptEdits blocks all shell commands; discovered during arm B prep session,
   verified with a haiku smoke test). Applies identically to both arms.
 - 2026-07-29 (pre-run): spec seeding for arm B was done AFTER task selection
-  (Web-2314 was frozen first, kit generated second — reverse of the
+  (Web-2314 was frozen first, kit generated second - reverse of the
   recommended order). Mitigation: seeded capability chosen from repo
   structure (api-gateway authorization/forwarding is a core capability), not
   from the ticket text. Contamination risk acknowledged: the seeded spec
   covers the same subsystem the task touches.
 - 2026-07-29: arm B prep session could not run `openspec validate` itself
-  (permission sandbox); conductor validated manually after the session —
+  (permission sandbox); conductor validated manually after the session -
   1 passed, 0 failed (strict).
 - 2026-07-29 (after pilot, before remaining runs): **two-move rule** (user
   decision). B-1 correctly followed feature-flow intake and stopped to ask 3
-  clarification questions (headless → empty diff). New rule, identical for
+  clarification questions (headless -> empty diff). New rule, identical for
   both arms: if move 1 ends with an empty diff and a question, the session is
   resumed ONCE with a fixed pre-written answer (`~/bench/clarify.md`, derived
   from the frozen acceptance criteria); counts as interventions=1. Non-empty
-  diff → no resume, interventions=0. prompt.md unchanged, so A-1 (didn't ask,
+  diff -> no resume, interventions=0. prompt.md unchanged, so A-1 (didn't ask,
   intervention=0) stays a valid measured run. Run cost = move1+move2.
 - Kit prep cost (break-even input): bootstrap.sh ~6 s, $0; LLM prep session
   (AGENTS.md fill + gateway spec seeding, sonnet, 9.5 min): **$3.60**

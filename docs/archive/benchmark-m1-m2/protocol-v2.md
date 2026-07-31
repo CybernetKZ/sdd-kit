@@ -1,7 +1,7 @@
-# Protocol v2 — FROZEN 2026-07-29, before any v2 run
+# Protocol v2 - FROZEN 2026-07-29, before any v2 run
 
 Rerun of the pilot with every pilot flaw fixed or explicitly accepted.
-Scale (user decision): **minimum — 1 run per arm**, task **Web-2314**
+Scale (user decision): **minimum - 1 run per arm**, task **Web-2314**
 (user's explicit choice; contamination from the pilot is documented below).
 
 ## Fixes vs pilot (numbering = final-report.md critique)
@@ -10,15 +10,15 @@ Scale (user decision): **minimum — 1 run per arm**, task **Web-2314**
    verbatim ticket + the user-approved acceptance criteria + "no one is
    available; make reasonable assumptions and implement". No clarifications,
    no resume. Empty diff = task_success 0. (Kills flaw #1/#2; the kit's
-   intake step is intentionally neutralized — v2 measures implementation,
+   intake step is intentionally neutralized - v2 measures implementation,
    not requirement-interrogation.)
 2. Two-move rule: **removed** (declared before runs, not invented after).
-3. Seeding: unchanged from pilot (1 capability + store reference) — user
+3. Seeding: unchanged from pilot (1 capability + store reference) - user
    chose "start with minimum". v2 therefore measures sdd-kit at MINIMAL
    seeding; full-repo seeding remains untested. Seeding-after-task-selection
-   contamination from the pilot still applies — accepted, documented.
+   contamination from the pilot still applies - accepted, documented.
 4. n: 1 run/arm (user decision). No medians; qualitative only.
-5. Conductor still writes/scores everything — unchanged, documented.
+5. Conductor still writes/scores everything - unchanged, documented.
 6. **Gates frozen NOW, before runs** (already baseline-calibrated in pilot):
    diff-applies, ruff-no-new-violations **excluding CPY001** (repo-wide
    noise), pytest-no-new-failures vs cached per-arm baseline.
@@ -30,15 +30,15 @@ Scale (user decision): **minimum — 1 run per arm**, task **Web-2314**
    bench-base worktree (kit artifacts present for B), then head-to-head.
 10. Blindness: abandoned by design (n=1, arms self-identifying). Judge is a
     fresh opus subagent that hasn't seen this conversation.
-11. OTEL tags: `run=v2` per arm; single move → no move ambiguity.
-12. No resume → no structural cacheRead inflation.
+11. OTEL tags: `run=v2` per arm; single move -> no move ambiguity.
+12. No resume -> no structural cacheRead inflation.
 13. Isolation: host, as pilot (user decision; push disabled, throwaway clones).
 14. Order: **B first, then A** (reverse of pilot).
 15. Judge cost: reported from subagent usage (outside OTEL), stated in report.
 
-MCP: arm B keeps kit-installed `.mcp.json` (kit feature) — project MCP
+MCP: arm B keeps kit-installed `.mcp.json` (kit feature) - project MCP
 servers do not connect in the isolated config (verified in pilot); both arms
-effectively prompt-only. Dev stack: left RUNNING (user decision) — gateway
+effectively prompt-only. Dev stack: left RUNNING (user decision) - gateway
 tests are in-process pytest; port/DB conflicts not applicable to this task.
 
 ## Run command (per arm)

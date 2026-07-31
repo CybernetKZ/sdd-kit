@@ -16,10 +16,10 @@ jobs:
       - name: SDD checks (AGENTS.md + openspec validate)
         run: make sdd-check
       # TODO per repo: wire in the full `make test` (linters + pytest + contract
-      # tests). WBN runs tests through docker compose — add that as a separate step.
+      # tests). WBN runs tests through docker compose - add that as a separate step.
 
   # TBD disciplines (ADR-0006): branch age + PR size.
-  # Escape hatch: labels `long-lived-ok` / `xl-ok` — anyone may set them, but the
+  # Escape hatch: labels `long-lived-ok` / `xl-ok` - anyone may set them, but the
   # PR body must contain a "Why long-lived:" / "Why XL:" line with a real reason.
   tbd-gates:
     runs-on: ubuntu-latest
@@ -45,7 +45,7 @@ jobs:
           AGE=$(( ( $(date +%s) - $(git show -s --format=%ct "$MB") ) / 86400 ))
           if [ "$AGE" -gt "$BRANCH_FAIL_DAYS" ]; then
             if has_label long-lived-ok && has_reason "Why long-lived"; then
-              echo "branch age: $AGE days — allowed by long-lived-ok label with reason"
+              echo "branch age: $AGE days - allowed by long-lived-ok label with reason"
             elif has_label long-lived-ok; then
               echo "FAIL: long-lived-ok label set, but PR body has no 'Why long-lived: <reason>' line"
               echo "next: add 'Why long-lived: <reason>' to the PR description"
@@ -56,15 +56,15 @@ jobs:
               FAILED=1
             fi
           elif [ "$AGE" -gt "$BRANCH_WARN_DAYS" ]; then
-            echo "WARN: branch diverged from $BASE $AGE days ago — merge daily (ADR-0006)"
+            echo "WARN: branch diverged from $BASE $AGE days ago - merge daily (ADR-0006)"
           else
-            echo "branch age: $AGE days — OK"
+            echo "branch age: $AGE days - OK"
           fi
 
           LINES=$(jq '.pull_request.additions + .pull_request.deletions' "$EV")
           if [ "$LINES" -gt "$PR_XL_LINES" ]; then
             if has_label xl-ok && has_reason "Why XL"; then
-              echo "PR size: $LINES lines — allowed by xl-ok label with reason"
+              echo "PR size: $LINES lines - allowed by xl-ok label with reason"
             elif has_label xl-ok; then
               echo "FAIL: xl-ok label set, but PR body has no 'Why XL: <reason>' line"
               echo "next: add 'Why XL: <reason>' to the PR description"
@@ -75,7 +75,7 @@ jobs:
               FAILED=1
             fi
           else
-            echo "PR size: $LINES lines — OK"
+            echo "PR size: $LINES lines - OK"
           fi
 
           exit "$FAILED"

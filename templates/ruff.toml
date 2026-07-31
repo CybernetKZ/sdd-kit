@@ -1,6 +1,6 @@
 # Ruff defaults for Python backends.
 # Installed by sdd-kit ONLY when the repository has no Ruff config of its own
-# (no ruff.toml / .ruff.toml and no [tool.ruff] in any pyproject.toml) —
+# (no ruff.toml / .ruff.toml and no [tool.ruff] in any pyproject.toml) -
 # web-backend-new keeps its own config (backend/pyproject.toml, select=ALL + ignores).
 # Deliberate choices below mirror that config where the team already decided:
 # E402 ignored, F401 relaxed for __init__.py, FA/TC excluded, double quotes.
@@ -15,7 +15,7 @@ extend-exclude = ["**/migrations/**", "**/generated/**", "**/backup/**"]
 
 [lint]
 # Explicit select, NOT extend-select: since ruff 0.15/0.16 the built-in defaults
-# grew to 400+ rules (docstrings, security, try/except style, ...) — far too
+# grew to 400+ rules (docstrings, security, try/except style, ...) - far too
 # noisy for brownfield code and unstable across ruff versions. This list is the
 # classic default (E4/E7/E9, F) plus curated additions.
 select = [
@@ -32,14 +32,14 @@ select = [
     "TID",  # tidy imports
 ]
 ignore = [
-    "E402",  # module-level import not at top — brownfield pattern (mirrors WBN)
+    "E402",  # module-level import not at top - brownfield pattern (mirrors WBN)
 ]
 # Deliberately NOT enabled:
-# FA, TC — `from __future__ import annotations` and TYPE_CHECKING-only imports
+# FA, TC - `from __future__ import annotations` and TYPE_CHECKING-only imports
 #          break FastAPI/Pydantic runtime introspection of annotations
 #          (WBN's own config ignores FA100/FA102/TC001-TC004 for the same reason);
-# PTH, TD, FURB — too noisy on brownfield code, revisit after the pilot;
-# S (security, bandit replacement) — enable selectively later, rule by rule.
+# PTH, TD, FURB - too noisy on brownfield code, revisit after the pilot;
+# S (security, bandit replacement) - enable selectively later, rule by rule.
 
 [lint.extend-per-file-ignores]
 "__init__.py" = ["F401"]  # re-exports are intentional

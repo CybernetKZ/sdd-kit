@@ -1,4 +1,4 @@
-# Final report — sdd-kit pilot benchmark on web-backend-new (WEB-2314)
+# Final report - sdd-kit pilot benchmark on web-backend-new (WEB-2314)
 
 Date: 2026-07-29. Status: **stopped after pilot (1 run per arm) by user decision.**
 This is a qualitative pilot, NOT a statistically valid comparison (n=1).
@@ -12,7 +12,7 @@ This is a qualitative pilot, NOT a statistically valid comparison (n=1).
 | Interventions | 0 | 1 (asked 3 clarification questions) |
 | Code diff | +138/−7, 6 files | +281/−13, 5 files (+~350 lines process artifacts) |
 | Gates | 3/3 PASS | diff ✓ tests ✓ ruff FAIL (+1 CPY001, +7 SLF001, new test file; CPY001 is repo-wide baseline noise) |
-| Scope creep vs frozen radius | 0 | 1 file (test-cases doc — mandated by feature-flow) |
+| Scope creep vs frozen radius | 0 | 1 file (test-cases doc - mandated by feature-flow) |
 | **Judge: task_success** | **1** | **1** |
 | Judge rubric (corr/read/conv/tests/merge) | 5/5/4/4/**5** | 5/3/2/5/**3** |
 | Judge verdict | **merge as-is** | send back: delete 6 non-code files first |
@@ -23,7 +23,7 @@ call-campaign). They differ in test breadth and non-code payload.
 
 Judge highlights:
 - B's test suite is objectively stronger (14 tests incl. regression guards
-  for the widened branch — the exact tests A is missing; A's untested
+  for the widened branch - the exact tests A is missing; A's untested
   fallback branch is a real gap). Judge would cherry-pick B's 4 regression
   asserts and its SERVICE_MAPPINGS-based fallback onto A's diff.
 - B's process artifacts (openspec change, tasks.md with unchecked boxes,
@@ -31,31 +31,31 @@ Judge highlights:
 - **Shared miss, found by neither arm but by the judge:** both route
   internet-facing API-key traffic to VAC's `/internal` sub-app
   (previously network-trust-only, `PUBLIC`) with `check_firm_access:
-  false` → real cross-tenant-read question; the JWT-scoped
+  false` -> real cross-tenant-read question; the JWT-scoped
   `VOICE_AGENT_URL` route already existed as the firm-scoped alternative.
   B at least documented the choice in design.md; A didn't mention it.
 
-Primary metric ($/accepted task): A $4.71, B $9.49 — but see critique §2:
+Primary metric ($/accepted task): A $4.71, B $9.49 - but see critique §2:
 the arms answered different specs, so this number should not be quoted.
 
 ## Fact-check of raised concerns (Daniil)
 
-1. **youtrack-mcp asymmetry** — real in config (bootstrap installs
+1. **youtrack-mcp asymmetry** - real in config (bootstrap installs
    `.mcp.json` in arm B only), but null in effect: B's agent searched for
    youtrack tools and got 0 matches (project MCP servers not approved in
    the fresh config). Neither arm had ticket access beyond prompt.md.
-2. **openspec incompleteness** — confirmed. Arm B had ONE seeded capability
+2. **openspec incompleteness** - confirmed. Arm B had ONE seeded capability
    (`api-gateway-authorization`) + a store reference; not full spec
    coverage. The pilot measured sdd-kit at minimal seeding.
-3. **cost mixing** — not found. Attribution verified per session.id and
-   timestamps: A-1 = d1cf0d8b 16:37–16:49 $4.713; B-1 = d01d7ab8
-   16:50–17:24 $9.487. Sequential, no overlap. Identical haiku rows
+3. **cost mixing** - not found. Attribution verified per session.id and
+   timestamps: A-1 = d1cf0d8b 16:37-16:49 $4.713; B-1 = d01d7ab8
+   16:50-17:24 $9.487. Sequential, no overlap. Identical haiku rows
    ($0.001, 579 input in both) are the same background call on the
    identical prompt, not double counting. Only contamination: conductor's
-   gate calibration (pytest) ran on the same machine during B-1 move 2 —
+   gate calibration (pytest) ran on the same machine during B-1 move 2 -
    wall-clock noise for B, not token/cost noise.
 
-## Self-critique — why these numbers must not be trusted
+## Self-critique - why these numbers must not be trusted
 
 Fatal for validity:
 1. **The arms solved different specs.** A worked from the 1-line ticket;
@@ -66,21 +66,21 @@ Fatal for validity:
    protocol was amended three times during the experiment day.
 3. **Seeding contamination**: the one seeded spec covers exactly the
    task's subsystem, and was seeded after task selection.
-4. **n=1 task × n=1 run** — against our own methodology doc (3–5 tasks ×
-   3 runs); within-arm variance alone is 2–3× on tokens.
+4. **n=1 task × n=1 run** - against our own methodology doc (3-5 tasks ×
+   3 runs); within-arm variance alone is 2-3× on tokens.
 
 Systematic bias:
 5. Author = experimenter = infra judge: same person (conductor) wrote ACs,
    clarify.md, gates, rubric. Zero independence.
 6. Gates were calibrated AFTER the runs (venv pollution, line-shift
-   compare, empty-baseline bug — three rewrites post-hoc).
+   compare, empty-baseline bug - three rewrites post-hoc).
 7. Ruff gate is structurally biased against new files (CPY001 that the
-   whole repo violates) — and creating new test files is the kit's style.
+   whole repo violates) - and creating new test files is the kit's style.
 8. Frozen blast radius excluded the test-cases doc that feature-flow
-   REQUIRES → B's "scope creep" was guaranteed by gate construction.
+   REQUIRES -> B's "scope creep" was guaranteed by gate construction.
 9. **Judge context asymmetry (setup error):** the judge evaluated both
    diffs against the NUDE baseline, so B's openspec artifacts were judged
-   as "directories that don't exist in this repo" — but they DO exist in
+   as "directories that don't exist in this repo" - but they DO exist in
    arm B's bootstrapped repo (and `make sdd-check` exists there). Judge's
    would-merge 3 for B partially reflects my setup, not only B's output.
    (Counterpoint: the real merge target `dev` has no kit, so the judge's
@@ -100,7 +100,7 @@ Technical noise:
 - Freeze ONE identical prompt package (ticket + ACs) for both arms before
   any run; no mid-flight clarifications, or a pre-declared two-move rule.
 - Seed specs for the whole repo capability list BEFORE task selection;
-   3–5 tasks × 3 runs, interleaved, headless, containerized.
+   3-5 tasks × 3 runs, interleaved, headless, containerized.
 - Gates calibrated on baseline before run 1; ruff gate = new violations
   in added lines only; blast radius written per-arm-methodology.
 - Independent judge with per-arm-correct baseline context (or two judges);
