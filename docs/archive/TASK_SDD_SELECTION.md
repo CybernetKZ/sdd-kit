@@ -2,15 +2,15 @@
 
 Статус: desk review выполнен 2026-07-27 (Fable 5 + субагенты). Артефакты готовы:
 `OUR_PATTERNS.md` (фаза 0), `SDD_EVALUATION.md` (карточки + матрица + shortlist),
-`ADR/ADR-0001...0005`. Рекомендация: стек OpenSpec (спека-гейт) + CF-паттерн make test/CI
+`../ADR/ADR-0001...0005`. Рекомендация: стек OpenSpec (спека-гейт) + CF-паттерн make test/CI
 (принуждение) + ECC-ревьюеры и spec-miner (ревью/бутстрап) + центральный store контрактов.
 ADR 1-4 - принято (подтверждено Daniil 2026-07-27: канон AGENTS.md; чистка обвеса до
 внедрения; GSD - опционально, решить в пилоте), ADR-5 - отложено (backend-gap-тикет
 после WEB-2305). Трекинг: https://cybernet.youtrack.cloud/issue/Web-2305.
 Дополнение 2026-07-30: TBD-дисциплины и feature-флаги - ADR-0006/0007 (принято);
 ProjectStore отклонён - ADR-0008; стык с intake-процессом RAISE - ADR-0009.
-Исследование: `REPORT_TBD_PROJECTSTORE.md`.
-Источники входа: `INIT.md`, `archive/recommendations.md`, `archive/Spec-Driven-Development-Tools.md`,
+Исследование: `../REPORT_TBD_PROJECTSTORE.md`.
+Источники входа: `INIT.md`, `recommendations.md`, `Spec-Driven-Development-Tools.md`,
 `WEB-2303-Hubtalk-comparison.md`.
 
 ## 1. Цель
@@ -171,5 +171,5 @@ SSO/Keycloak, api-gateway, validation-service и redis-контракты `cyber
   компонентом, флаг выбирает реализацию, потом прослойка удаляется.
 - **RAISE** - внутренний процесс подачи и приоритизации заявок (форма + RICE + доска
   Voicebot + LLM). Слой над SDD-стеком (ADR-0009). Не путать с методологией useraise.dev
-  (разбор: `sdd-kit/research-useraise-methodology.md`, не внедряем).
+  (разбор: `research-useraise-methodology.md`, не внедряем).
 - **RICE** - формула приоритета заявки: Reach × Impact × Confidence ÷ Effort.

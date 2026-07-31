@@ -1,7 +1,7 @@
 # Отчёт: Trunk-Based Development + feature flags и SmartAndPoint/ProjectStore
 
 Дата: 2026-07-30. Метод: два Opus-субагента (research + code-audit), синтез Fable 5.
-Дополняет `TASK_SDD_SELECTION.md`, `SDD_EVALUATION.md`, ADR-0001...0005.
+Дополняет `archive/TASK_SDD_SELECTION.md`, `archive/SDD_EVALUATION.md`, ADR-0001...0005.
 
 Обновление после grill-сессии 2026-07-30 (решения Daniil, зафиксированы в ADR-0006...0009):
 - пороги гейтов включаем сразу, без спринта наблюдения; значения - на репозиторий
@@ -33,7 +33,7 @@ TBD - короткоживущие ветки + PR, а не прямые ком�
 Наш стек гейтов (spec-guard, sdd-gate, autoreview) - это и есть обязательное ревью.
 
 Прямые коммиты в trunk мы уже "пробовали": cybernet3.0 - 1780 коммитов прямо в dev,
-покрытие тикетами 12.1% (`OUR_PATTERNS.md:27,31`). Убрать PR = убрать точку,
+покрытие тикетами 12.1% (`archive/OUR_PATTERNS.md:27,31`). Убрать PR = убрать точку,
 к которой прикреплён `sdd-ci.yml` (триггер только `pull_request`).
 
 Цели DORA - про время жизни веток, а не про их отсутствие: ≤3 активных ветки,
@@ -41,7 +41,7 @@ merge в trunk минимум раз в день (https://dora.dev/capabilities/
 Это достижимо с PR.
 
 Наша реальная проблема - размер батча: медиана PR в WBN 412 строк, но p90 = 4221 строка
-и 62 файла (`OUR_PATTERNS.md:34-35`); 18.4% тикетов требуют >1 PR (`:46`).
+и 62 файла (`archive/OUR_PATTERNS.md:34-35`); 18.4% тикетов требуют >1 PR (`:46`).
 Главный риск по DORA - тяжёлое медленное ревью заставляет копить большие батчи.
 Значит блокирующим оставляем только быстрый `make sdd-check`; AI-ревью - advisory,
 второй блокирующий LLM-проход не добавляем.
@@ -144,7 +144,7 @@ opus/max на каждую story).
    генератором и сравни с закоммиченным" - чистый способ сделать производные
    вью гейтуемыми (пригодно для spec freshness в `spec-lint.py`).
 
-### Строка для SDD_EVALUATION.md
+### Строка для archive/SDD_EVALUATION.md
 
 > ProjectStore - отклонено: проваливает критерий 1 (один vault, нет multi-repo)
 > и критерий 2 (doctor всегда exit 0, гейта нет); слой work-items дублирует YouTrack.
@@ -162,5 +162,5 @@ opus/max на каждую story).
 2. [x] sdd-kit: PreCompact-hook (`pre-compact.js` -> `.claude/last-session-state.md`)
    и doctor-формат находок `{level, group, code, message, next}` + `--json`
    в `sdd-doctor.sh` и `repo-audit.sh` - сделано 2026-07-30.
-3. [x] `SDD_EVALUATION.md`: строка "отклонено" для ProjectStore.
+3. [x] `archive/SDD_EVALUATION.md`: строка "отклонено" для ProjectStore.
 4. [ ] Пилот: замерить размер PR и переделки после включения блокирующих порогов.

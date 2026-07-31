@@ -50,8 +50,8 @@ CybernetAI, чтобы кратно ускорить работу над про�
 
 [SDD_EVALUATION.md](SDD_EVALUATION.md)
 [TASK_SDD_SELECTION.md](TASK_SDD_SELECTION.md)
-[LOGIC_VERIFICATION.md](archive/LOGIC_VERIFICATION.md)
-[recommendations.md](archive/recommendations.md)
+[LOGIC_VERIFICATION.md](LOGIC_VERIFICATION.md)
+[recommendations.md](recommendations.md)
 [INIT.md](INIT.md)
-[Spec-Driven-Development-Tools.md](archive/Spec-Driven-Development-Tools.md)
+[Spec-Driven-Development-Tools.md](Spec-Driven-Development-Tools.md)
 [OUR_PATTERNS.md](OUR_PATTERNS.md)

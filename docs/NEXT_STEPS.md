@@ -240,7 +240,7 @@
 |---|---|
 | Глобально у Daniil | вычищено по ADR-0004: остались context7, headroom, youtrack |
 | Пер-репозиторий `.mcp.json` | кладёт bootstrap.sh: context7 + youtrack; токен youtrack - через `YOUTRACK_TOKEN` в окружении, НЕ в файле |
-| У остальных разработчиков | раздать методичку: `INIT.md` требует ≤500 строк CLAUDE.md и минимум MCP; проверить, что ни у кого не тянутся мёртвые серверы |
+| У остальных разработчиков | раздать методичку: `archive/INIT.md` требует ≤500 строк CLAUDE.md и минимум MCP; проверить, что ни у кого не тянутся мёртвые серверы |
 | graphify | не MCP-гейт, а навигация; `graphify watch` на WBN уже работает - оставить |
 
 ## Реализовано 2026-07-28 (по итогам исследований ниже)
@@ -374,9 +374,9 @@ SDD_STORE_ID / SDD_STORE_DIR / SDD_STORE_GIT.
 это дело ruff", поле действия auto-fix/ask-user/no-op, клауза про
 долговременный фикс против осознанного сдерживания.
 
-## Сверка с INIT.md (2026-07-29): sdd-doctor и добивка пробелов
+## Сверка с archive/INIT.md (2026-07-29): sdd-doctor и добивка пробелов
 
-Прошлись по INIT.md пункт за пунктом. Было покрыто: методичка ≤500 строк,
+Прошлись по archive/INIT.md пункт за пунктом. Было покрыто: методичка ≤500 строк,
 youtrack-mcp/context7, AGENTS.md-канон, авторевью с tools + правилами репо
 (AGENTS.md в промпте - проверено), hooks, Graphify/ponytail/Headroom/grill
 (персональные, в методичке), модели//effort, sdd-audit против раздувания.
@@ -403,13 +403,13 @@ youtrack-mcp/context7, AGENTS.md-канон, авторевью с tools + пр�
   headroom-ai + claude mcp add). caveman отдельно не существует - это
   бенчмарк-стенд внутри репо ponytail; Playwright закрыт chrome-devtools-axi.
 - **`.claude/skills/feature-flow/SKILL.md`** (ставит bootstrap) - процесс
-  Daniil из INIT.md:19-32 как skill: допрос тикета против кода и спек ДО кода
+  Daniil из archive/INIT.md:19-32 как skill: допрос тикета против кода и спек ДО кода
   (вопросы Дине/Ольге комментарием), план как OpenSpec change, ветка
   feature/WEB-*, тест-док, pytest+newman, ручной прогон, ревью (в скоупе -
   чинить, вне - TODO с номером тикета), PR. Whitelist repo-audit дополнен.
 Синхронизировано по 5 установкам. Методичка обновлена (ссылка та же).
 
-## Проверка 14 инструментов из INIT.md:45-94 (2026-07-29)
+## Проверка 14 инструментов из archive/INIT.md:45-94 (2026-07-29)
 
 Три субагента (контекст / параллельные агенты / LLM-фреймворки+observability).
 
@@ -452,7 +452,7 @@ Claude Code), phoenix (запасной вариант observability, если L
   (WBN 5, VA 15, frontend 11, c3.0 21, PCA 2, кросс-сервис WBN↔VA 11),
   каждая строка - готовый заголовок тикета + ссылка на источник.
   Мы их НЕ чиним (скоуп WEB-2305) - материал для тикетов, заводит Daniil.
-- [x] **Skill `incident-flow`** в kit (BUGFIX-процесс из INIT.md:35-43):
+- [x] **Skill `incident-flow`** в kit (BUGFIX-процесс из archive/INIT.md:35-43):
   собрать данные collect_incident.py -> док о причинах (баг/клиент/инфра -
   не угадывать до данных) -> план как OpenSpec change -> фикс с регрессионным
   тестом (падает до, проходит после) -> проверка против инцидента.
@@ -513,3 +513,11 @@ Claude Code), phoenix (запасной вариант observability, если L
 3. `.spec-guard-paths` уже создан во всех 4 репо (тестовый режим). Решить,
    что коммитим при боевой раскатке: все сразу или сначала только WBN
    (рекомендация: WBN - сразу, остальные - после пилота).
+
+## Реорганизация документации (2026-07-31)
+
+Бенчмарк-доки переехали в cc-bench (`/home/octrow/cybernet/cc-bench/docs/`):
+`PLAN-tools.md`, `telemetry-tooling-research.md` (бывший `recommendations.md`),
+`adr/`. Архив m1/m2 и завершённые доки WEB-2305 (`INIT.md`,
+`original_description_WEB-2305.md`, `TASK_SDD_SELECTION.md`, `OUR_PATTERNS.md`,
+`SDD_EVALUATION.md`, `WEB-2303-Hubtalk-comparison.md`) - в `docs/archive/`.

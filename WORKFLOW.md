@@ -202,7 +202,7 @@ Consequences:
 - **Verifiability is mandatory.** Every skill/tool must have a way to confirm
   it actually ran: a measured artifact, a log line, a gate that fails without
   it. Unverifiable pieces get removed - 95% of ~285 installed skills were
-  never used once (`OUR_PATTERNS.md`), and `repo-audit` exists to keep it
+  never used once (`docs/archive/OUR_PATTERNS.md`), and `repo-audit` exists to keep it
   that way.
 
 ## Prototype instead of waiting

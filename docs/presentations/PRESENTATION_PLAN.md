@@ -14,7 +14,7 @@
 - Задача Web-2305, дата, докладчик.
 
 ### Слайд 2. Как мы работаем сейчас - измеренные факты
-(источник: OUR_PATTERNS.md, анализ git-истории четырёх репозиториев и 2 ГБ транскриптов агентов)
+(источник: ../archive/OUR_PATTERNS.md, анализ git-истории четырёх репозиториев и 2 ГБ транскриптов агентов)
 - Исправлений больше, чем новых функций: 33,2 % против 26,0 % по 1576 pull request.
 - 18,4 % задач потребовали больше одного pull request - задачу переделывали.
   Худшие случаи: WEB-2001 - 9 pull request, WEB-1560 - 8.
@@ -188,5 +188,5 @@
   (сейчас 33 % всей работы), быстрее контекст для агентов.
 
 ### Слайд 17. Вопросы и ссылки
-- Web-2305 в YouTrack; документы: OUR_PATTERNS.md, SDD_EVALUATION.md,
-  REPORT_TBD_PROJECTSTORE.md, WORKFLOW.md, ADR-0001...0011.
+- Web-2305 в YouTrack; документы: ../archive/OUR_PATTERNS.md, ../archive/SDD_EVALUATION.md,
+  ../REPORT_TBD_PROJECTSTORE.md, ../../WORKFLOW.md, ADR-0001...0011.

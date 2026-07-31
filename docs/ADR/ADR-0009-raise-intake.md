@@ -55,4 +55,5 @@ SDD-стек (OpenSpec + гейты + store, ADR-0001...0003) решает, ка
 
 Пути выше устарели после переезда sdd-kit в `/home/octrow/cybernet/sdd-kit` (этот файл сам
 теперь внутри sdd-kit). Актуальные пути от корня репозитория: `docs/RAISE-intake-process.md`,
-`research-useraise-methodology.md`, `templates/skills/feature-flow` (без префикса `sdd-kit/`).
+`docs/archive/research-useraise-methodology.md` (переехал в архив 2026-07-31),
+`templates/skills/feature-flow` (без префикса `sdd-kit/`).

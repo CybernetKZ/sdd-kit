@@ -1,6 +1,6 @@
 # Архив прогонов m1/m2
 
-Завершённые прогоны бенчмарка m1/m2 (июль 2026). Актуальные материалы - в `sdd-kit/benchmark/` (`PLAN-tools.md`, `recommendations.md`, `adr/`).
+Завершённые прогоны бенчмарка m1/m2 (июль 2026). Актуальные материалы - в `cc-bench/docs/` (`/home/octrow/cybernet/cc-bench/docs/`): `PLAN-tools.md`, `telemetry-tooling-research.md`, `adr/`.
 
 Читать первым: `comparison-runs.md` (итоговый синтез с поправкой).
 

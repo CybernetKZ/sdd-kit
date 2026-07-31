@@ -158,3 +158,10 @@ templates/            everything installed into repos (English-only)
   agents/             reviewer agents for autoreview
   skills/             team skills (feature-flow: ticket-to-PR workflow)
 ```
+
+## Benchmarks
+
+The [cc-bench](https://github.com/octrow/cc-bench) repo (local:
+`/home/octrow/cybernet/cc-bench`) is the benchmark harness for this stack;
+design docs live in its `docs/`.
+Historical m1/m2 benchmark runs: `docs/archive/benchmark-m1-m2/` (in Russian).

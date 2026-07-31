@@ -14,7 +14,7 @@
 5. в каждом из репозиториев nude-WBN (nude-claude/web-backend-new) и sdd-WBN (sdd-kit-claude/web-backend-new) запускаем терминал с claude code
 6. найти в youtack назначенные на меня таски со статусами backlog/read_to_go (use mcp youtack)
 7. уточнить какую из задач взять в работу (к примеру WEB-2334)
-8. выполнить шаги docs/INIT.md:1-33
+8. выполнить шаги INIT.md:1-33
 9. сравнить результаты и метрики
 
 ## метрики
