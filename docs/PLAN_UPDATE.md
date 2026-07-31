@@ -54,14 +54,14 @@
 
 ## Фаза 4. Честность гейтов
 
-- [ ] 4.1 `Makefile.sdd:45,47`: убрать фиктивный `|| exit 1` у spec-lint и заменить «all gates passed» на честное «gates passed (spec-lint advisory)» (2.1). TODO-строкой: включить `SPEC_LINT_STRICT=1` в CI, когда specs стабилизируются.
-- [ ] 4.2 AI-промпт в один файл `templates/review-prompt.md` → `.claude/scripts/review-prompt.md`; читать его и в `Makefile.sdd` (sdd-review), и в `autoreview.yml` (2.2).
-- [ ] 4.3 `autoreview.yml`: проверку `CLAUDE_CODE_OAUTH_TOKEN` — первым шагом job (или `if:` на job), чтобы radon/semgrep не жгли CI впустую (2.3).
-- [ ] 4.4 Удалить job `reviewdog-ruff` из `autoreview.yml` — не гейтит (`-fail-level=none`), дублирует pre-commit-автофикс (2.4). Линт-гейт — будущий `make test` в sdd-ci.
-- [ ] 4.5 Слить `repo-audit.sh` в `sdd-doctor.sh` (секция `audit`), один make-таргет `sdd-doctor`; удалить `SDD_AUDIT_STRICT`; personal-секцию (rtk/graphify/ponytail) убрать из doctor — это зона setup-dev (2.5). Обновить bootstrap (установка скриптов, финальный advisory-прогон) и Makefile.sdd.
-- [ ] 4.6 `feature-flow` шаг 7: пометить traceability gate и QA quality gate как «(planned)» — требование ADR-0012 п.8 (4.5/8).
-- [ ] 4.7 `QA-SDD-PROCESS.md`: шапка со статусом «target-процесс; примеры путей — из WBN» (6.4).
-- [ ] 4.8 Пороги PR — одно место истины (6.3): оставить правку в workflow (`PR_XL_LINES`), поправить ADR-0006 п.2 (профили порогов не реализованы).
+- [x] 4.1 `Makefile.sdd:45,47`: убрать фиктивный `|| exit 1` у spec-lint и заменить «all gates passed» на честное «gates passed (spec-lint advisory)» (2.1). TODO-строкой: включить `SPEC_LINT_STRICT=1` в CI, когда specs стабилизируются.
+- [x] 4.2 AI-промпт в один файл `templates/review-prompt.md` → `.claude/scripts/review-prompt.md`; читать его и в `Makefile.sdd` (sdd-review), и в `autoreview.yml` (2.2).
+- [x] 4.3 `autoreview.yml`: проверку `CLAUDE_CODE_OAUTH_TOKEN` — первым шагом job (или `if:` на job), чтобы radon/semgrep не жгли CI впустую (2.3).
+- [x] 4.4 Удалить job `reviewdog-ruff` из `autoreview.yml` — не гейтит (`-fail-level=none`), дублирует pre-commit-автофикс (2.4). Линт-гейт — будущий `make test` в sdd-ci.
+- [x] 4.5 Слить `repo-audit.sh` в `sdd-doctor.sh` (секция `audit`), один make-таргет `sdd-doctor`; удалить `SDD_AUDIT_STRICT`; personal-секцию (rtk/graphify/ponytail) убрать из doctor — это зона setup-dev (2.5). Обновить bootstrap (установка скриптов, финальный advisory-прогон) и Makefile.sdd.
+- [x] 4.6 `feature-flow` шаг 7: пометить traceability gate и QA quality gate как «(planned)» — требование ADR-0012 п.8 (4.5/8).
+- [x] 4.7 `QA-SDD-PROCESS.md`: шапка со статусом «target-процесс; примеры путей — из WBN» (6.4).
+- [x] 4.8 Пороги PR — одно место истины (6.3): оставить правку в workflow (`PR_XL_LINES`), поправить ADR-0006 п.2 (профили порогов не реализованы).
 
 **Проверка**: `make sdd-check` в репо со STALE-спекой — warn, не блок, и не рапортует «all gates passed» без оговорки; autoreview без секрета завершается за секунды.
 
@@ -69,11 +69,11 @@
 
 ## Фаза 5. Hooks + settings
 
-- [ ] 5.1 Удалить `templates/settings-living-spec.json` и развилку `bootstrap.sh:258-265`: всегда ставить `settings.json` + `spec-guard.js` (opt-in уже делает `.spec-guard-paths`) (1.1). Для conversation_flow решить: spec-guard включается тем же `.spec-guard-paths` — если LIVING-SPEC-репо не должен требовать openspec change, просто не заполнять файл или вынести это в профиль комментарием.
-- [ ] 5.2 Удалить `templates/format-py.js` и его блок из `settings.json` — pre-commit-ruff покрывает (1.2).
-- [ ] 5.3 `spec-guard.js:25-32`: walk-up → `process.env.CLAUDE_PROJECT_DIR || process.exit(0)` (1.3).
-- [ ] 5.4 `pre-compact.js:41`: хардкод `dev` → fallback `origin/HEAD` (1.4).
-- [ ] 5.5 `block-no-verify.js` — **не трогать** (1.5).
+- [x] 5.1 Удалить `templates/settings-living-spec.json` и развилку `bootstrap.sh:258-265`: всегда ставить `settings.json` + `spec-guard.js` (opt-in уже делает `.spec-guard-paths`) (1.1). Для conversation_flow решить: spec-guard включается тем же `.spec-guard-paths` — если LIVING-SPEC-репо не должен требовать openspec change, просто не заполнять файл или вынести это в профиль комментарием.
+- [x] 5.2 Удалить `templates/format-py.js` и его блок из `settings.json` — pre-commit-ruff покрывает (1.2).
+- [x] 5.3 `spec-guard.js:25-32`: walk-up → `process.env.CLAUDE_PROJECT_DIR || process.exit(0)` (1.3).
+- [x] 5.4 `pre-compact.js:41`: хардкод `dev` → fallback `origin/HEAD` (1.4).
+- [x] 5.5 `block-no-verify.js` — **не трогать** (1.5).
 
 **Проверка**: self-test `block-no-verify.js --test`; spec-guard блокирует правку файла из `.spec-guard-paths` без активной change и молчит без файла.
 
@@ -89,7 +89,7 @@
   - Флаги для частичного запуска: `install.sh --repo-only` / `--machine-only` (замена двух старых скриптов); сами `bootstrap.sh` и `setup-dev.sh` оставить на один релиз как двухстрочные шимы (`exec ./install.sh --repo-only "$@"`), потом удалить.
   - Идемпотентность сохраняется: never-overwrite `put()`, повторный прогон — ноль изменений.
   - Обновить README/README_RU/ONBOARDING (инструкция установки — одна команда) и CI кита (`ci.yml`: shellcheck + bootstrap-smoke зовут `install.sh`).
-- [ ] 6.1 Удалить мёртвый шаг 2b «profile payload» (`bootstrap.sh:176-188`) (0.1).
+- [x] ~~6.1~~ ОТМЕНЁН (payload-механизм теперь используется: profiles/voice-agent-constructor-backend/) — Удалить мёртвый шаг 2b «profile payload» (`bootstrap.sh:176-188`) (0.1).
 - [ ] 6.2 `PROFILE_STORE=1` — дефолт в bootstrap; убрать строку из 6 профилей (0.2).
 - [ ] 6.3 Один источник openspec-пина: git-check и `OPENSPEC=` до store-ветки, убрать дубли строк 74-76 (0.3).
 - [ ] 6.4 LIVING-SPEC-вставка в pre-commit: заменить python3-хередок конкатенацией шаблонов при установке; guard `grep -q "make sdd-check"` при кастомном хуке (0.4).

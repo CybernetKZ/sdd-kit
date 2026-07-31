@@ -10,7 +10,7 @@ set -u
 
 JSON=0; [ "${1:-}" = "--json" ] && JSON=1
 FINDINGS="$(mktemp)"; trap 'rm -f "$FINDINGS"' EXIT
-PASS=0; WARN=0; FAIL=0
+PASS=0; WARN=0; FAIL=0; INFO=0
 GROUP="machine"
 
 # emit <level> <code> <message> [next]
@@ -19,12 +19,14 @@ emit() {
   if [ "$JSON" = 0 ]; then
     case "$1" in
       ok)   echo "  ok:   [$2] $3" ;;
+      info) echo "  info: [$2] $3"; [ -n "${4:-}" ] && echo "        next: $4" ;;
       warn) echo "  WARN: [$2] $3"; [ -n "${4:-}" ] && echo "        next: $4" ;;
       fail) echo "  FAIL: [$2] $3"; [ -n "${4:-}" ] && echo "        next: $4" ;;
     esac
   fi
 }
 ok()   { PASS=$((PASS+1)); emit ok   "$@"; }
+note() { INFO=$((INFO+1)); emit info "$@"; }
 warn() { WARN=$((WARN+1)); emit warn "$@"; }
 bad()  { FAIL=$((FAIL+1)); emit fail "$@"; }
 
@@ -161,7 +163,7 @@ print(' '.join(sorted(servers - allowed)))
   for d in .cursor .cursorrules .windsurf .windsurfrules .serena .aider .roo .clinerules GEMINI.md; do
     [ -e "$d" ] && warn audit.foreign-config "foreign agent-tool config: $d" "delete if unused: rm -r $d"
   done
-  [ -e CLAUDE.local.md ] && warn audit.claude-local "CLAUDE.local.md present (personal file, fine — must stay untracked)" "add CLAUDE.local.md to .git/info/exclude"
+  [ -e CLAUDE.local.md ] && note audit.claude-local "CLAUDE.local.md present (personal file, fine — must stay untracked)"
 
   # 3. Skills: only the openspec-* set + the kit's flows are expected.
   if [ -d .claude/skills ]; then
@@ -180,7 +182,7 @@ print(' '.join(sorted(servers - allowed)))
       [ -f "$a" ] || continue
       name=$(basename "$a" .md)
       case "$name" in backend-reviewer|database-reviewer|planner|plan-griller) ;;
-        *) warn audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" "delete if unused: rm .claude/agents/$name.md" ;;
+        *) note audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
       esac
     done
   fi
@@ -192,7 +194,7 @@ import json
 d = json.load(open('.claude/settings.local.json'))
 print(' '.join(sorted(k for k, v in d.get('enabledPlugins', {}).items() if v)) if isinstance(d.get('enabledPlugins'), dict) else ' '.join(d.get('enabledPlugins', [])))
 " 2>/dev/null)
-    [ -n "$PLUGINS" ] && warn audit.plugin-local "plugins enabled in .claude/settings.local.json: $PLUGINS" "keep only what this repo needs: edit .claude/settings.local.json"
+    [ -n "$PLUGINS" ] && note audit.plugin-local "plugins enabled in .claude/settings.local.json: $PLUGINS"
   fi
 fi
 
@@ -207,11 +209,12 @@ for line in open(sys.argv[1]):
                  "message": message, **({"next": nxt} if nxt else {})})
 print(json.dumps({"findings": rows,
                   "summary": {"ok": sum(r["level"] == "ok" for r in rows),
+                              "info": sum(r["level"] == "info" for r in rows),
                               "warn": sum(r["level"] == "warn" for r in rows),
                               "fail": sum(r["level"] == "fail" for r in rows)}}, indent=1))
 ' "$FINDINGS"
 else
-  echo "[sdd-doctor] summary: $PASS ok, $WARN warning(s), $FAIL failure(s)"
+  echo "[sdd-doctor] summary: $PASS ok, $INFO info, $WARN warning(s), $FAIL failure(s)"
   if [ "$FAIL" -eq 0 ] && [ "$WARN" -eq 0 ]; then
     echo "[sdd-doctor] 0 issues found"
   elif [ "$FAIL" -gt 0 ]; then

@@ -41,4 +41,4 @@ sdd-check:
 	@# then this becomes a real gate and the summary line below must say so.
 	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py; fi
 	@$(MAKE) --no-print-directory sdd-flags
-	@echo "sdd-check: OK — sdd-check passed (AGENTS.md, openspec validate, sdd-flags; spec-lint advisory)"
+	@echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate, sdd-flags); spec-lint is advisory"

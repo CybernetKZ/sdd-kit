@@ -126,6 +126,7 @@ if [ -f ruff.toml ] && ! cmp -s "$KIT/templates/ruff.toml" ruff.toml \
 else
   rm_ours "$KIT/templates/ruff.toml" ruff.toml
 fi
+rm_ours "$KIT/templates/feature_flags.py" feature_flags.py
 rm -f .spec-guard-paths && say "removed: .spec-guard-paths"
 
 # .mcp.json: ours contains only context7/youtrack (+ our shape) — else keep.
