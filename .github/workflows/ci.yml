@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck all shell scripts
-        run: shellcheck -S warning bootstrap.sh setup-dev.sh templates/*.sh
+        run: shellcheck -S warning bootstrap.sh uninstall.sh setup-dev.sh templates/*.sh
       - name: bash syntax
         run: |
-          bash -n bootstrap.sh setup-dev.sh
+          bash -n bootstrap.sh uninstall.sh setup-dev.sh
           for f in templates/pre-commit-hook.sh templates/repo-audit.sh templates/sdd-doctor.sh; do
             bash -n "$f"
           done
@@ -63,3 +63,9 @@ jobs:
           SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/bootstrap.sh /tmp/smoke-repo
           find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/after.md5
           diff /tmp/before.md5 /tmp/after.md5
+      - name: uninstall round-trips to an empty repo
+        run: |
+          cd /tmp/smoke-repo
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/uninstall.sh /tmp/smoke-repo
+          LEFT=$(find . -path ./.git -prune -o -type f -print)
+          [ -z "$LEFT" ] || { echo "FAIL: files left after uninstall:"; echo "$LEFT"; exit 1; }

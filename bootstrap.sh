@@ -238,6 +238,9 @@ else
   printf -- "-include Makefile.sdd\n" > Makefile; say "created: Makefile (include only)"
 fi
 
+# ----------------------------------- 5b. flag registry (makes sdd-flags a real gate)
+put feature_flags.py feature_flags.py
+
 # ------------------------------------------------------- 6. CI gate on pull request
 put sdd-ci.yml .github/workflows/sdd-ci.yml
 

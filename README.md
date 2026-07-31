@@ -15,10 +15,25 @@ what is missing.
 ```bash
 sdd-kit/bootstrap.sh /path/to/repo   # per repository: SDD assets, gates, hooks
 sdd-kit/setup-dev.sh                 # per developer machine: recommended personal tools (opt-in)
+sdd-kit/uninstall.sh /path/to/repo   # reverse bootstrap: put the repo back the way it was
+sdd-kit/uninstall.sh --force /path/to/repo  # also delete kit files that were modified since install
 ```
 
 Re-running is safe. Without a TTY, questions are skipped with instructions;
 `SDD_KIT_ASSUME_YES=1` auto-confirms installs (never the YouTrack token).
+
+## Uninstall
+
+`uninstall.sh` reverses bootstrap with one safety rule: a file is deleted
+only when it is byte-identical to the kit template (or profile payload) that
+installed it - anything the team modified is kept, with a WARN and the exact
+manual command. `--force` deletes the kit-installed files even when modified
+(useful when the repo carries an older kit version); AGENTS.md and openspec/
+are team content and are never force-deleted. The `CLAUDE.md -> AGENTS.md`
+rename is offered back;
+`openspec/` (specs + changes) and the central store registration are touched
+only after an explicit yes. On an untouched bootstrap the round trip is
+clean: `git status` shows the repo exactly as before install.
 
 ## What it installs
 
@@ -159,6 +174,7 @@ Reviewer agents and spec-miner are adapted from
 
 ```
 bootstrap.sh          per-repo installer
+uninstall.sh          per-repo uninstaller (reverses bootstrap, keeps team edits)
 setup-dev.sh          per-developer machine setup (personal tools, opt-in)
 profiles/             per-repo overrides: spec-guard paths, store wiring, py/no-py
 templates/            everything installed into repos (English-only)
