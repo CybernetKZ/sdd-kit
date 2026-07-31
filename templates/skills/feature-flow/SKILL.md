@@ -68,27 +68,29 @@ away; a risky or cross-service one earns the full grill.
   small PRs under ONE change, dark behind a feature flag (see 4b). The change
   stays active across all the epic's PRs and is archived when the flag is
   enabled in prod by default (ADR-0011).
-- Standard/deep: interrogate the plan before implementing (grill it): edge
-  cases, rollback, migrations, cross-service impact. Fix the plan, not the
+- Standard/deep: interrogate the plan before implementing (grill it): an
+  agent asks the questions - edge cases, rollback, migrations, cross-service
+  impact - and the developer answers; anything the developer cannot answer
+  becomes a question to the ticket author. Fix the plan, not the
   code later. Record the grill as a `## Grill` section in proposal.md - the
   sharp questions and the accepted answers, one line per decision. It
   archives with the change, so the "why option B" history survives.
 
 ## 3. QA writes the tests - before implementation (QA-SDD-PROCESS.md)
 
-Developers do NOT write tests. The change (manifest) goes to the QA flow
-before any implementation code:
+Developers do NOT write tests. The change (its spec delta) goes to the QA
+flow before any implementation code:
 
-- QA validates the manifest: every Requirement has at least one measurable
+- QA validates the spec delta: every Requirement has at least one measurable
   Scenario (WHEN/THEN), edge cases are covered (invalid input, permissions,
   empty values, repeated calls), no conflict with existing contracts.
-  A manifest that fails validation comes BACK to you - fix the Scenarios,
+  A spec delta that fails validation comes BACK to you - fix the Scenarios,
   not the tests. Your job in step 2 is to write Scenarios QA can test.
 - QA writes one test (or an explicit skip with a reason) per Scenario, each
   carrying a tracer comment `openspec: <change> / Requirement / Scenario`;
   an independent agent then adversarially checks every test for green stubs.
 - Tests must be RED before implementation - QA shows the RED run.
-- Light tier: the manifest's single Scenario yields one regression test that
+- Light tier: the spec delta's single Scenario yields one regression test that
   reproduces the bug/gap and fails on the current code - that IS the RED.
 
 ## 4. Implement

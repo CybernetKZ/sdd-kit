@@ -4,6 +4,12 @@ Bootstrap for spec-driven development (SDD) in a repository - new or
 existing. One script, idempotent: never overwrites existing files, only adds
 what is missing.
 
+**Where to start:**
+
+- New to the team or to SDD -> `docs/ONBOARDING.md`.
+- How the process works (signal -> merged PR) -> `WORKFLOW.md`.
+- Installing the kit into a repo -> keep reading this file.
+
 ## Usage
 
 ```bash
@@ -31,7 +37,7 @@ Re-running is safe. Without a TTY, questions are skipped with instructions;
 | `.claude/scripts/repo-audit.sh` | advisory clutter audit: extra MCP servers, foreign agent-tool configs (.cursor/.serena/...), stray skills/agents; runs at the end of bootstrap and via `make sdd-audit`; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, and (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values; runs at the end of bootstrap; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine); + chrome-devtools for frontend profiles |
-| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> QA validates the manifest and writes tests BEFORE code (QA-SDD-PROCESS.md; developers do not write tests) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
+| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> QA validates the spec delta and writes tests BEFORE code (QA-SDD-PROCESS.md; developers do not write tests) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
 | `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (collect_incident.py) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by QA from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) - installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
 | `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
@@ -126,7 +132,7 @@ browser loop).
 - `WORKFLOW.md` - the end-to-end team flow (signal -> merged PR) with every
   tool's plug-in point.
 - `QA-SDD-PROCESS.md` - the separate QA workflow: tests are written BEFORE
-  implementation, by QA from the OpenSpec manifest, with a traceability gate
+  implementation, by QA from the OpenSpec spec delta, with a traceability gate
   (each Scenario ⇄ one test) and adversarial verification of generated tests.
   Developers do not write tests.
 
