@@ -3,6 +3,14 @@
 > Дата: 2026-07-31. Полный разбор того, что kit устанавливает, запускает и принуждает —
 > послойно, с матрицей дублирования и ранжированным планом упрощения.
 > Источник: аудит 5 параллельными агентами (bootstrap / hooks / gates+CI / prompts / flags+docs).
+>
+> **СТАТУС 2026-08-01: аудит-снимок, устарел.** План упрощения выполнен (фазы 2–7,
+> см. [PLAN_UPDATE.md](PLAN_UPDATE.md) — статус исполнения внизу). Ключевые расхождения
+> с текстом ниже: bootstrap.sh+setup-dev.sh → `install.sh`; ревьюеров 2 (backend/database)
+> + новый `test-author`; feature_flags.py ~35 строк и ставится инсталлером; хуки — `.cjs`
+> (фикс ESM-репо); repo-audit влит в sdd-doctor; settings-living-spec.json и format-py
+> удалены; enforcement — сознательно advisory (ADR-0015); флаги dormant (ADR-0015);
+> тесты до кода — агент test-author (ADR-0016).
 
 ---
 

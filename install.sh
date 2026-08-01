@@ -326,9 +326,9 @@ repo_section() {
   put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
   put review-prompt.md .claude/scripts/review-prompt.md
 
-  # ----------------- 7b. agents: reviewers (autoreview) + planner/plan-griller
+  # ------- 7b. agents: reviewers (autoreview) + planner/plan-griller/test-author
   local a
-  for a in backend-reviewer database-reviewer planner plan-griller; do
+  for a in backend-reviewer database-reviewer planner plan-griller test-author; do
     put "agents/$a.md" ".claude/agents/$a.md"
   done
   put autoreview.yml .github/workflows/autoreview.yml

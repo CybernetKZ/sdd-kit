@@ -93,7 +93,7 @@ if [ -f .claude/scripts/repo-audit.sh ]; then
     echo "        next: rm .claude/scripts/repo-audit.sh" >&2
   fi
 fi
-for a in backend-reviewer database-reviewer planner plan-griller; do
+for a in backend-reviewer database-reviewer planner plan-griller test-author; do
   rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
 done
 rm_ours "$KIT/templates/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md
