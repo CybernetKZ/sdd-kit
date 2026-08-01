@@ -10,10 +10,12 @@ pieces are marked *(planned)* in the text.
 
 Grounding: RAISE intake = ADR-0009; task tiers & models = ADR-0010;
 epic/flags/handoff seam = ADR-0011; grill/QA/epic clarifications =
-ADR-0012; branch & PR gates = ADR-0006; enforcement = ADR-0003;
-testing = `QA-SDD-PROCESS.md` (a separate QA workflow: tests are written
-BEFORE implementation, and developers do NOT write tests - QA does, from
-the spec delta). The per-task orchestration lives in the `feature-flow`
+ADR-0012; branch & PR gates = ADR-0006; enforcement = ADR-0003, deliberately
+advisory today = ADR-0015; testing = `QA-SDD-PROCESS.md` + ADR-0016 (tests are
+written from the spec delta BEFORE implementation, and never by whoever writes
+the implementation: today the `test-author` agent writes them and a human QA
+validates; human QA owning the step is the target).
+The per-task orchestration lives in the `feature-flow`
 skill (features) and `incident-flow` skill (bugs/incidents) - this diagram
 is those skills drawn as one picture.
 
@@ -65,10 +67,10 @@ flowchart TD
     TIER -- "light: minimal change<br/>(why + what + regression test)" --> PLAN
 
     %% ============ QA: TESTS BEFORE CODE ============
-    subgraph QAF["3 · QA: tests from the spec delta, BEFORE code (QA-SDD-PROCESS.md)"]
-        QAVAL["QA validates the spec delta:<br/>every Requirement has a measurable<br/>Scenario (WHEN/THEN), edge cases covered,<br/>no conflict with existing contracts"]
+    subgraph QAF["3 · Tests from the spec delta, BEFORE code (QA-SDD-PROCESS.md, ADR-0016)"]
+        QAVAL["Validate the spec delta:<br/>every Requirement has a measurable<br/>Scenario (WHEN/THEN), edge cases covered,<br/>no conflict with existing contracts"]
         QOK{"Spec delta<br/>testable?"}
-        QATESTS["QA writes tests from Scenarios -<br/>one test (or explicit skip) per Scenario,<br/>tracer: openspec change/Requirement/Scenario.<br/>Developers do NOT write tests"]
+        QATESTS["test-author agent writes tests from<br/>Scenarios - one test (or explicit skip)<br/>per Scenario, tracer '# spec: requirement /<br/>scenario'. The implementer never writes them;<br/>human QA ownership = target (ADR-0016)"]
         ADV["Adversarial check: independent agent<br/>tries to refute each test<br/>(green-stub detection)"]
         RED["Tests RED before implementation"]
         QAVAL --> QOK

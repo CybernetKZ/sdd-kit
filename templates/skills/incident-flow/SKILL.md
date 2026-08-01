@@ -8,8 +8,8 @@ description: Cybernet team workflow for a production incident reported in Telegr
 Incidents arrive as loose Telegram messages ("не было end_call со стороны
 агента, посмотри почему"), often without an owner. Follow **feature-flow**
 (`.claude/skills/feature-flow/SKILL.md`) with the differences below — everything
-else is identical: tier rules, the gates (spec, QA tests before code, sdd-check,
-review, CI), its step-3 QA rules, no spec-guard bypass for urgent work.
+else is identical: tier rules, the gates (spec, tests before code, sdd-check,
+review, CI), its step-3 test rules, no spec-guard bypass for urgent work.
 
 ## Step 1 becomes: collect the evidence
 
@@ -35,10 +35,13 @@ deliverable; hand it to the owner and **STOP** — no change, no code.
   unless the fix turns out architectural. Branch `bugfix/WEB-XXXX`. Urgent speeds
   up PRIORITIZATION, not development (ADR-0009): the spec stays mandatory, just
   minimal (why + what + one Scenario reproducing the incident).
-- **3 (QA tests)**: the regression test must fail on current code *for the
-  incident's reason* — a RED run that merely errors out is not a reproduction.
-  So write a precise Scenario: WHEN the incident's conditions, THEN the expected
-  behavior.
+- **3 (tests)**: the regression test is written by the `test-author` agent from
+  the Scenario, before the fix (ADR-0016) — never by whoever writes the fix. It
+  must fail on current code *for the incident's reason*: a RED run that merely
+  errors out is not a reproduction. So write a precise Scenario: WHEN the
+  incident's conditions, THEN the expected behavior. If the test passes on
+  current code, the incident is not reproduced — report that instead of forcing
+  a failure, and go back to the evidence.
 - **5 + 8 (verify, handoff)**: re-run the incident scenario (or the collector on
   a staging reproduction), record before/after in the ticket/PR body, link the
   root-cause doc from the PR. The handoff comment points at the RAISE
