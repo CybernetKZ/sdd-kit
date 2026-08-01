@@ -51,18 +51,18 @@ clean: `git status` shows the repo exactly as before install.
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | OpenSpec init (`--tools claude`); specs + delta-changes live here |
 | `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags` (blocking) + spec-lint (advisory until `SPEC_LINT_STRICT=1`); every failure prints a concrete `next:` step |
-| `feature_flags.py` | minimal flag registry (ADR-0007): flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails CI. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
-| `.github/workflows/sdd-ci.yml` | required SDD gate on every pull request; + `tbd-gates` job (ADR-0006): branch age (warn >2 days, fail >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
+| `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - no process step requires a flag** (ADR-0015): flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails CI. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
+| `.github/workflows/sdd-ci.yml` | the SDD gate on every pull request - **advisory today**: no branch protection, no required check (ADR-0015); + `tbd-gates` job (ADR-0006): branch age (warn >2 days, red >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
 | `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
-| `.claude/agents/` | `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) |
+| `.claude/agents/` | `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) + `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
-| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> QA validates the spec delta and writes tests BEFORE code (QA-SDD-PROCESS.md; developers do not write tests) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
-| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by QA from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
+| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> validate the spec delta, then the `test-author` agent writes the tests BEFORE code (QA-SDD-PROCESS.md, ADR-0016; the implementer never writes them, human QA ownership is the target) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
+| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by the `test-author` agent from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) - installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
 | `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
 
@@ -155,9 +155,10 @@ prompt-cache prefix, measured +45..62% cost - see
 - `WORKFLOW.md` - the end-to-end team flow (signal -> merged PR) with every
   tool's plug-in point.
 - `QA-SDD-PROCESS.md` - the separate QA workflow: tests are written BEFORE
-  implementation, by QA from the OpenSpec spec delta, with a traceability gate
+  implementation, from the OpenSpec spec delta, with a traceability gate
   (each Scenario ⇄ one test) and adversarial verification of generated tests.
-  Developers do not write tests.
+  Whoever writes the implementation never writes its tests: today that is the
+  `test-author` agent, with human QA ownership as the target (ADR-0016).
 
 ## Design notes
 
@@ -171,6 +172,12 @@ context - advisory by nature, the model can ignore them. Hooks
 ignored. Enforcement therefore lives only in hooks + CI gates, and every
 installed piece must be verifiable (a gate, a log line, a measured
 artifact) - the `sdd-doctor` audit section names what never runs.
+
+And today even the CI half is advisory on purpose (ADR-0015): branch
+protection is off and no check is required, so the only pieces that actually
+block are local (spec-guard, the `--no-verify` blocker, pre-commit). Server
+gates are honest signals in a log; switching them on is one deliberate
+decision, deferred rather than cancelled.
 
 ## Attribution
 

@@ -53,18 +53,18 @@ sdd-kit/uninstall.sh --force /path/to/repo  # удалить файлы кита
 | `AGENTS.md` (+ симлинк `CLAUDE.md`) | Главный контекст для ИИ-агентов, до 500 строк; существующий `CLAUDE.md` переименовывается, а не теряется |
 | `openspec/` | Инициализация OpenSpec; здесь живут спецификации и дельта-изменения (delta-changes) |
 | `Makefile.sdd` (+ `-include` в Makefile) | Команда `make sdd-check`: проверяет, что `AGENTS.md` существует и ≤500 строк + `openspec validate --all --strict` + `sdd-flags` (блокируют) + spec-lint (консультативно, пока не включён `SPEC_LINT_STRICT=1`); при любой ошибке выводит конкретный шаг `next:` |
-| `feature_flags.py` | Минимальный реестр фича-флагов (ADR-0007): имя флага -> дата `expires`, включение через `FLAG_<NAME>=1`, чтение только через `is_enabled()`; `make sdd-flags` предупреждает 7 дней после истечения срока, потом роняет CI. Lifecycle описан в docstring модуля; не забудь `git add` - гейт смотрит на файлы в индексе |
-| `.github/workflows/sdd-ci.yml` | Обязательная SDD-проверка для каждого pull request; + джоба `tbd-gates` (ADR-0006): возраст ветки (предупреждение >2 дней, ошибка >5) и размер PR (ошибка >1500 изменённых строк; если репозиторию нужен другой порог - поправь `PR_XL_LINES` в самом workflow) - метки-обходы `long-lived-ok`/`xl-ok` требуют причину `Why ...:` в описании PR |
+| `feature_flags.py` | Минимальный реестр фича-флагов (ADR-0007), **по требованию - ни один шаг процесса не обязывает заводить флаг** (ADR-0015): имя флага -> дата `expires`, включение через `FLAG_<NAME>=1`, чтение только через `is_enabled()`; `make sdd-flags` предупреждает 7 дней после истечения срока, потом роняет CI. Lifecycle описан в docstring модуля; не забудь `git add` - гейт смотрит на файлы в индексе |
+| `.github/workflows/sdd-ci.yml` | SDD-проверка на каждом pull request - **сегодня консультативная**: branch protection выключена, required check не назначен (ADR-0015); + джоба `tbd-gates` (ADR-0006): возраст ветки (предупреждение >2 дней, красная >5) и размер PR (ошибка >1500 изменённых строк; если репозиторию нужен другой порог - поправь `PR_XL_LINES` в самом workflow) - метки-обходы `long-lived-ok`/`xl-ok` требуют причину `Why ...:` в описании PR |
 | `.github/workflows/autoreview.yml` | Автоматическое ревью PR: ИИ-ревью через headless `claude -p` с общим промптом `.claude/scripts/review-prompt.md`, которому подаётся отчёт статических анализаторов (radon, complexipy, vulture, semgrep security patterns), и он обязан его проверить перед публикацией; без секрета `CLAUDE_CODE_OAUTH_TOKEN` job завершается за секунды |
-| `.claude/agents/` | `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy) для шага ИИ-ревью + `planner` и `plan-griller` (план и гриль фазы 2 на opus через `model` frontmatter, ADR-0013) |
+| `.claude/agents/` | `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy) для шага ИИ-ревью + `planner` и `plan-griller` (план и гриль фазы 2 на opus через `model` frontmatter, ADR-0013) + `test-author` (падающие тесты фазы 3 по спек-дельте, sonnet, ADR-0016) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (блокирует правки кода без активной `openspec/changes/<id>/`), блокировщик `git commit --no-verify` и пакет выживания при PreCompact (`.claude/last-session-state.md` - активное изменение + незакоммиченная работа, чтобы агенты продолжали работу после компакции; идея из ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1` |
 | `.git/hooks/pre-commit` | Защита от коммитов в защищённые ветки (main/master/prod/stage блокируются, dev предупреждает; `SDD_ALLOW_PROTECTED=1` обходит), автофикс+форматирование ruff для застейдженного Python, проверки гигиены (маркеры слияния, файлы >5 МБ, `breakpoint()`, паттерны секретов/токенов, новые сабмодули, битый JSON/TOML/YAML) + `make sdd-check` (если хук уже есть, сливается вручную) |
 | `.claude/scripts/review-prompt.md` | Единственный канонический промпт ИИ-ревью: его читают и `make sdd-review`, и `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | Доктор окружения (`make sdd-doctor`): нужные утилиты (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI и авторизация, регистрация в сторе, токен youtrack, наличие хуков/pre-commit, и (по профилю) наличие файлов `.env` для каждого сервиса, нужных свежему клону - только пути, никогда не значения секретов; запускается в конце bootstrap; находки в формате `{level, group, code, message, next}` с точной командой-исправлением, `--json` для машин (ADR-0008) |
 | `.mcp.json` | MCP-серверы проекта: context7 + youtrack (пути подобраны под эту машину) |
-| `.claude/skills/feature-flow/` | Командный процесс "от тикета до PR" в виде skill: разбор тикета YouTrack -> выбор тира (light/standard/deep, ADR-0010) -> OpenSpec change + грилль -> QA проверяет спек-дельту и пишет тесты ДО кода (QA-SDD-PROCESS.md; разработчики тесты не пишут) -> реализация -> ручная проверка -> ревью -> PR -> хендофф ready_to_test |
-| `.claude/skills/incident-flow/` | Командный процесс работы с инцидентами: сбор улик (CybernetKZ/incident_collect) -> документ с корневой причиной (bug/misuse/infra - для misuse/infra сам документ и есть результат) -> OpenSpec change -> сначала регресс-тест (пишет QA по сценарию инцидента), потом фикс -> проверка по инциденту -> хендофф ready_to_test |
+| `.claude/skills/feature-flow/` | Командный процесс "от тикета до PR" в виде skill: разбор тикета YouTrack -> выбор тира (light/standard/deep, ADR-0010) -> OpenSpec change + грилль -> проверка спек-дельты, затем агент `test-author` пишет тесты ДО кода (QA-SDD-PROCESS.md, ADR-0016; автор реализации свои тесты не пишет, владение QA - целевое состояние) -> реализация -> ручная проверка -> ревью -> PR -> хендофф ready_to_test |
+| `.claude/skills/incident-flow/` | Командный процесс работы с инцидентами: сбор улик (CybernetKZ/incident_collect) -> документ с корневой причиной (bug/misuse/infra - для misuse/infra сам документ и есть результат) -> OpenSpec change -> сначала регресс-тест (пишет агент `test-author` по сценарию инцидента), потом фикс -> проверка по инциденту -> хендофф ready_to_test |
 | `ruff.toml` | Явный (explicit-select) конфиг Ruff (классика E/F + отобранные дополнения) - ставится, ТОЛЬКО если в репозитории нет своего конфига Ruff; explicit select нужен, потому что в ruff ≥0.15 набор правил по умолчанию раздулся до 400+ |
 | `.spec-guard-paths` + подключение к стору | Для известных репозиториев (см. "Профили" ниже): настраивается автоматически |
 
@@ -150,9 +150,10 @@ uvx - от прошлой пробы остался мусор `.serena/`, ко�
 ## Документы по процессу
 
 - `WORKFLOW.md` - весь цикл работы команды (сигнал -> влитый PR) с точкой подключения каждого инструмента.
-- `QA-SDD-PROCESS.md` - отдельный процесс QA: тесты пишутся ДО реализации, силами QA по
+- `QA-SDD-PROCESS.md` - отдельный процесс QA: тесты пишутся ДО реализации по
   спек-дельте OpenSpec, с проверкой прослеживаемости (каждый Scenario ⇄ один тест) и состязательной
-  проверкой сгенерированных тестов. Разработчики тесты не пишут.
+  проверкой сгенерированных тестов. Автор реализации свои тесты не пишет никогда: сегодня их
+  пишет агент `test-author`, владение фазой человеком-QA - целевое состояние (ADR-0016).
 
 ## Design notes
 
@@ -165,6 +166,11 @@ uvx - от прошлой пробы остался мусор `.serena/`, ко�
 (pre-commit, PreToolUse/PreCompact) - это детерминированный код, и его игнорировать нельзя. Поэтому всё
 принудительное живёт только в хуках и CI-проверках, и каждая установленная часть должна быть проверяемой
 (проверка, строка в логе, измеримый артефакт) - секция audit в `sdd-doctor` показывает всё, что никогда не запускается.
+
+И сегодня даже половина с CI - консультативная, осознанно (ADR-0015): branch protection выключена,
+required check не назначен, поэтому реально блокируют только локальные вещи (spec-guard, блокировщик
+`--no-verify`, pre-commit). Серверные проверки - честные сигналы в логе; включение - одно отдельное
+решение, отложенное, а не отменённое.
 
 ## Attribution
 

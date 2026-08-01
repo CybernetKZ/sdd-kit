@@ -166,3 +166,10 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 | va-tmpl(2) | MEDIUM | System templates (is_system=True) allow the same PUT mutations as regular ones with no identity-field lock, unlike PCA system templates | voice-agent-constructor-backend/openspec/specs/agent-template/spec.md |
 
 - **uninstall.sh + SDD_KIT_ASSUME_YES=1**: без вопросов отвечает «да» на «Unregister central store» и снимает регистрацию реального store на машине (найдено при smoke-тесте фазы 6, поведение существовало и раньше). Нужен guard: unregister только при явном `--force` или интерактивном yes.
+
+## Additions 2026-08-01 (гриль-сессия №3, ADR-0015 / ADR-0016)
+
+| ID | Severity | Title | Source |
+|---|---|---|---|
+| kit-flag(1) | HIGH | Механизм включения флага в среде не определён: неизвестно, где физически ставится `FLAG_X=1` на stage и prod (helm values? `.env` сервиса? переменные CI/CD?) и у кого туда доступ. Пока ответа нет, handoff-комментарий «включи `FLAG_X=1`» адресован в пустоту. Закрыть ДО первого боевого флага | ADR-0015 п.2 |
+| kit-frontend(1) | LOW | Фронтового профиля нет: `web-frontend-new` ставится обычной установкой - ревьюверы бэкенд-ориентированные (`backend-reviewer`/`database-reviewer`), `feature_flags.py` на Python там фактически no-op. Нужен `frontend-reviewer` и TS-вариант реестра флагов. Низкий приоритет: бэкенд первого класса | ADR-0015 п.5 |
