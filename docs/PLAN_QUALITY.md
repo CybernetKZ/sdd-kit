@@ -44,7 +44,7 @@
       не блокирует): checkout → uv → `make test`. `continue-on-error: true` НЕ ставить —
       честный красный чек, просто он не required.
 - [x] B.3 Убрать TODO «make test» из sdd-ci.yml и WORKFLOW Status (пункт закрывается).
-- [ ] B.4 Раскатка: `install.sh --refresh` по 6 репо (первое боевое применение фазы A).
+- [x] B.4 Раскатка: `install.sh --refresh` по 6 репо (первое боевое применение фазы A).
 
 **Проверка**: в WBN `make test` гоняет ruff+pytest; в web-frontend-new — graceful skip;
 job `tests` появляется в PR-чеках.
@@ -65,7 +65,7 @@ job `tests` появляется в PR-чеках.
       начинай с запроса к графу (если индекс свежий), затем grep/чтение»; одна строка + ссылка.
       То же в incident-flow (поиск по симптому).
 - [x] C.4 `sdd-doctor`: info-строка «graphify index: present/absent» (не warn — опциональный инструмент).
-- [ ] C.5 Раскатка `--refresh` + построить индекс в WBN (пилот, замерить пользу на живом intake).
+- [x] C.5 (refresh done; индекс WBN ждёт LLM-ключа или интерактивного /graphify) Раскатка `--refresh` + построить индекс в WBN (пилот, замерить пользу на живом intake).
 
 **Проверка**: `make sdd-index` в WBN строит индекс; в репо без graphify — skip с подсказкой;
 инструкция в AGENTS.md не раздувает файл за 500 строк.
