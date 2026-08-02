@@ -48,11 +48,26 @@ XACK **fail-closed**, а не fail-open (ошибка остаётся в PEL �
 5. `key_prefix` = первые 7 символов UUID фирмы — enumerable; секретность целиком
    на hashed-половине.
 
-## Что дальше (по готовности владельца)
+## Волна 2 (2026-08-03): wbn-va-rpc — закоммичено (store `5acdca2`)
 
-- [ ] Ревью и коммит правок в cybernet-specs (5 спек).
-- [ ] Обновить README store: статус «test scaffold, nothing authoritative» устарел —
-      после D6 (ADR-0015) store живёт как контекст для агентов; sign-off за Daniil.
-- [ ] Волна 2 сверки: wbn-va-rpc (+ frontend-контракты при поднятии приоритета фронта).
-- [ ] Синхронизировать исходные доки WBN (`POST_CALL_PROCESSOR_LLM_REDIS_CONTRACT.md`) —
-      в спеках drift-места помечены; сама правка доков — вне текущего скоупа.
+Сверка обеих сторон: WBN @ `36d29f5e`, VA @ `5d235888`. Инвентарь из 14 actions
+не изменился. Ключевые drift'ы:
+
+- **TaskIQ enqueue-failure fallback покрывает 2 из 6 write-actions** — 4 agent-записи
+  идут `.kiq()` в log-only try/except: без fallback и без dead-letter (finding l).
+- **Асимметрия возвращаемого клиентом**: VA возвращает весь envelope, WBN — `response.data`
+  (finding m, load-bearing).
+- **(h) эскалирован latent → LIVE**: `TOUCH_AGENT_WB` с `user_uuid=null` достижим с живого
+  пути (удаление knowledge base → cleanup агентов), WBN-схема требует UUID. Кандидат на тикет.
+- `UPDATE_AGENT_WB` имеет 2 недокументированные ошибки, НЕ покрытые idempotency-правилом.
+- `RABBITMQ_VHOST` не читает ни одна сторона; дефолты различаются.
+- Cross-side mismatches (a)–(k): все перепроверены, ни один не выброшен;
+  (d)/(j)/(k) уточнены; закрыта uncertainty #2 (ровно один WBN-консьюмер очереди).
+
+## Статус store
+
+- [x] Волна 1: 5 контрактов закоммичены (`c41df8f`), README подписан (working store, 2026-08-03).
+- [x] Волна 2: wbn-va-rpc (`5acdca2`).
+- [ ] Не сверены: `frontend-api-v1`, `va-frontend-api` (фронт — низкий приоритет).
+- [ ] Синхронизировать исходные доки WBN (`POST_CALL_PROCESSOR_LLM_REDIS_CONTRACT.md` и др.) —
+      drift-места помечены в спеках; правка доков — вне скоупа (WBN read-only).
