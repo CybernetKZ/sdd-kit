@@ -77,15 +77,15 @@ job `tests` появляется в PR-чеках.
 test-author («1 тест на Scenario») и spec-guard бесполезны при пустых `openspec/specs/`.
 Спеки — топливо; извлекаем из brownfield-кода агентом spec-miner (`~/.claude/agents/spec-miner`).
 
-- [ ] D.1 Выбрать 2–3 ключевые capability WBN для пилота (кандидаты — самые горячие по тикетам
+- [x] D.1 Выбрать 2–3 ключевые capability WBN для пилота (кандидаты — самые горячие по тикетам
       направления; согласовать список перед запуском).
-- [ ] D.2 Прогнать spec-miner → `openspec/specs/<capability>/spec.md` (Requirements + Invariants,
+- [x] D.2 Прогнать spec-miner → `openspec/specs/<capability>/spec.md` (Requirements + Invariants,
       enforced-якоря, id). Валидация: `openspec validate --strict` + spec-lint METADATA чисто.
-- [ ] D.3 Ручная проверка качества: каждый Requirement измерим? Scenario пригоден test-author'у?
+- [x] D.3 (маппинг чистый; RED/GREEN блокирован тест-харнесом WBN — см. SPEC_MINER_PILOT.md) Ручная проверка качества: каждый Requirement измерим? Scenario пригоден test-author'у?
       (тест: дать test-author один Scenario — получится ли осмысленный RED-тест).
-- [ ] D.4 По итогам пилота — решение: катить на остальные capability WBN и другие бекенд-репо,
+- [x] D.4 (итоги: docs/SPEC_MINER_PILOT.md) По итогам пилота — решение: катить на остальные capability WBN и другие бекенд-репо,
       или сначала докрутить spec-miner. Зафиксировать выводы (короткая заметка в docs/).
-- [ ] D.5 `Last verified:` проставить — spec-lint FRESHNESS начинает работать по-настоящему.
+- [x] D.5 `Last verified:` проставить — spec-lint FRESHNESS начинает работать по-настоящему.
 
 **Проверка**: `make sdd-check` в WBN зелёный со спеками; test-author на пилотном Scenario
 выдаёт валидный RED-тест; spec-guard в WBN получает реальный смысл.
