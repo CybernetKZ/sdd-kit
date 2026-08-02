@@ -64,10 +64,29 @@ XACK **fail-closed**, а не fail-open (ошибка остаётся в PEL �
 - Cross-side mismatches (a)–(k): все перепроверены, ни один не выброшен;
   (d)/(j)/(k) уточнены; закрыта uncertainty #2 (ровно один WBN-консьюмер очереди).
 
+## Волна 3 (2026-08-03): frontend-api-v1 + va-frontend-api — закоммичено (store `3d751a0`)
+
+**frontend-api-v1** (WBN @ 36d29f5e, WFN @ 2917fdf0): два «дефекта» исходной спеки
+**отозваны** (logout вызывается и чистит Redis; `nginx.prod.conf` с прод-правилами
+лежит в WFN); `/internal` гейтится JWT+ролями, не IP-allowlist; WS-разрыв сужен до
+dev-only (Vite без правила `/lk/ws`); error-shapes gateway расширены.
+
+**va-frontend-api** (VA @ 5d235888): gateway — **123-правильный per-endpoint
+allowlist + role gate**, а не простой path-rewrite (новый дефект z: drift allowlist ↔
+route table VA); ASR/VAD-блоки плоские; custom-function отсутствует в tool-union
+(`dict[str,Any]` отключает `extra=forbid`); `get_current_user_data` **fail-open**
+(None вместо 401) — 18/49 endpoint'ов agent-роутера вообще без identity.
+
+Запаркованные наблюдения (в отчётах агентов, тикеты не заводим): VA не проверяет
+HMAC-подпись gateway (одна прокси — две модели доверия, безопасность держится на
+недостижимости порта VA); неаутентифицированные мутации на 8 роутерах VA;
+`getDecodedToken` фронта всегда null (клиентские permission-гейты молча не работают);
+CORS `*`+credentials на WBN и VA public-app.
+
 ## Статус store
 
-- [x] Волна 1: 5 контрактов закоммичены (`c41df8f`), README подписан (working store, 2026-08-03).
+- [x] Волна 1: 5 контрактов (`c41df8f`), README подписан (working store, 2026-08-03).
 - [x] Волна 2: wbn-va-rpc (`5acdca2`).
-- [ ] Не сверены: `frontend-api-v1`, `va-frontend-api` (фронт — низкий приоритет).
+- [x] Волна 3: frontend-api-v1 + va-frontend-api (`3d751a0`). **Все 8 контрактов сверены с кодом.**
 - [ ] Синхронизировать исходные доки WBN (`POST_CALL_PROCESSOR_LLM_REDIS_CONTRACT.md` и др.) —
       drift-места помечены в спеках; правка доков — вне скоупа (WBN read-only).
