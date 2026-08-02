@@ -67,3 +67,5 @@ test-author по Scenario «окно 22:00→06:00 → два слота» (`der
     хелпер и константа удалены (WEB-1917 Variant A).
 13. Redis-контракт: TTL `call_in_redis:*` — доки 1h, код 7d; `CALL_RELATION_KEY` пишет
     post-call-processor, не call_in_service.
+
+**Скоуп 2026-08-02**: работаем только с sdd-kit + cybernet-specs; находки по WBN (см. список выше) запаркованы — тикеты не заводятся, ошибки в других репо игнорируются до отдельного решения.
