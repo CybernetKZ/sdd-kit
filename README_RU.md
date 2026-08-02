@@ -22,6 +22,7 @@
 sdd-kit/install.sh                   # файлы репозитория + личные инструменты на машине
 sdd-kit/install.sh --repo-only       # только файлы репозитория (путь можно не указывать - берётся текущий каталог)
 sdd-kit/install.sh --machine-only    # только личные инструменты на этой машине
+sdd-kit/install.sh --refresh         # обновить файлы кита в репозитории до текущей версии
 sdd-kit/uninstall.sh /path/to/repo   # откатить репозиторную часть: вернуть репозиторий как было
 sdd-kit/uninstall.sh --force /path/to/repo  # удалить файлы кита, даже если их правили после установки
 ```
@@ -34,6 +35,27 @@ sdd-kit/uninstall.sh --force /path/to/repo  # удалить файлы кита
 `bootstrap.sh` и `setup-dev.sh` остаются как deprecated-обёртки над `--repo-only` / `--machine-only` и будут
 удалены через релиз.
 
+## Обновление кита в репозитории: `install.sh --refresh`
+
+Обычная установка ничего не перезаписывает, поэтому в репозитории, настроенном месяцы назад, остаются старые
+шаблоны. Чтобы подтянуть текущие:
+
+```bash
+cd /путь/к/sdd-kit && git pull
+cd /путь/к/репозиторию && /путь/к/sdd-kit/install.sh --refresh
+```
+
+`--refresh` перезаписывает только **манифест файлов кита** (список - в `install.sh`, функция `kit_manifest`):
+`.claude/hooks/*.cjs`, `.claude/agents/*.md`, `.claude/skills/{feature-flow,incident-flow}/SKILL.md`,
+`.claude/scripts/{spec-lint.py,sdd-doctor.sh,review-prompt.md}`, `Makefile.sdd`,
+`.github/workflows/{sdd-ci,autoreview}.yml` и `.git/hooks/pre-commit` (пересобирается со вставкой LIVING SPEC,
+если так велит профиль). Каждый изменённый файл печатается как `refreshed: <path> (+X/-Y lines)`, второй прогон
+даёт ноль изменений. Файлы репозитория не трогаются: `AGENTS.md`, `CLAUDE.md`, `.spec-guard-paths`,
+`feature_flags.py`, `.claude/expected-env`, `ruff.toml`, `openspec/**`, `.mcp.json`. `.claude/settings.json`
+только сравнивается: если блок `hooks` разошёлся с шаблоном - WARN и слияние вручную (в репо могли добавить свои
+хуки). Результат смотреть через `git diff` до коммита. `--refresh` работает только с репозиторной частью: у
+машинных инструментов нет семантики обновления - для них перезапустите `--machine-only`.
+
 ## Деинсталляция
 
 `uninstall.sh` разворачивает bootstrap с одним правилом безопасности: файл удаляется,
@@ -42,8 +64,10 @@ sdd-kit/uninstall.sh --force /path/to/repo  # удалить файлы кита
 удаления. `--force` удаляет файлы кита даже изменёнными (полезно, когда в репозитории
 стоит старая версия кита); AGENTS.md и openspec/ - командный контент, force их не
 трогает никогда. Переименование `CLAUDE.md -> AGENTS.md` предлагается откатить;
-`openspec/` (спеки + change'и) и регистрация центрального стора трогаются только после
-явного «да». На нетронутой установке раунд-трип чистый: `git status` показывает
+`openspec/` (спеки + change'и) удаляется только после явного «да». Регистрация центрального
+стора - машинное состояние, общее для всех репозиториев: снимается только при интерактивном
+«да» или с `--force`; unattended-прогон (нет TTY / `SDD_KIT_ASSUME_YES=1`) её сохраняет и
+печатает ручную команду. На нетронутой установке раунд-трип чистый: `git status` показывает
 репозиторий ровно таким, каким он был до установки.
 
 ## What it installs

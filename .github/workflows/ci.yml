@@ -63,6 +63,20 @@ jobs:
           SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/install.sh --repo-only /tmp/smoke-repo
           find . -path ./.git -prune -o -type f -print | sort | xargs md5sum > /tmp/after.md5
           diff /tmp/before.md5 /tmp/after.md5
+      - name: refresh restores kit-owned files, leaves repo-owned ones alone
+        run: |
+          cd /tmp/smoke-repo
+          echo "GARBAGE from CI" >> .claude/scripts/review-prompt.md
+          md5sum AGENTS.md .claude/settings.json > /tmp/repo-owned.md5
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/install.sh --refresh /tmp/smoke-repo
+          cmp .claude/scripts/review-prompt.md $GITHUB_WORKSPACE/templates/review-prompt.md
+          md5sum -c /tmp/repo-owned.md5   # AGENTS.md / settings.json untouched
+      - name: refresh is idempotent (second run refreshes nothing)
+        run: |
+          cd /tmp/smoke-repo
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/install.sh --refresh /tmp/smoke-repo | tee /tmp/refresh2.log
+          grep -q "refresh done: 0 files refreshed" /tmp/refresh2.log
+          ! grep -q "\[sdd-kit\] refreshed:" /tmp/refresh2.log
       - name: uninstall round-trips to an empty repo
         run: |
           cd /tmp/smoke-repo

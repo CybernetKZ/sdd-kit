@@ -30,6 +30,15 @@ OpenSpec change and uncommitted work from before the last context compaction.
 - Cross-service contracts live in the central store repository,
   wired in via `references:` in `openspec/config.yaml`.
 
+## Codebase search
+
+- Order: if `graphify-out/graph.json` exists, start with a graph query
+  (`graphify query "<question>"`) for orientation, then confirm with
+  grep/read; no index yet — go straight to grep/read.
+- Build/update the index: `make sdd-index` (manual, run before a big intake).
+- The graph is navigation/context only (ADR-0004) — its edges are INFERRED,
+  never treat them as verified facts; always confirm in the actual code.
+
 ## Do not edit by hand
 
 TODO: list generated files and directories (migrations, generated code).

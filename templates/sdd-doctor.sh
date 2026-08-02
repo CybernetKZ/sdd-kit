@@ -100,6 +100,16 @@ if [ -n "$ROOT" ]; then
   [ -f .spec-guard-paths ] && ok repo.spec-guard "spec-guard enabled ($(wc -l < .spec-guard-paths | tr -d ' ') guarded path(s))" \
     || warn repo.spec-guard "no .spec-guard-paths — spec-guard hook is a no-op" "create .spec-guard-paths (code path prefixes, one per line)"
 
+  # graphify index (navigation/context only, ADR-0004 — never a gate, so this
+  # is info-level even when absent). Only reported when the CLI is installed.
+  if command -v graphify >/dev/null 2>&1; then
+    if [ -f graphify-out/graph.json ]; then
+      note repo.graphify-index "graphify index: present (graphify-out/graph.json)"
+    else
+      note repo.graphify-index "graphify index: absent (optional, navigation-only)" "make sdd-index"
+    fi
+  fi
+
   if [ -f .git/hooks/pre-commit ] && grep -q sdd-check .git/hooks/pre-commit 2>/dev/null; then
     ok repo.pre-commit "pre-commit hook runs sdd-check"
   else

@@ -21,7 +21,10 @@ contract/logic mistakes) - so step 1 exists to catch that BEFORE any code.
   recommended answers in parallel. Stop and wait ONLY on serious business
   forks (pricing, client commitments, data deletion). Validating requests is
   the RAISE process owner's job, not yours.
-- Cross-check every claim against reality:
+- Cross-check every claim against reality: if a fresh graphify index exists
+  (`graphify-out/graph.json`), start with a graph query for orientation
+  (`graphify query "<ticket claim>"`, navigation only — ADR-0004, always
+  verify in code), then grep/read the code and specs.
   - the code (does this already exist? does it conflict with current logic?),
   - repo specs (`openspec view`, `openspec/specs/`),
   - cross-service contracts (`openspec show <spec> --type spec --store cybernet-specs`).

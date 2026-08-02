@@ -20,6 +20,10 @@ review, CI), its step-3 test rules, no spec-guard bypass for urgent work.
   collector (https://github.com/CybernetKZ/incident_collect):
   `collect_incident.py <uuid>` pulls logs, Redis state and DB rows (first run:
   clone it and fill its `.env` per its README). Read it BEFORE forming a theory.
+- Searching by symptom: if a fresh graphify index exists
+  (`graphify-out/graph.json`), start with a graph query
+  (`graphify query "<symptom>"`, navigation only — ADR-0004, always verify in
+  code), then grep/read the code.
 
 ## New step: root-cause document, before any plan
 

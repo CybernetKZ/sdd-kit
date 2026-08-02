@@ -33,6 +33,16 @@ cd /путь/к/репозиторию && sdd-kit/install.sh --repo-only
   авто-ревью, хуки, ruff.toml (только если у репо нет своего конфига ruff), .mcp.json;
 - в конце сам прогонит проверку окружения и ревизию мусора (`make sdd-doctor`).
 
+Обновление кита (вышла новая версия шаблонов - хуки, агенты, скиллы, CI):
+```bash
+cd /путь/к/sdd-kit && git pull
+cd /путь/к/репозиторию && /путь/к/sdd-kit/install.sh --refresh
+```
+`--refresh` перезаписывает только файлы кита и печатает, что изменилось; `AGENTS.md`,
+`.spec-guard-paths`, `feature_flags.py`, `ruff.toml`, `openspec/`, `.mcp.json` не трогает,
+про разошедшийся `hooks` в `.claude/settings.json` предупреждает. Итог смотреть `git diff`
+до коммита.
+
 Подключение к store (если ещё не сделано):
 ```bash
 git clone <store-repo> ~/cybernet/cybernet-specs   # когда появится боевой store

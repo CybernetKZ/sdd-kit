@@ -165,7 +165,7 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 | va-tmpl(1) | MEDIUM | delete_template idempotency (repeat delete -> 404) contradicts sibling delete_agent (repeat delete -> success) - inconsistent contract between domains | voice-agent-constructor-backend/openspec/specs/agent-template/spec.md |
 | va-tmpl(2) | MEDIUM | System templates (is_system=True) allow the same PUT mutations as regular ones with no identity-field lock, unlike PCA system templates | voice-agent-constructor-backend/openspec/specs/agent-template/spec.md |
 
-- **uninstall.sh + SDD_KIT_ASSUME_YES=1**: без вопросов отвечает «да» на «Unregister central store» и снимает регистрацию реального store на машине (найдено при smoke-тесте фазы 6, поведение существовало и раньше). Нужен guard: unregister только при явном `--force` или интерактивном yes.
+- ~~**uninstall.sh + SDD_KIT_ASSUME_YES=1**: без вопросов отвечает «да» на «Unregister central store» и снимает регистрацию реального store на машине (найдено при smoke-тесте фазы 6, поведение существовало и раньше). Нужен guard: unregister только при явном `--force` или интерактивном yes.~~ **FIXED 2026-08-02** (фаза A.3): `unregister_store()` в uninstall.sh — снятие регистрации только при интерактивном yes или `--force`; unattended-прогон (нет TTY / `SDD_KIT_ASSUME_YES=1`) пропускает шаг и печатает ручную команду.
 
 ## Additions 2026-08-01 (гриль-сессия №3, ADR-0015 / ADR-0016)
 

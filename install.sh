@@ -11,6 +11,16 @@
 #   sdd-kit/install.sh [/path/to/repo]              both sections (repo first)
 #   sdd-kit/install.sh --repo-only [/path/to/repo]  repo assets only
 #   sdd-kit/install.sh --machine-only               developer tools only
+#   sdd-kit/install.sh --refresh [/path/to/repo]    update the kit-owned files
+#
+# --refresh re-copies ONLY the kit-owned manifest (hooks, agents, skills,
+# scripts, Makefile.sdd, CI workflows, pre-commit) when the target drifted from
+# the template, and reports a per-file (+added/-removed) summary. Repo-owned
+# files (AGENTS.md, .spec-guard-paths, feature_flags.py, .claude/expected-env,
+# ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched.
+# --refresh always implies the repo section only: the machine tools have no
+# refresh semantics (re-run --machine-only for those), so --repo-only is
+# redundant with it (accepted, ignored).
 #
 # The repo path defaults to the current directory.
 # Every question takes a default: plain Enter accepts it ([Y/n] = yes,
@@ -36,13 +46,15 @@ skip() { SKIP_COUNT=$((SKIP_COUNT + 1)); SKIP_LIST="$SKIP_LIST$1
 # ------------------------------------------------------------------ arguments
 DO_REPO=1
 DO_MACHINE=1
+DO_REFRESH=0
 REPO_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo-only)    DO_MACHINE=0 ;;
     --machine-only) DO_REPO=0 ;;
+    --refresh)      DO_REFRESH=1; DO_MACHINE=0 ;;  # repo section only, by definition
     -h|--help)
-      sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     -*) fail "unknown option: $1 (try --help)" ;;
     *)  REPO_ARG="$1" ;;
@@ -91,6 +103,77 @@ put() { # put <template> <destination> — copies only when the destination is m
     mkdir -p "$(dirname "$2")"; cp "$KIT/templates/$1" "$2"; say "created: $2"; fi
 }
 
+# ------------------------------------------------------------- kit manifest --
+# The kit-owned files: ONE source of truth, used by both the install pass
+# (put(), never overwrites) and `--refresh` (overwrites what drifted).
+# Format per line: "<path under templates/> <destination relative to the repo>".
+#
+# Deliberately NOT here — repo-owned, never overwritten by --refresh:
+#   AGENTS.md, CLAUDE.md, .spec-guard-paths, feature_flags.py,
+#   .claude/expected-env, ruff.toml, openspec/**, .mcp.json,
+#   .claude/settings.json (its `hooks` block is compared and warned about only),
+#   store-ci.yml (store profile: handled separately, see PROFILE_IS_STORE).
+#
+# .git/hooks/pre-commit is listed but never copied verbatim: it is assembled by
+# assemble_pre_commit() (LIVING SPEC splice), so both loops special-case it.
+KIT_PRE_COMMIT_DST=".git/hooks/pre-commit"
+kit_manifest() {
+  cat <<'EOF'
+block-no-verify.cjs .claude/hooks/block-no-verify.cjs
+pre-compact.cjs .claude/hooks/pre-compact.cjs
+spec-guard.cjs .claude/hooks/spec-guard.cjs
+agents/backend-reviewer.md .claude/agents/backend-reviewer.md
+agents/database-reviewer.md .claude/agents/database-reviewer.md
+agents/planner.md .claude/agents/planner.md
+agents/plan-griller.md .claude/agents/plan-griller.md
+agents/test-author.md .claude/agents/test-author.md
+skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
+skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
+spec-lint.py .claude/scripts/spec-lint.py
+sdd-doctor.sh .claude/scripts/sdd-doctor.sh
+review-prompt.md .claude/scripts/review-prompt.md
+Makefile.sdd Makefile.sdd
+sdd-ci.yml .github/workflows/sdd-ci.yml
+autoreview.yml .github/workflows/autoreview.yml
+pre-commit-hook.sh .git/hooks/pre-commit
+EOF
+}
+
+# assemble_pre_commit <destination> — writes the pre-commit hook, splicing in
+# the LIVING SPEC fragment right before the '# SDD gate:' block when the
+# profile asks for it. Used by both the install pass and --refresh.
+assemble_pre_commit() {
+  local dst="$1"
+  if [ "${PROFILE_LIVING_SPEC:-0}" = 1 ]; then
+    awk -v frag="$KIT/templates/living-spec-check.sh" '
+      /^# SDD gate:/ && !ins { while ((getline line < frag) > 0) print line; ins = 1 }
+      { print }
+    ' "$KIT/templates/pre-commit-hook.sh" > "$dst"
+    grep -q "LIVING SPEC discipline" "$dst" \
+      || warn "LIVING SPEC fragment not inserted (no '# SDD gate:' anchor in the template?)"
+  else
+    cp "$KIT/templates/pre-commit-hook.sh" "$dst"
+  fi
+  chmod +x "$dst"
+}
+
+# load_profile <repo-basename> — resets the PROFILE_* globals to their defaults
+# and then sources profiles/<repo-basename>.env if it exists. Shared by the
+# install pass and --refresh (which needs PROFILE_LIVING_SPEC / PROFILE_IS_STORE).
+load_profile() {
+  PROFILE_STORE=1            # 1 = wire this repo to the central spec store (default)
+  PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
+  PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
+  PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
+  PROFILE_SPEC_GUARD_PATHS=""
+  PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
+  if [ -f "$KIT/profiles/$1.env" ]; then
+    # shellcheck disable=SC1090
+    . "$KIT/profiles/$1.env"
+    say "profile: $1"
+  fi
+}
+
 # ============================================================== REPO SECTION ==
 repo_section() {
   local REPO REPO_NAME
@@ -107,17 +190,7 @@ repo_section() {
   # py/no-py). A profile is a shell fragment in profiles/<repo-basename>.env
   # setting PROFILE_* vars.
   REPO_NAME="$(basename "$REPO")"
-  PROFILE_STORE=1            # 1 = wire this repo to the central spec store (default)
-  PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
-  PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
-  PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
-  PROFILE_SPEC_GUARD_PATHS=""
-  PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
-  if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
-    # shellcheck disable=SC1090
-    . "$KIT/profiles/$REPO_NAME.env"
-    say "profile: $REPO_NAME"
-  fi
+  load_profile "$REPO_NAME"
 
   # Central spec store (ADR-0001). Override per machine/org.
   local STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
@@ -293,8 +366,19 @@ repo_section() {
     fi
   fi
 
-  # ------------------------------------------------- 5. Makefile: sdd-check
-  put Makefile.sdd Makefile.sdd
+  # ---------------------------------- 5. kit-owned files (the manifest, once)
+  # Hooks, agents, skills, scripts, Makefile.sdd, CI workflows. Same list that
+  # `--refresh` re-copies later; .git/hooks/pre-commit is assembled in 8b.
+  local m_src m_dst
+  while read -r m_src m_dst; do
+    [ -n "$m_src" ] || continue
+    [ "$m_dst" = "$KIT_PRE_COMMIT_DST" ] && continue
+    put "$m_src" "$m_dst"
+  done <<EOF
+$(kit_manifest)
+EOF
+
+  # ------------------------------------------------- 5a. Makefile: sdd-check
   if [ -f Makefile ]; then
     grep -q "Makefile.sdd" Makefile || { printf '\n-include Makefile.sdd\n' >> Makefile; say "appended: -include Makefile.sdd to Makefile"; }
   else
@@ -303,9 +387,6 @@ repo_section() {
 
   # --------------------------- 5b. flag registry (makes sdd-flags a real gate)
   put feature_flags.py feature_flags.py
-
-  # ----------------------------------------------- 6. CI gate on pull request
-  put sdd-ci.yml .github/workflows/sdd-ci.yml
 
   # --------------------------------- 6b. ruff config (only when none exists)
   if [ "$PROFILE_SKIP_PY" = 1 ]; then
@@ -317,23 +398,10 @@ repo_section() {
     put ruff.toml ruff.toml
   fi
 
-  # --------------------------------------- 7. Claude Code hooks (repo-local)
-  put block-no-verify.cjs .claude/hooks/block-no-verify.cjs
-  put pre-compact.cjs .claude/hooks/pre-compact.cjs
-  put spec-guard.cjs .claude/hooks/spec-guard.cjs
-  put settings.json .claude/settings.json  # if settings.json already exists, merge by hand
-  put spec-lint.py .claude/scripts/spec-lint.py
-  put sdd-doctor.sh .claude/scripts/sdd-doctor.sh
-  put review-prompt.md .claude/scripts/review-prompt.md
-
-  # ------- 7b. agents: reviewers (autoreview) + planner/plan-griller/test-author
-  local a
-  for a in backend-reviewer database-reviewer planner plan-griller test-author; do
-    put "agents/$a.md" ".claude/agents/$a.md"
-  done
-  put autoreview.yml .github/workflows/autoreview.yml
-  put skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
-  put skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
+  # ----- 7. Claude Code settings (NOT in the manifest: repos add own hooks;
+  #          if settings.json already exists, merge the hooks block by hand —
+  #          `--refresh` only warns when the two differ)
+  put settings.json .claude/settings.json
 
   # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
   if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
@@ -364,17 +432,10 @@ repo_section() {
   elif [ "$PROFILE_LIVING_SPEC" = 1 ]; then
     # LIVING SPEC repos: the fragment is concatenated in at install time,
     # right before the '# SDD gate:' block. No post-injection into a live hook.
-    awk -v frag="$KIT/templates/living-spec-check.sh" '
-      /^# SDD gate:/ && !ins { while ((getline line < frag) > 0) print line; ins = 1 }
-      { print }
-    ' "$KIT/templates/pre-commit-hook.sh" > "$PRE_COMMIT"
-    grep -q "LIVING SPEC discipline" "$PRE_COMMIT" \
-      || warn "LIVING SPEC fragment not inserted (no '# SDD gate:' anchor in the template?)"
-    chmod +x "$PRE_COMMIT"
+    assemble_pre_commit "$PRE_COMMIT"
     say "created: $PRE_COMMIT (hygiene checks + LIVING SPEC discipline + make sdd-check)"
   else
-    cp "$KIT/templates/pre-commit-hook.sh" "$PRE_COMMIT"
-    chmod +x "$PRE_COMMIT"
+    assemble_pre_commit "$PRE_COMMIT"
     say "created: $PRE_COMMIT (hygiene checks + make sdd-check before every commit)"
   fi
 
@@ -412,6 +473,102 @@ repo_section() {
   say "  5) AI review runs locally: 'make sdd-review' (your own subscription login;"
   say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
   say "     (autoreview.yml) skips in seconds without one)"
+}
+
+# =========================================================== REFRESH SECTION ==
+# `--refresh`: re-copy the kit-owned manifest into an already-installed repo.
+# Repo-owned files are never touched (see the kit_manifest comment for the list).
+# Idempotent: a second run reports zero refreshed files.
+REFRESHED=0
+
+# refresh_file <rendered source> <destination> — overwrite only on drift.
+refresh_file() {
+  local src="$1" dst="$2" added removed
+  if [ ! -e "$dst" ]; then
+    mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"
+    REFRESHED=$((REFRESHED + 1)); say "refreshed: $dst (was missing)"
+    return 0
+  fi
+  cmp -s "$src" "$dst" && return 0
+  added=$(diff "$dst" "$src" | grep -c '^>' || true)
+  removed=$(diff "$dst" "$src" | grep -c '^<' || true)
+  cp "$src" "$dst"
+  REFRESHED=$((REFRESHED + 1))
+  say "refreshed: $dst (+$added/-$removed lines)"
+}
+
+# .claude/settings.json is never rewritten: a repo may have added its own hooks
+# (pretooluse_guard.py in conversation_flow). Compare the `hooks` object only.
+refresh_settings_hooks() {
+  [ -f .claude/settings.json ] || { say "missing:   .claude/settings.json (run install.sh --repo-only)"; return 0; }
+  if python3 - "$KIT/templates/settings.json" .claude/settings.json <<'PY'
+import json, sys
+
+def hooks(path):
+    try:
+        with open(path) as fh:
+            return json.load(fh).get("hooks")
+    except Exception:
+        return "<unreadable>"
+
+sys.exit(0 if hooks(sys.argv[1]) == hooks(sys.argv[2]) else 1)
+PY
+  then
+    say "ok:      .claude/settings.json hooks match the template"
+  else
+    warn ".claude/settings.json: hooks differ from template — merge manually (repo may have custom hooks)"
+    echo "        next: diff <(python3 -m json.tool $KIT/templates/settings.json) <(python3 -m json.tool .claude/settings.json)" >&2
+  fi
+}
+
+# .git/hooks/pre-commit is assembled, not copied (LIVING SPEC splice), and a
+# hand-merged hook (repo's own checks) is never overwritten.
+refresh_pre_commit() {
+  local tmp
+  if [ -e "$KIT_PRE_COMMIT_DST" ] && ! grep -q "sdd-kit git pre-commit hook" "$KIT_PRE_COMMIT_DST"; then
+    warn "$KIT_PRE_COMMIT_DST is not the kit hook (hand-merged?) — left alone"
+    return 0
+  fi
+  tmp="$(mktemp)"
+  assemble_pre_commit "$tmp"
+  refresh_file "$tmp" "$KIT_PRE_COMMIT_DST"
+  rm -f "$tmp"
+  chmod +x "$KIT_PRE_COMMIT_DST"
+}
+
+refresh_section() {
+  local REPO REPO_NAME m_src m_dst
+  REPO="${REPO_ARG:-$PWD}"
+  REPO="$(cd "$REPO" && pwd)"
+  cd "$REPO"
+  say "refresh: $REPO (kit-owned files only)"
+  [ -d .git ] || fail "$REPO is not a git repository"
+
+  REPO_NAME="$(basename "$REPO")"
+  load_profile "$REPO_NAME"
+
+  if [ "$PROFILE_IS_STORE" = 1 ]; then
+    refresh_file "$KIT/templates/store-ci.yml" .github/workflows/store-ci.yml
+    say "refresh done (store profile): $REFRESHED file(s) updated"
+    return 0
+  fi
+
+  while read -r m_src m_dst; do
+    [ -n "$m_src" ] || continue
+    [ "$m_dst" = "$KIT_PRE_COMMIT_DST" ] && continue
+    refresh_file "$KIT/templates/$m_src" "$m_dst"
+  done <<EOF
+$(kit_manifest)
+EOF
+
+  refresh_pre_commit
+  refresh_settings_hooks
+
+  if [ "$REFRESHED" = 0 ]; then
+    say "refresh done: 0 files refreshed (everything already matches the kit)"
+  else
+    say "refresh done: $REFRESHED file(s) refreshed — review with git diff before committing"
+  fi
 }
 
 # =========================================================== MACHINE SECTION ==
@@ -521,8 +678,12 @@ machine_section() {
 }
 
 # ======================================================================= main ==
-if [ "$DO_REPO" = 1 ]; then repo_section; fi
-if [ "$DO_MACHINE" = 1 ]; then machine_section; fi
+if [ "$DO_REFRESH" = 1 ]; then
+  refresh_section
+else
+  if [ "$DO_REPO" = 1 ]; then repo_section; fi
+  if [ "$DO_MACHINE" = 1 ]; then machine_section; fi
+fi
 
 if [ "$SKIP_COUNT" -gt 0 ]; then
   say "skipped $SKIP_COUNT step(s) — finish them later:"

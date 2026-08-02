@@ -18,6 +18,7 @@ One command, from inside the repo you want to set up:
 sdd-kit/install.sh                   # repo assets + developer machine tools
 sdd-kit/install.sh --repo-only       # repo assets only (path arg optional: defaults to cwd)
 sdd-kit/install.sh --machine-only    # only the personal tools on this machine
+sdd-kit/install.sh --refresh         # update the kit-owned files to the current kit
 sdd-kit/uninstall.sh /path/to/repo   # reverse the repo half: put the repo back the way it was
 sdd-kit/uninstall.sh --force /path/to/repo  # also delete kit files that were modified since install
 ```
@@ -31,6 +32,31 @@ token is only ever read from an interactive prompt.
 `bootstrap.sh` and `setup-dev.sh` still work as deprecated shims for
 `--repo-only` / `--machine-only` and will be removed after one release.
 
+## Updating the kit in a repo: `install.sh --refresh`
+
+The plain install never overwrites, so a repo installed months ago keeps the
+old templates. To pull the current versions in:
+
+```bash
+cd /path/to/sdd-kit && git pull
+cd /path/to/repo && /path/to/sdd-kit/install.sh --refresh
+```
+
+`--refresh` re-copies only the **kit-owned manifest** (the list lives in
+`install.sh`, function `kit_manifest`): `.claude/hooks/*.cjs`,
+`.claude/agents/*.md`, `.claude/skills/{feature-flow,incident-flow}/SKILL.md`,
+`.claude/scripts/{spec-lint.py,sdd-doctor.sh,review-prompt.md}`, `Makefile.sdd`,
+`.github/workflows/{sdd-ci,autoreview}.yml` and `.git/hooks/pre-commit`
+(re-assembled with the LIVING SPEC fragment where the profile asks for it).
+Each changed file is reported as `refreshed: <path> (+X/-Y lines)`; a second run
+reports zero. Repo-owned files are never touched: `AGENTS.md`, `CLAUDE.md`,
+`.spec-guard-paths`, `feature_flags.py`, `.claude/expected-env`, `ruff.toml`,
+`openspec/**`, `.mcp.json`. `.claude/settings.json` is compared, never written:
+if its `hooks` block drifted from the template you get a WARN and merge by hand
+(the repo may have added its own hooks). Review the result with `git diff`
+before committing. `--refresh` is the repo section only — machine tools have no
+refresh semantics, re-run `--machine-only` for those.
+
 ## Uninstall
 
 `uninstall.sh` reverses the repo install with one safety rule: a file is deleted
@@ -40,8 +66,10 @@ manual command. `--force` deletes the kit-installed files even when modified
 (useful when the repo carries an older kit version); AGENTS.md and openspec/
 are team content and are never force-deleted. The `CLAUDE.md -> AGENTS.md`
 rename is offered back;
-`openspec/` (specs + changes) and the central store registration are touched
-only after an explicit yes. On an untouched install the round trip is
+`openspec/` (specs + changes) is deleted only after an explicit yes. The
+central store registration is machine-wide state shared by every repo: it is
+unregistered only on an interactive yes or with `--force` — an unattended run
+(no TTY / `SDD_KIT_ASSUME_YES=1`) keeps it and prints the manual command. On an untouched install the round trip is
 clean: `git status` shows the repo exactly as before install.
 
 ## What it installs

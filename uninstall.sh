@@ -7,8 +7,10 @@
 # is kept, with a WARN and the exact manual command. --force deletes the
 # kit-installed files even when they were modified (AGENTS.md and openspec/
 # are still treated as team content: rename/ask logic applies, never force).
-# Data (openspec/ specs, store registration) is only touched after an
-# explicit yes.
+# Data (openspec/ specs) is only touched after an explicit yes. The central
+# store registration is machine-wide state: it is unregistered only on an
+# interactive yes or with --force — an unattended run (no TTY /
+# SDD_KIT_ASSUME_YES=1) keeps it and prints the manual command.
 set -euo pipefail
 
 KIT="$(cd "$(dirname "$0")" && pwd)"
@@ -33,6 +35,28 @@ if [ -f "$KIT/profiles/$REPO_NAME.env" ]; then
   say "profile: $REPO_NAME"
 fi
 STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
+
+# unregister_store <question> — the central store is machine-wide state shared
+# by every repo, so it is NEVER unregistered unattended: an explicit interactive
+# yes or --force is required (SDD_KIT_ASSUME_YES alone is not enough).
+unregister_store() {
+  local q="$1" cmd="$OPENSPEC store unregister $STORE_ID"
+  if [ "$FORCE" = 1 ]; then
+    $OPENSPEC store unregister "$STORE_ID" && say "unregistered: store '$STORE_ID' (--force)"
+    return 0
+  fi
+  if [ "$INTERACTIVE" = 0 ]; then
+    say "kept: store '$STORE_ID' registration (unattended run — machine-wide state)"
+    echo "        next: $cmd  # or re-run uninstall.sh --force" >&2
+    return 0
+  fi
+  printf '[sdd-kit] %s [y/N] ' "$q"
+  local answer=""; read -r answer || answer=""
+  case "$answer" in
+    [yY]|[yY][eE][sS]) $OPENSPEC store unregister "$STORE_ID" && say "unregistered: store '$STORE_ID'" ;;
+    *) say "kept: store '$STORE_ID' registration"; echo "        next: $cmd" >&2 ;;
+  esac
+}
 
 ask() { # explicit yes required; non-TTY: yes only with SDD_KIT_ASSUME_YES=1
   local q="$1" answer=""
@@ -66,9 +90,8 @@ if [ "$PROFILE_IS_STORE" = 1 ]; then
   rm_ours "$KIT/templates/store-ci.yml" .github/workflows/store-ci.yml
   OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
   command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
-  if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]" \
-     && ask "Unregister store '$STORE_ID' on this machine? (files stay untouched)"; then
-    $OPENSPEC store unregister "$STORE_ID" && say "unregistered: store '$STORE_ID'"
+  if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
+    unregister_store "Unregister store '$STORE_ID' on this machine? (files stay untouched)"
   fi
   say "done (store profile): removed $REMOVED, kept $KEPT"
   exit 0
@@ -193,9 +216,8 @@ if [ -d openspec ]; then
 fi
 OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
 command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
-if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]" \
-   && ask "Unregister central store '$STORE_ID' on this machine? (other repos may still use it; files stay)"; then
-  $OPENSPEC store unregister "$STORE_ID" && say "unregistered: store '$STORE_ID'"
+if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
+  unregister_store "Unregister central store '$STORE_ID' on this machine? (other repos may still use it; files stay)"
 fi
 
 # -------------------------------------------------------------- 8. empty dirs

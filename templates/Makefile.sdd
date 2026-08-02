@@ -1,7 +1,7 @@
 # SDD checks (included from the main Makefile via: -include Makefile.sdd)
 # Installed by sdd-kit/install.sh.
 
-.PHONY: sdd-check sdd-doctor sdd-review sdd-flags
+.PHONY: sdd-check sdd-doctor sdd-review sdd-flags test sdd-index
 
 # Feature-flag expiry gate (ADR-0007): every registered flag has a death date.
 # No feature_flags.py in the repo -> nothing to check, passes.
@@ -44,3 +44,48 @@ sdd-check:
 	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py; fi
 	@$(MAKE) --no-print-directory sdd-flags
 	@echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate, sdd-flags); spec-lint is advisory"
+
+# Advisory single-entry test gate (ADR-0015): ruff + pytest, run on demand
+# (make test) and as an advisory CI job — NOT part of sdd-check, so
+# pre-commit / sdd-check stay fast. Each half no-ops with a clear echo when
+# the repo has nothing of that kind to run; a real run that fails exits
+# non-zero (this target is meant to go red when it should).
+test:
+	@FAILED=0; \
+	if [ -f ruff.toml ] || [ -f .ruff.toml ] || { [ -f pyproject.toml ] && grep -q '^\[tool\.ruff\]' pyproject.toml; }; then \
+		echo "make test: ruff config found — running ruff check ."; \
+		if command -v ruff >/dev/null 2>&1; then RUFF="ruff"; \
+		elif command -v uvx >/dev/null 2>&1; then RUFF="uvx ruff"; \
+		else echo "FAIL: ruff config found but neither ruff nor uvx is installed"; FAILED=1; RUFF=""; fi; \
+		[ -n "$$RUFF" ] && { $$RUFF check . || FAILED=1; }; \
+	else \
+		echo "make test: no ruff config (ruff.toml/.ruff.toml/[tool.ruff]) — lint skipped"; \
+	fi; \
+	if [ -d tests ] || [ -f pytest.ini ] || { [ -f pyproject.toml ] && grep -q '^\[tool\.pytest' pyproject.toml; }; then \
+		echo "make test: tests found — running pytest -q"; \
+		if command -v pytest >/dev/null 2>&1; then PYTEST="pytest"; \
+		elif command -v uv >/dev/null 2>&1; then PYTEST="uv run pytest"; \
+		elif command -v uvx >/dev/null 2>&1; then PYTEST="uvx pytest"; \
+		else echo "FAIL: tests found but neither pytest, uv, nor uvx is installed"; FAILED=1; PYTEST=""; fi; \
+		[ -n "$$PYTEST" ] && { $$PYTEST -q || FAILED=1; }; \
+	else \
+		echo "make test: no tests found — skipped"; \
+	fi; \
+	exit "$$FAILED"
+
+# Codebase knowledge graph (graphify), builds/updates graphify-out/graph.json
+# over source code + openspec/ + docs/. Manual invocation only — run it
+# yourself before a big intake (ticket/spec verification); NOT part of
+# sdd-check/pre-commit/CI, and it never spawns background processes.
+# ADR-0004: graphify is navigation/context ONLY, never a CI gate — its edges
+# are INFERRED (best-effort relationships), not verified facts; treat graph
+# answers as leads to check against the actual code, not ground truth.
+sdd-index:
+	@command -v graphify >/dev/null 2>&1 || { echo "graphify not installed — run sdd-kit/install.sh --machine-only"; exit 0; }
+	@if [ -f graphify-out/graph.json ]; then \
+		echo "sdd-index: existing graph found — incremental update (AST-only, no LLM needed)"; \
+		graphify update . || echo "sdd-index: update failed (see output above) — advisory, not a gate"; \
+	else \
+		echo "sdd-index: no graph yet — building index over code + openspec/ + docs/"; \
+		graphify extract . --out . || echo "sdd-index: build failed — likely no LLM backend configured (set GEMINI_API_KEY/GOOGLE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY/... or pass --backend), or run the interactive '/graphify' command in Claude Code instead; advisory, not a gate"; \
+	fi

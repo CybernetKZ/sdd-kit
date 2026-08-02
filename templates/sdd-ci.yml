@@ -15,8 +15,18 @@ jobs:
           node-version: "22"
       - name: SDD checks (AGENTS.md + openspec validate)
         run: make sdd-check
-      # TODO per repo: wire in the full `make test` (linters + pytest + contract
-      # tests). WBN runs tests through docker compose - add that as a separate step.
+
+  # Advisory single-entry test signal (ADR-0015): ruff + pytest, if the repo
+  # has either. A red run here is visible in the PR but is NOT a required
+  # check - no continue-on-error, this is a real pass/fail, just not blocking.
+  tests:
+    name: tests (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: make test (advisory)
+        run: make test
 
   # TBD disciplines (ADR-0006): branch age + PR size.
   # Escape hatch: labels `long-lived-ok` / `xl-ok` - anyone may set them, but the
