@@ -135,8 +135,45 @@ if [ -n "$ROOT" ]; then
     fi
   fi
 
-  [ -f .claude/settings.json ] && ok repo.hooks "Claude hooks configured (.claude/settings.json)" \
-    || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
+  # repo.hooks: a present .claude/settings.json is not proof the kit hooks it
+  # ships (.claude/hooks/*.cjs) actually run — a repo that already had its own
+  # settings.json before the kit was installed keeps its hooks untouched by
+  # put(), so block-no-verify.cjs/spec-guard.cjs/pre-compact.cjs can sit on
+  # disk copied but never referenced. Check every installed .cjs hook is
+  # mentioned somewhere in settings.json's hooks tree, not just that the file
+  # exists.
+  if [ -f .claude/settings.json ]; then
+    UNWIRED_HOOKS=$(python3 -c "
+import json, glob, os, sys
+
+try:
+    data = json.load(open('.claude/settings.json'))
+except Exception:
+    print('<unreadable>')
+    sys.exit(0)
+
+commands = ' '.join(
+    h.get('command', '')
+    for groups in data.get('hooks', {}).values()
+    for g in groups
+    for h in g.get('hooks', [])
+)
+missing = [
+    os.path.basename(f) for f in sorted(glob.glob('.claude/hooks/*.cjs'))
+    if os.path.basename(f) not in commands
+]
+print(' '.join(missing))
+" 2>/dev/null)
+    if [ "$UNWIRED_HOOKS" = "<unreadable>" ]; then
+      warn repo.hooks ".claude/settings.json is not valid JSON — cannot verify kit hooks are wired" "fix the JSON syntax, then re-run"
+    elif [ -n "$UNWIRED_HOOKS" ]; then
+      warn repo.hooks "hook file(s) in .claude/hooks/ not referenced by .claude/settings.json: $UNWIRED_HOOKS — copied but inactive" "run sdd-kit/install.sh --repo-only $ROOT (wires them in additively, keeps your own hooks)"
+    else
+      ok repo.hooks "Claude hooks configured (.claude/settings.json, all .claude/hooks/*.cjs wired)"
+    fi
+  else
+    warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
+  fi
   if [ -f .spec-guard-paths ]; then
     # count only real prefixes: skip comments and blank lines (same rule as spec-guard.cjs)
     GUARD_PATHS=$(grep -cv -e '^[[:space:]]*#' -e '^[[:space:]]*$' .spec-guard-paths || true)
