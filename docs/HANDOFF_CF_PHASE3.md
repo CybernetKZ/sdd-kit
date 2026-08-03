@@ -30,16 +30,63 @@
 | 3 | observers | 24 | 1 MISMATCH → O1 + V1c |
 | 3 | voice-pipeline | 25 | 4 MISMATCH → VP1–VP4 |
 
-Гейты: `openspec validate --all --strict` и `spec-lint.py` зелёные, все спеки FRESH.
-Дефектов в реестре: **48** (2 CRITICAL cross-org утечки, 6 HIGH).
+**Итог фазы 3 на 2026-08-03:** 20 capability-спек, **366 Requirements** (+ инварианты), 87 архивных changes.
+Гейты: `openspec validate --all --strict` = 20 passed / 0 failed; `spec-lint` = 0 metadata violations,
+FRESH=13 / STALE=7 (причина STALE — мерж main, см. п. 3 «Незавершённое»).
+Дефектов в реестре: **65** (3 CRITICAL, 7 HIGH, 1 отозван как ложный). Топ-3 в тикеты первыми:
+1. **TA1 CRITICAL** — межтенантный захват аккаунта: реинкарнация архивной учётки чужого тенанта с сохранением `keycloak_id` (`storage/repos/accounts.py:427-438`, `api/users.py:97-104`).
+2. **V1a CRITICAL** — `webhook_deliveries` без `organization_id` и без route-guard; `retry` перевыстреливает вебхук чужого тенанта, payload содержит ПД звонка.
+3. **V1b/TA3 CRITICAL** — copilot-переписки: чтение, `list()` без параметра отдаёт все организации, `DELETE` удаляет чужую переписку.
 
-## Что в работе (волна 4, запущена)
+## Параллельная работа Даниила (не часть CF-миграции, но влияет на кит)
 
-Fixup `voice-pipeline` (4 MISMATCH + 6 групп пропусков) и 7 майнеров: `tenancy-auth`, `rag`, `cost-analytics`, `editor-ui`, `copilot`, `monitoring`, `timezones`.
+**ADR-0021 — executor, тир→конвейер, провенанс гриля** (принят, раскатан по 7 репо):
+артефакты — `ADR-0021-executor-tier-pipeline.md` + строка в индексе ADR; `templates/agents/executor.md`
+(в манифесте `install.sh` и в списке известных агентов `sdd-doctor`); `feature-flow/SKILL.md` §1b/§2/§4;
+`plan-griller.md`; глоссарий (статьи «executor», «провенанс гриля»); бэклог kit-flow(1–3) закрыт.
+На полигоне executor лежит, доктор чист (0 fail, extra-agent не флажится).
 
-## Что дальше
+Учесть при продолжении CF-миграции: `executor` — новый агент кита, поедет в CF при `--refresh`;
+таблица «тир → конвейер → модели» из §1b — ориентир для payload-скиллов `tz`/`tz-implement` фазы 4;
+шапка провенанса `## Grill` обязательна и в CF-changes.
 
-1. Верификаторы на каждую спеку волны 4 (по `tools/cf/verify-section.md`, модель: opus на `tenancy-auth` — там V1a–V1e; sonnet на остальные), затем fixup'ы. MISMATCH'и → DEFECTS_CF.
+## Волна 4 (завершена частично; 2026-08-03, лимит сессии в 20:40)
+
+Смайнены ВСЕ оставшиеся capability — итого **20 из 20** по плану, `openspec validate --all --strict` = 20 passed / 0 failed:
+
+| Capability | Req | Верификация |
+|---|---|---|
+| tenancy-auth | 26+1 Inv (fixup добит) | **opus: 2 MISMATCH + 9 дефектов, вкл. TA1 CRITICAL** |
+| cost-analytics | 20+2 Inv | sonnet: 19/20 CONFIRMED, 1 MISMATCH + 5 дефектов (CA1–CA5) |
+| editor-ui | 12+3 Inv | ⏳ **не верифицирована** |
+| copilot | 11+1 Inv | sonnet: 11/11 CONFIRMED, V1b подтверждён независимо |
+| rag | 12 | ⏳ **не верифицирована**; при сверке со store **нашла ложный R1** |
+| monitoring | 31/53 Sc+2 Inv | sonnet: 31/31 CONFIRMED, ПД в лейблах нет, alerts.yml чист; **TA9** — `/metrics` без аутентификации |
+| timezones | 16/33 Sc+3 Inv | sonnet: 16/16 CONFIRMED + 3 Inv; инвариант `no-utc-fallback` **подтверждён** (фолбэк недостижим по всей цепочке) — дефектов нет |
+| voice-pipeline (fixup волны 3) | 17→31 | ✅ 4 MISMATCH исправлены, 7 Req добавлено |
+
+Также: **R1 отозван как ложноположительный** (валидаторы границ `limit`/`threshold` существуют с ТЗ №42) — store-дельта `add-cf-rag-contract` исправлена, остальные 12 её пунктов перепроверены построчно и подтверждены.
+
+## Незавершённое
+
+1. ✅ ~~fixup `tenancy-auth`~~ — добит: 26 Req + 1 Inv, TA1–TA8 отражены, все гейты зелёные.
+2. **Верификаторы двух спек**: `editor-ui` (12 Req + 3 Inv) и `rag` (12 Req). Остальные 18 из 20 верифицированы.
+3. **Fixup'ы по итогам верификации волны 4** (задания сформированы, не запущены):
+   - `cost-analytics`: MISMATCH `reports-filter` (`load_test` не в `ALLOWED_FILTER_KEYS` — CA3), якорь `rate-snapshot` → `analytics/service.py:_compute_cost` (CA5), пополнить инвариант `known-gaps` асимметрией CancelledError в chunks-пути, MISSING (UI-блок себестоимости, обнуление usage при хендоффе №28, атрибуция TTS-фолбэка, `recording_link` в пресете `full`, нормативная граница «сырой транскрипт в отчёт не выгружается»).
+   - `monitoring`: уточнить формулировку `system-health-endpoints` («без API-ключа» ≠ «без аутентификации» — эндпоинт под `/api/*` и гейтится middleware), добавить MinIO-метрики (`:9000/minio/v2/metrics/cluster`, `MINIO_PROMETHEUS_AUTH_TYPE=public`, источник `MinioDiskLow`).
+   - `timezones`: правок не требуется (дефектов нет), только пробелы тестов.
+3. **7 спек ушли в STALE после мержа main** (`975eeaf3`, поверх него `4e9f2c4d` «настраиваемый пул соединений к БД» и `e62d5e5d` «порт health-сервера голосового воркера из env»). Изменилось +231/−121 в четырёх файлах-якорях:
+
+   | Файл | STALE-спеки |
+   |---|---|
+   | `livekit_agent/agent.py` (+246/−…) | `voice-pipeline`, `call-control`, `tts` |
+   | `storage/db.py` (+60) | `persistence-versioning`, `timezones` |
+   | `storage/repos/__init__.py` (+15) | `tenancy-auth` |
+   | `livekit_agent/worker_load.py` (+31) | `monitoring` |
+
+   Нужно: ре-верифицировать затронутые Requirements против нового кода и обновить маркеры `Last verified` на актуальный коммит. **Особое внимание V2** (6 из 9 `_upgrade_to_*` выполняют DDL на Postgres) — `storage/db.py` как раз менялся, дефект мог быть починен или изменён. Это нормальная работа механизма spec-lint, а не поломка: он ровно для этого и нужен.
+
+## Что дальше по плану
 2. Закрыть пробелы покрытия G1–G6 из DEFECTS_CF: G1 transfer-рантайм §8.9 ТЗ №28 (в `call-control`), G2 авто-завершение, G3 fast-hangup, G4 ТЗ №83 tail-commit, G5 каталог голосов TTS, G6 лог TTS-чанков.
 3. Слепок `openspec/**` → `sdd-kit/profiles/conversation_flow/` (ADR-0019 решение 2).
 4. Шапка DOCUMENTATION.md: «канон поведения — openspec/specs/, документ ведётся параллельно (ADR-0019)»; `docs/patches/README.md`: «архив закрыт на №84».
@@ -57,14 +104,18 @@ Fixup `voice-pipeline` (4 MISMATCH + 6 групп пропусков) и 7 ма�
 ```
 Продолжаем миграцию conversation_flow, фаза 3. Прочитай
 sdd-kit/docs/HANDOFF_CF_PHASE3.md (состояние), PLAN_CF_MIGRATION.md (план),
-DEFECTS_CF.md (48 дефектов), tools/cf/*.md (инструкции конвейера).
+DEFECTS_CF.md (59 дефектов, 3 CRITICAL), tools/cf/*.md (инструкции конвейера).
 
 Ты — дирижёр: работу делают субагенты (opus/sonnet), ты держишь состояние,
-пишешь дефекты в DEFECTS_CF.md и обновляешь план. Коммиты — только Даниил.
+пишешь дефекты в DEFECTS_CF.md и обновляешь план/handoff. Коммиты — только Даниил.
 
-Следующий шаг: верификаторы на спеки волны 4 (tenancy-auth, rag,
-cost-analytics, editor-ui, copilot, monitoring, timezones) по
-tools/cf/verify-section.md — каждый НЕ автор спеки, задача опровергать;
-на предыдущих волнах «расхождений нет» шесть раз скрывало реальные баги.
-Затем fixup'ы, пробелы G1-G6, слепок в профиль, шапки документов.
+Все 20 capabilities смайнены, validate --all --strict зелёный. Незавершённое —
+раздел «Незавершённое» этого файла: (1) добить fixup tenancy-auth, (2) пять
+верификаторов (cost-analytics, monitoring, timezones, editor-ui, rag),
+(3) voice-pipeline стала STALE после мержа main — перепроверить и обновить
+маркер. Верификатор всегда НЕ автор спеки и обязан опровергать: на волнах 1-4
+заявление майнера «расхождений нет» семь раз скрывало реальные баги, включая
+CRITICAL. Затем пробелы G1-G8, слепок openspec/** в профиль кита, шапки
+DOCUMENTATION.md и docs/patches/README.md, и фаза 4 (скиллы tz/tz-review/
+tz-implement, пилот на реальном ТЗ №85).
 ```

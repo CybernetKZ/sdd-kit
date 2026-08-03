@@ -96,6 +96,20 @@
 
 Пробелы тестов, обнажившие V1–V3: нет тестов на cross-org для deliveries/copilot/component+observer usage; нет теста «на Postgres `_upgrade_to_*` — no-op» (поэтому V2 и не замечали); нет теста «discard/restore сохраняет черновик символическим».
 
+### Волна 4: cost-analytics (верификация 2026-08-03, sonnet) — 1 MISMATCH, 5 новых дефектов
+
+| # | Уровень | Тип | Суть |
+|---|---|---|---|
+| CA1 | MEDIUM (деньги, латентный) | код | `_pick_record` (`analytics/costs.py:64-95`): при ПУСТОМ входящем `model` (например `_stt_settings.model or ""`, `livekit_agent/agent.py:722`) условие матчит **любую** запись каталога того же провайдера, а не только записи с пустым полем модели. Это ровно та проблема, которую ТЗ №69 закрыло для LLM (`_llm_line`), но не портировало на ASR/TTS. Сегодня не эксплуатируется (по одной ASR-модели на провайдера в сидах) — активируется при добавлении custom-записей |
+| CA2 | MEDIUM (деньги) | код | Отрицательные тарифы не валидируются: `_norm*` в `catalogs.py` и `api/llm_models.py` принимают `float` без `ge=0`. Отрицательная ставка даёт `computed`-строку с отрицательным `amount_microusd`, искажающим `total_microusd` |
+| CA3 | LOW | код (MISMATCH спеки) | `reports/filters.py:14-38`: `ALLOWED_FILTER_KEYS` не включает `load_test`, который принимает `GET /api/sessions` (`api/routes/history.py:38,100`) — отчёт с тем же фильтром, что листинг, получает 400. Теста нет |
+| CA4 | MEDIUM (латентный, класс V1) | код | `set_cost` и семейство (`set_disposition`, `set_call_status`, `set_health`, `set_analytics_status`, `save_analytics_batch`, `reconcile_talk_interval`, `storage/repos/sessions.py:848-861`) не делают org-check на уровне репозитория — в отличие от `get()` (`:627-629`). Сегодня безопасно только благодаря вызывающему коду (всегда после org-checked `get()` либо из воркер-контекста без scope); тот же паттерн, что дал CRITICAL в V1a/V1b/TA1 — сломается на первом admin/bulk-эндпоинте без предварительного `get()` |
+| CA5 | INFO | спека (якорь) | Гарантия неизменности снапшота тарифа реализована в `analytics/service.py:_compute_cost` (`if entry.get("cost"): return`), а не в `analytics/costs.py:_rate_snapshot` (тот только строит dict), куда указывает `enforced:` |
+
+Проверено чисто: арифметика микро-долларов без дрейфа float, идемпотентность `merge_analytics_cost`, заморозка тарифа при смене каталога, org-скоуп поиска тарифа и чтения стоимости, presign-утечки нет (`report_id` гейтится `_org_visible`), RBAC отчётов срабатывает до бизнес-логики, keyset-пагинация корректна.
+
+Инвариант `known-gaps` неполон: не упоминает асимметрию «прерванный TTS-промах в chunks-пути не записывается» (`livekit_agent/tts_cache.py:15,77,224` — `CancelledError` до `_record_chunk`).
+
 ### Волна 4: tenancy-auth (верификация 2026-08-03, opus) — 2 MISMATCH, 8 новых дефектов
 
 Капабилити безопасности; проверялось адресно: подделка контекста, обходы поддерева, fail-open в матрице ролей.
@@ -109,6 +123,7 @@
 | TA5 | LOW (security) | код | `_internal_token_valid` (`api/auth.py:246-249`) сравнивает сервисный токен обычным `==`, не `secrets.compare_digest`. Токен даёт полный root-admin без scope — нужно constant-time |
 | TA6 | LOW | док/спека (мёртвый код) | `api/auth.py:293-294` — ветка «организация не найдена» для архивной цели недостижима: `is_in_subtree` отваливает раньше (`list_all` фильтрует архивные). Fail-closed, вреда нет; сценарий спеки описывал несуществующее поведение |
 | TA7 | LOW | спека | Спека утверждала, что `organization_id` меняется через `PATCH /api/users/{id}` — в коде `UserUpdate` (`api/users.py:65-67`) такого поля нет, `UserRepository.update` (`accounts.py:451-464`) правит только `display_name`/`role`. Перевод между организациями возможен только реинкарнацией (см. TA1) |
+| TA9 | MEDIUM (security) | код (периметр) | **`/metrics` открыт без аутентификации вообще**: и `/metrics` (`api/main.py:356`), и `/healthz` (`:390`) зарегистрированы прямо на `app`, ВНЕ префиксов `/api/*` и `/v1/*`, на которые смотрит auth-middleware (`api/auth.py:323-358`) — поэтому их нет и в `_EXEMPT_PATHS`: middleware их просто не видит. Любой, кто достучится до порта 8100 (проброшенного/выставленного), читает операционные метрики: объём звонков, доля ошибок LLM, глубина очередей. `/healthz` открытым быть должен (liveness, данных не отдаёт) — вопрос только к `/metrics`, ограничение нужно на уровне ingress/LB либо в коде. Найдено верификатором monitoring |
 | TA8 | INFO | уточнение V1c | Утечка ограничена СПИСКОМ ССЫЛОК: сама сущность гейтится `_visible_row`/`_org_visible` (`components.py:140`, `observers.py:119`), но `ComponentRefRow`/`ObserverReactionRow` выбираются без scope (`components.py:143-148`, `observers.py:122-128`) — для shared-компонента каталога видны `flow_name` + `organization_id` чужих орг. Формулировку V1c уточнить |
 
 Подтверждено чистым: подпись RS256 по JWKS realm, `exp`, fail-closed при неизвестной роли, `is_in_subtree` не пускает вверх/вбок (`home` берётся из БД, не из заголовка), формат и хеширование API-ключей, `temp_password` не логируется. V1a подтверждён и оказался хуже описания: у `WebhookDeliveryRow` вообще нет `organization_id`, а payload доставки содержит ПД звонка.
