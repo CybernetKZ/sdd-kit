@@ -117,6 +117,29 @@ M2.5 чист: коммит в `dev` - WARN + пропущен ("prefer a branch
 (M2-1 AGENTS.md в .gitignore, M2-2 JSON-шум spec-lint, M2-3 пустой коммит после
 автофикса), все закрыты.
 
-## Шаг 3 (test-author) - фрикция
+## M3. Скилл целиком по триггеру ("сделай WEB-2318") - прогон 2026-08-03
 
-_(заполняется по итогам прогона)_
+Лог: `~/dev/web-backend-new/wbn-create-task-web-2318-sdd-kit.txt` (Opus 5).
+Скилл прошёл весь цикл сам: intake -> proposal/design/spec-delta/tasks ->
+test-author (RED) -> реализация -> mutation-тесты -> backend-reviewer -> честный
+отчёт "что не сделано" (E2E, PR, YouTrack).
+
+Что подтвердилось (фиксы предыдущих волн работают):
+- триггер по "сделай WEB-2318" - скилл подхвачен сам (M3.1);
+- YouTrack 403 -> graceful fallback на вставленный текст тикета;
+- store опрошен, контракт `external-webapi-authorization` реально применён
+  (Bearer+401 из тикета отклонены по контракту, вопрос задан владельцу) - C3/C4;
+- все 3 ложных утверждения тикета найдены заново (WebRTC нет, ключи валидирует
+  gateway+SSO, путь конфликтует) - цель intake достигнута;
+- intake.md создан и затем свёрнут planner'ом в proposal.md с удалением -
+  ровно по SKILL §1 (C6); proposal содержит Why/Deviations/Tier/Grill/Open questions;
+- deep-тир завёл design.md (P6), change валиден --strict (M3.3);
+- test-author: RED до реализации, 3 green-stub-диспута (loguru caplog, дубль
+  теста, getdel-мутация), спор автор<->реализатор без правки чужих тестов -
+  ADR-0016 работает (M3.4).
+
+| # | Проблема | Приоритет | Статус |
+|---|---|---|---|
+| M3-1 | **Docker compose project-name collision**: два чекаута WBN делят имя проекта, `docker compose exec` цепляется к чужому дереву - test-author гонял тесты по чужому чекауту и оставил stray-файлы в доноре; стоило цикла отладки | средний | **исправлено** (test-author.md): секция "Running inside Docker" - проверить bind mount, предпочитать `docker compose run --rm --no-deps` |
+| M3-2 | Ожидание плана M3.2 ("создан intake.md") противоречило SKILL §1 (planner сворачивает и удаляет) - проверяющий примет штатное поведение за пропажу артефакта | низкий | **исправлено**: план уточнён |
+| M3-3 | Пожелания владельца по workflow (сложность->модель, ревью плана отдельным шагом, исполнение sonnet'ом/параллельно) | - | занесены в DEFECTS_BACKLOG (kit-flow 1-3), не для этого прогона |

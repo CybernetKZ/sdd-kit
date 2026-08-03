@@ -53,6 +53,12 @@ non-skipped test **fails for the intended reason** - the behavior is absent or
 wrong. A test that fails on `ImportError`, a missing fixture or a typo is not a
 reproduction; fix the test until it fails on the assertion.
 
+Running inside Docker: first prove the container sees YOUR checkout - two
+checkouts of the same repo share a compose project name, and `docker compose
+exec` attaches to whichever is up, silently testing the wrong tree. Prefer
+`docker compose run --rm --no-deps <svc> ...` (fresh container, this
+directory's bind mount) or verify with a marker file before trusting a run.
+
 If a test **unexpectedly passes**, do not invent a failure and do not tighten
 the assertion until it breaks. A green test means the behavior may already
 exist - report it as a finding: the Scenario may be redundant, or the change's

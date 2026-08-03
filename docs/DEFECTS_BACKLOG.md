@@ -174,3 +174,11 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 | kit-flag(1) | HIGH | Механизм включения флага в среде не определён: неизвестно, где физически ставится `FLAG_X=1` на stage и prod (helm values? `.env` сервиса? переменные CI/CD?) и у кого туда доступ. Пока ответа нет, handoff-комментарий "включи `FLAG_X=1`" адресован в пустоту. Закрыть ДО первого боевого флага | ADR-0015 п.2 |
 | kit-frontend(1) | LOW | Фронтового профиля нет: `web-frontend-new` ставится обычной установкой - ревьюверы бэкенд-ориентированные (`backend-reviewer`/`database-reviewer`), `feature_flags.py` на Python там фактически no-op. Нужен `frontend-reviewer` и TS-вариант реестра флагов. Низкий приоритет: бэкенд первого класса | ADR-0015 п.5 |
 - **make test в WBN**: pytest без окружения репо падает на collection (30 errors) - тесты WBN живут в Docker. Advisory-job будет красным. Вариант: переменная-override `SDD_TEST_CMD` в Makefile.sdd или repo-специфичная цель test. (2026-08-02)
+
+## Additions 2026-08-03 (ручной прогон M3, пожелания владельца)
+
+| ID | Severity | Title | Source |
+|---|---|---|---|
+| kit-flow(1) | MEDIUM | Явный шаг "определи сложность -> выбери workflow и модель" в начале feature-flow: тиры light/standard/deep есть (ADR-0006), но выбор модели по тиру описан одной строкой в SKILL §2 ("bulk mechanical steps can drop to haiku") - владелец хочет систематизировать: сложность -> workflow -> модель | пожелание владельца, M3 2026-08-03 |
+| kit-flow(2) | MEDIUM | Ревью плана как отдельный шаг с инструментами (graphify/openspec/ponytail/context7): сейчас plan-griller существует, но прогон M3 его не задействовал - проверить триггер/место в SKILL | пожелание владельца, M3 2026-08-03 |
+| kit-flow(3) | MEDIUM | Выполнение утверждённого плана более дешёвой моделью (sonnet), возможно параллельно по независимым задачам tasks.md - сейчас вся реализация идёт на модели сессии | пожелание владельца, M3 2026-08-03 |

@@ -86,11 +86,11 @@ B1–B4 ✅; `repo-auditor` → `templates/agents/` + kit_manifest ✅; кэши
 4. ✅ AGENTS.md канонический 246 строк (всё содержимое старых файлов сохранено), `CLAUDE.md` → симлинк, USA v4 → `docs/DEPLOY_USA.md` (311 строк, дословно). `make sdd-check` зелёный и не вакуумный (config.yaml существует; specs/ наполнится в фазе 3).
 Сверх плана: `planner.md`/`feature-flow` кита перенацелены с удалённого `commands/opsx/propose.md` на `skills/openspec-propose/SKILL.md`.
 
-### Фаза 2 — кросс-репо контракты в store (~1 день)
-По ADR-0018: change в cybernet-specs → PR → ревью владельцев потребителей.
-- `cf-dialer-integration-api` — из `integration-guide.md` (829 строк, EN; проза + якоря `file.py:line`, Provenance, отметка «responses authoritative here»).
-- `cf-rag-contract` — из `cybernetrag_openapi.json` + §11.9.
-- Обновить `SOURCES.md` + README-таблицу store; в CF — `references:` в config.yaml.
+### Фаза 2 — кросс-репо контракты в store (~1 день) — **ВЫПОЛНЕНА 2026-08-03, не закоммичена**
+По ADR-0018: два change в cybernet-specs готовы, `validate --all --strict` = 10 passed / 0 failed. PR + ревью владельцев + apply (перенос в specs/, обновление SOURCES.md/README) — Даниил/владельцы.
+- ✅ `add-cf-dialer-integration-api` — 26 Requirements / 81 Scenarios, якоря сверены с кодом; **12 расхождений записано** (топ: webhook `call.status` = `ended|active` против REST `queued|ringing|ongoing|ended|failed` — одно имя поля, два словаря; «must be HTTPS» из гайда не энфорсится — `allow_http` no-op; 5 недокументированных полей объекта звонка).
+- ✅ `add-cf-rag-contract` — 13 Requirements / 30 Scenarios; **13 расхождений записано** (топ: лимиты SearchRequest не энфорсятся → 422 без ретрая и RAG молча выключен; деградация ловит только RagError, ValidationError парсинга роняет тёрн; литеральный адрес в §11.9; расхождение имён S3-бакета).
+- ✅ В CF — `references: cybernet-specs` в config.yaml (формат как у WBN), `sdd-check` зелёный. Обновление SOURCES.md/README-таблицы — задачи в tasks.md обоих changes (на apply-этапе, с пересчётом итогов из-за параллельности).
 
 ### Фаза 3 — полная конвертация (главная фаза, ~2–3 недели, sonnet-агенты волнами)
 Для каждой capability: `mine-section` → `verify-section` (полная сверка с кодом) → `id:`/`enforced:` метаданные (ADR-0017) → `openspec validate --strict` + `spec-lint` чистый. Расхождения — в `DEFECTS_CF.md` (тикет-материал, поведение не «чинится» молча).
