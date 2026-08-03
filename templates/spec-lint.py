@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""spec-lint: freshness and metadata checks for openspec/specs/**/spec.md.
+"""spec-lint: freshness and metadata checks for openspec/specs/**/spec.md,
+plus metadata checks for the spec deltas of active openspec/changes/**.
 
 FRESHNESS  compares each spec's `> Last verified: <date> (commit <hash>)` marker
            against the source files named by its `<!-- enforced: ... -->` anchors.
            A spec is STALE when any enforced file changed since that commit.
 METADATA   checks that every `### Requirement:` block carries `id` and `enforced`,
            that ids are unique, that only whitelisted metadata keys are used, and
-           that `#### Scenario:` blocks never appear under `## Invariants`.
+           that `#### Scenario:` blocks never appear under `## Invariants`. Active change
+           deltas get the same metadata checks (archived ones are closed history);
+           their anchors are reported as advice, never as violations - a delta may
+           legitimately name a symbol the change is about to create.
 
 Report goes to STDERR, machine-readable JSON to STDOUT.
 Exit codes: 0 = clean or warn-only (default), 1 = metadata violations,
@@ -183,7 +187,7 @@ def parse_spec(path: Path) -> dict:
     return spec
 
 
-def check_deltas(root: Path, spec_ids: dict) -> list[dict]:
+def check_deltas(root: Path) -> list[dict]:
     """Metadata-check the spec deltas of active changes, before they reach the canon.
 
     Deltas were invisible to this script until a change was applied, so a
@@ -303,7 +307,7 @@ def main() -> int:
                         "last_verified_date": spec["date"], "last_verified_commit": spec["commit"],
                         "violations": spec["violations"], **freshness})
 
-    deltas = check_deltas(root, seen_ids)
+    deltas = check_deltas(root)
 
     totals = {status: sum(1 for r in results if r["status"] == status)
               for status in ("FRESH", "STALE", "UNVERIFIED", "MISSING")}
@@ -332,6 +336,20 @@ def main() -> int:
             print(f"      anchor resolves to no file: {anchor}", file=out)
         for violation in item["violations"]:
             print(f"      {violation['kind']} (line {violation['line']}): {violation['message']}", file=out)
+    if deltas:
+        bad = sum(1 for d in deltas if d["violations"] or d["unresolved_anchors"])
+        print(f"spec-lint: {len(deltas)} change delta(s) checked, {bad} with findings", file=out)
+        for item in deltas:
+            if not (item["violations"] or item["unresolved_anchors"]):
+                continue
+            print(f"  DELTA      {item['delta']}  ({item['requirements']} req)", file=out)
+            for violation in item["violations"]:
+                print(f"      {violation['kind']} (line {violation['line']}): "
+                      f"{violation['message']}", file=out)
+            for anchor in item["unresolved_anchors"]:
+                print(f"      note: anchor does not resolve yet: {anchor} "
+                      f"(expected only if this change creates it)", file=out)
+
     if violations == 0 and not totals["STALE"] and not totals["MISSING"]:
         print("spec-lint: 0 issues found", file=out)
 
