@@ -79,11 +79,12 @@ PROFILE_ENV_FILES=".env"
 ### Фаза 0 — kit-багфиксы и гигиена (~полдня) — **ВЫПОЛНЕНА 2026-08-03, не закоммичена**
 B1–B4 ✅; `repo-auditor` → `templates/agents/` + kit_manifest ✅; кэши вычищены ✅; сверх плана — P0-2 (planner получил Write/Edit), P0-3 (plan-griller переписан в one-shot, 48 строк), P0-1-пин (`$OPENSPEC` больше не падает на глобальный непиненный бинарь — всегда `npx -y @fission-ai/openspec@1.7.0`). Локальные проверки зелёные (bash -n, node --check, py_compile); закоммитить + прогнать self-CI (bootstrap-smoke) — Даниил.
 
-### Фаза 1 — фундамент в conversation_flow (~полдня)
-1. patch49: показать diff Даниилу → он коммитит как есть (решение 8).
-2. `rm -r openspec/` (пустые dirs) → `openspec init` → `config.yaml` (store `references:` — в фазе 2).
-3. Закоммитить kit-дроп (коммитит Даниил): `Makefile.sdd` + include, hooks, agents, скиллы, скрипты, `feature_flags.py`, `.spec-guard-paths` (пустой, коммент «включается фазой 5»), `sdd-ci.yml`, `autoreview.yml`, `.claude/settings.json`, `.mcp.json`.
-4. `AGENTS.md`/`CLAUDE.md`: USA v4 → `docs/DEPLOY_USA.md`; канонический AGENTS.md; `CLAUDE.md` → симлинк. `make sdd-check` — не вакуумно.
+### Фаза 1 — фундамент в conversation_flow (~полдня) — **ВЫПОЛНЕНА 2026-08-03, не закоммичена**
+1. ✅ patch49: diff проверен — все 21 «изменение» это перенос строк (IDE-переформат), семантика не тронута; коммитить как есть безопасно.
+2. ✅ `openspec init` на пиненном 1.7.0 (config.yaml создан; store `references:` — в фазе 2). По ADR-0020 п.8: `commands/opsx/` удалены, 6 openspec-скиллов проштампованы `disable-model-invocation: true`.
+3. ✅ Kit-дроп готов к коммиту (коммитит Даниил); по P0-7 из CF удалены мёртвые `feature-flow`/`incident-flow` (оговорка: `--refresh` их вернёт, пока не сделано профильное гейтирование манифеста — P0-4); копии planner/plan-griller в CF синхронизированы с починенными шаблонами фазы 0.
+4. ✅ AGENTS.md канонический 246 строк (всё содержимое старых файлов сохранено), `CLAUDE.md` → симлинк, USA v4 → `docs/DEPLOY_USA.md` (311 строк, дословно). `make sdd-check` зелёный и не вакуумный (config.yaml существует; specs/ наполнится в фазе 3).
+Сверх плана: `planner.md`/`feature-flow` кита перенацелены с удалённого `commands/opsx/propose.md` на `skills/openspec-propose/SKILL.md`.
 
 ### Фаза 2 — кросс-репо контракты в store (~1 день)
 По ADR-0018: change в cybernet-specs → PR → ревью владельцев потребителей.

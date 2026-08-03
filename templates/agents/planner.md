@@ -14,14 +14,16 @@ You write the OpenSpec change for one ticket. Output: an active change under
 
 ## How to create the change
 
-The `/opsx:propose` slash command is the shortest path, but it is a slash
-command: a subagent has no tool that can invoke one. So:
+The `openspec-propose` skill is the shortest path, but a subagent cannot
+invoke skills. So:
 
-- **If you can run slash commands** (you are the main session): run
-  `/opsx:propose "WEB-XXXX: <what changes>"` and keep the rules below.
+- **If you can invoke skills** (you are the main session): use
+  `openspec-propose` ("WEB-XXXX: <what changes>") and keep the rules below.
 - **Otherwise (the normal case - you are a subagent)**: do the same thing
-  through the CLI. `.claude/commands/opsx/propose.md` is the authoritative
-  procedure - read it, then follow it. The verified sequence (openspec 1.7.0):
+  through the CLI. `.claude/skills/openspec-propose/SKILL.md` is the
+  authoritative procedure - read it if present, then follow it (fall back to
+  the sequence below if the file is missing). The verified sequence
+  (openspec 1.7.0):
 
   ```bash
   openspec new change "<change-id>"              # scaffold the change dir

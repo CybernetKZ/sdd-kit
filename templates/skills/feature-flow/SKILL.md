@@ -90,8 +90,8 @@ cross-service one earns the full grill.
   automatic: plan and grill run as the `planner` / `plan-griller` subagents
   (`model: opus` in their frontmatter, ADR-0013); the implementation runs
   on the session model; bulk mechanical steps can drop to haiku.
-- Run the `planner` agent: `/opsx:propose "WEB-XXXX: <what changes>"` (a subagent
-  cannot invoke slash commands - it follows `.claude/commands/opsx/propose.md`
+- Run the `planner` agent: propose the change (a subagent
+  cannot invoke skills - it follows `.claude/skills/openspec-propose/SKILL.md`
   through the openspec CLI; see `planner.md`) -
   proposal + spec deltas + tasks. It starts from step 1's
   `openspec/changes/<change-id>/intake.md`.
