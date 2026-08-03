@@ -186,12 +186,12 @@ print(' '.join(sorted(servers - allowed)))
     done
   fi
 
-  # 4. Agents: the sdd-kit set (2 reviewers + planner + plan-griller) is expected.
+  # 4. Agents: the sdd-kit set (2 reviewers + planner + plan-griller + test-author) is expected.
   if [ -d .claude/agents ]; then
     for a in .claude/agents/*.md; do
       [ -f "$a" ] || continue
       name=$(basename "$a" .md)
-      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller) ;;
+      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller|test-author) ;;
         *) note audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
       esac
     done
