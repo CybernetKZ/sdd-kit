@@ -61,13 +61,49 @@ def git(root: Path, *args: str) -> tuple[bool, str]:
 def resolve_anchor(anchor: str, root: Path) -> list[str]:
     """Resolve one `enforced` anchor to an existing repo-relative file.
 
-    Anchors are file paths: `path/to/file.py` or `path/to/file.py:123`.
-    ponytail: the fuzzy symbol resolver (CamelCase->file index + git grep)
-    was dropped - write a path in the spec; bring resolution back only if
-    writing paths actually hurts.
+    One anchor may name several files, `;`-separated; each is
+    `path/to/file.py` with an optional `:`-suffix holding `,`-separated line
+    numbers, `12-34` ranges or symbol names.
+
+    The suffix is validated too: a miner that hallucinates `file.py:no_such_fn`
+    used to pass every gate, because only the file was checked (CF defect M1).
+    Every named file counts toward freshness - the old parser kept only the
+    first one, so edits to the rest went unnoticed.
     """
-    path = anchor.strip().split(":", 1)[0]
-    return [path] if (root / path).is_file() else []
+    files: list[str] = []
+    for part in anchor.split(";"):
+        resolved = _resolve_one(part.strip(), root)
+        if not resolved:
+            return []  # one bad part discredits the whole anchor
+        files.append(resolved)
+    return files
+
+
+def _resolve_one(anchor: str, root: Path) -> str:
+    """Resolve a single-file anchor, or "" when it does not check out."""
+    path, _, suffix = anchor.partition(":")
+    target = root / path
+    if not path or not target.is_file():
+        return ""
+    if not suffix.strip():
+        return path
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    for token in suffix.split(","):
+        # ponytail: substring match, not a parser - a symbol that appears
+        # anywhere in the file proves the anchor was read, not invented
+        token = token.strip().rsplit(".", 1)[-1]
+        start = token.split("-", 1)[0]
+        if not token:
+            continue
+        if start.isdigit():
+            if int(start) > text.count("\n") + 1:
+                return ""
+        elif token not in text:
+            return ""
+    return path
 
 
 def parse_spec(path: Path) -> dict:
@@ -176,7 +212,32 @@ def check_freshness(spec: dict, root: Path, cache: dict) -> dict:
             "enforced_files": len(files)}
 
 
+def self_check() -> int:
+    """Assert the anchor resolver, the one piece with real parsing in it."""
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    (root / "a.py").write_text("line1\ndef real_fn():\n    pass\n", encoding="utf-8")
+    (root / "b.py").write_text("class Klass:\n    def meth(self): pass\n", encoding="utf-8")
+    cases = {
+        "a.py": ["a.py"], "a.py:2": ["a.py"], "a.py:1-3": ["a.py"], "a.py:2,3": ["a.py"],
+        "a.py:real_fn": ["a.py"], "a.py:Klass.real_fn": ["a.py"],
+        "a.py:real_fn; b.py:Klass.meth": ["a.py", "b.py"],
+        # every one of these used to pass the gate
+        "a.py:999": [], "a.py:2,999": [], "a.py:ghost_fn": [], "a.py:real_fn,ghost_fn": [],
+        "a.py:real_fn; b.py:ghost_fn": [], "nope.py": [], "nope.py:real_fn": [],
+    }
+    bad = {a: (resolve_anchor(a, root), want) for a, want in cases.items()
+           if resolve_anchor(a, root) != want}
+    for anchor, (got, want) in bad.items():
+        print(f"spec-lint self-check FAIL {anchor!r}: got {got}, want {want}", file=sys.stderr)
+    print(f"spec-lint self-check: {len(cases) - len(bad)}/{len(cases)} passed")
+    return 1 if bad else 0
+
+
 def main() -> int:
+    if "--self-check" in sys.argv:
+        return self_check()
     parser = argparse.ArgumentParser(
         prog="spec-lint.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
