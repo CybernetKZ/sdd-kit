@@ -1,155 +1,134 @@
 # План миграции conversation_flow на sdd-kit + OpenSpec
 
-Дата: 2026-08-03. Статус: **черновик, ждёт грилл** (grill-with-docs).
+Дата: 2026-08-03. Статус: **прошёл грилл** (grill-with-docs, решения зафиксированы в [ADR-0019](ADR/ADR-0019-cf-onboarding.md)).
 Источники: `~/cybernet/docs/sdd-kit-vs-conversation_flow.md`, `~/cybernet/docs/sdd-kit-vs-code-conventions.md`, глубокий аудит conversation_flow от 2026-08-03 (LIVING SPEC 9470 строк / v1.81.0, 83 ТЗ в `docs/patches/`, 41 405 строк тестов).
-Решение пользователя: conversation_flow входит в scope sdd-kit; **спец-код под conversation_flow разрешён внутри sdd-kit** (профиль + payload + конвертеры).
+conversation_flow входит в scope sdd-kit (частично отменяет ADR-0015); спец-код под conversation_flow разрешён внутри sdd-kit.
 
 ---
 
-## 0. TL;DR
+## 0. TL;DR (после грилла)
 
-Домашняя SDD-система conversation_flow структурно почти 1:1 с OpenSpec — мигрируем **конвергенцией, а не заменой**:
+**Полная конвертация всего `conversation_flow/docs/` в OpenSpec до первого нового ТЗ.** Внутренние спеки — канон в самом репо, 2 кросс-репо контракта — в cybernet-specs, полный слепок — в `sdd-kit/profiles/conversation_flow/` (копируется при install, только для этого репо). DOCUMENTATION.md не замораживается — ведётся параллельно: агент генерирует его обновление из spec-дельты, канон — openspec.
 
 | Домашнее | OpenSpec / sdd-kit | Способ |
 |---|---|---|
-| `docs/patches/patchNN-*.md` (ТЗ) | `openspec/changes/<id>/` (proposal + delta + tasks) | новые ТЗ (№85+) сразу в новом формате; старые 83 — **не конвертируем**, остаются замороженным архивом |
-| `docs/DOCUMENTATION.md` (LIVING SPEC) | `openspec/specs/<capability>/spec.md` (~20 capabilities) | майним по секциям волнами (spec-miner), секция за секцией усыхает до обзор+ссылка |
-| §17 changelog | порядок `openspec/changes/archive/` | §17 замораживается на последнем «старом» ТЗ, дальше — история архива |
-| `/patch` → `/patch-review` → `/patch-implement` | feature-flow + planner/plan-griller/test-author | **адаптированные скиллы в payload профиля** — сохраняем всё ценное из трилогии (recon-before-text, «код важнее спеки», STOP-гейты, 11 инвариантов платформы) |
-| `tests/test_patchNN.py` | тесты со `# spec:` трейсерами по Scenario | старые не трогаем; якоря `enforced:` берём из готовой карты §14 + tests/README.md |
-| `pretooluse_guard.py`, lint_brand/migrations/imports, `make test` | — | **не трогаем вообще** — у kit нет эквивалента, это сильнее `sdd-test` |
-| `docs/integration-guide.md` + `cybernetrag_openapi.json` | `cybernet-specs` store | два новых контракта в store (по ADR-0018) |
+| `docs/DOCUMENTATION.md` (LIVING SPEC) | `openspec/specs/<capability>/spec.md` (~20 capabilities) | полный рерайт sonnet-агентами + полная верификация против кода |
+| `docs/patches/patchNN-*.md` (83 ТЗ) | `openspec/changes/archive/tz-0NN-*/` | полная конвертация (sonnet); оригиналы остаются, в change — ссылка на оригинал |
+| `docs/integration-guide.md`, `cybernetrag_openapi.json` | `cybernet-specs` store | 2 контракта по ADR-0018 |
+| `/patch` → `/patch-review` → `/patch-implement` | скиллы `tz`/`tz-implement` в payload профиля | наследники с сохранением recon-before-text, «код важнее спеки», STOP-гейтов, 11 инвариантов; судьба review-шага — отдельный грилл |
+| §17 changelog | продолжается (агент обновляет из дельты) + порядок `changes/archive/` | |
+| `tests/test_patchNN.py` | тесты со `# spec:` трейсерами по Scenario | старые не трогаем; `enforced:` якоря из §14 + tests/README.md |
+| `pretooluse_guard.py`, lint_brand/migrations/imports, `make test` | — | **не трогаем** — сильнее `sdd-test`, эквивалента в ките нет |
 
-Плюс: чиним 4 бага sdd-kit, найденных на этом репо, и коммитим установку (сейчас весь kit-дроп untracked = невидим для CI и команды).
+## 1. Решения грилла (2026-08-03, ADR-0019)
 
----
+1. **Конвертация — полная**, весь `docs/` (не только нормативные разделы), LLM-часть на sonnet.
+2. **Размещение — два уровня ADR-0001**: внутреннее в CF (канон), контракты в store. Слепок в профиле кита = seed при install (repo-owned после, в `--refresh`-manifest не входит).
+3. **Верификация — полная по протоколу store**: каждая capability сверяется с кодом отдельным агентом, расхождения — в список дефектов.
+4. **Порядок: сначала вся конвертация, потом пилот.** До завершения конвертации новые ТЗ идут по старому патч-процессу. Пилот — реальное следующее ТЗ (не синтетика из бэклога).
+5. **DOCUMENTATION.md — параллельно, навсегда**: канон openspec; в `tz-implement` фаза 3 агент переносит изменение из spec-дельты в § документа + §17 + версия `1.NN.0`, в тех же коммитах. Living-spec-warn в pre-commit остаётся постоянно (`PROFILE_LIVING_SPEC=1` не снимается).
+6. **Язык**: спеки/proposal в репо — русские, ключевые слова Requirement/Scenario/WHEN/THEN — английские; store — только английский.
+7. **Нумерация — двойная**: id change = сквозной `tz-NNN` (следующий №85); YouTrack-id — в proposal.md.
+8. **patch49** (грязные +129/−61): закоммитить как есть — формат легаси и замораживается; **коммитит Даниил** (агенты не коммитят).
+9. **repo-auditor** → `templates/agents/` кита + kit_manifest (для всех профилей).
+10. **Отдельный грилл (следующий)**: дедупликация `/patch-review` ↔ `plan-griller` ↔ opsx-команды openspec ↔ `feature-flow`, со сверкой текстов; там же — когда install.sh перестаёт копировать `database-reviewer` (дубль с плагином code-conventions, C2 из §6).
 
-## 1. Принципы
+## 2. Спец-код в sdd-kit
 
-1. **Конвергенция, не замена.** Патч-система живая (28 из 40 последних коммитов — ТЗ), самосогласованная и в HEAD. Ломать работающий процесс ради формата — потеря. Меняем контейнер артефактов, сохраняем дисциплину.
-2. **Append-only уважается.** 83 старых ТЗ не переписываются (собственное правило репо: «патчи не переписываются задним числом»). Конвертер делает только *stub-ссылки* в архив, если решим (§5, фаза 3).
-3. **Ничего из "do-not-break" списка не деградирует:** `pretooluse_guard.py` (flow.gen.ts / brand / append-only миграции / demo-flow), `make test` (строже `sdd-test`), правило «код важнее спеки — STOP», замеры latency p50/p90, i18n×6 локалей, «не пушить без явной просьбы» (совпадает с MAIN RULE пользователя).
-4. **Спец-код живёт в sdd-kit**, а не россыпью в репо: профиль `conversation_flow.env` + payload `profiles/conversation_flow/` + конвертеры. `--refresh` должен уметь обновлять адаптированные скиллы.
-5. **Advisory-first сохраняется** (ADR-0015): гейты включаем поэтапно, сначала сигналы.
-
-## 2. Целевая картина (после всех фаз)
-
-- `openspec/specs/` — ~20 capabilities (разбивка из аудита): `flow-schema`, `flow-execution`, `voice-pipeline`, `telephony`, `call-control`, `recording`, `tts`, `asr`, `observers`, `mcp`, `cost-analytics`, `editor-ui`, `copilot`, `persistence-versioning`, `webhooks`, `monitoring`, `tenancy-auth`, `rag`, `timezones`, `public-api-v1`. Метаданные по ADR-0017 (`id:`/`enforced:`), якоря из §14 + карты тестов.
-- `openspec/changes/` — новые ТЗ как changes с id `tz-NNN-<slug>` (сквозная нумерация продолжается: следующий №85 → `tz-085-...`).
-- `docs/DOCUMENTATION.md` — остаётся, но меняет роль: архитектурный обзор (§1–2), карта проекта (§14), глоссарий (§16), операционка (§15) + на каждый вымытый § — 3–5 строк обзора и ссылка на capability-спеку. §17 заморожен. Целевой размер ≤ ~2500 строк.
-- `docs/patches/` — заморожен, README дополнен «архив закрыт на ТЗ №84, дальше `openspec/changes/`».
-- `cybernet-specs` — +2 контракта: `cf-dialer-integration-api` (из integration-guide.md), `cf-rag-contract` (из cybernetrag_openapi.json + §11.9). conversation_flow получает `references:` на store.
-- `.spec-guard-paths` — включён обратно (14 префиксов из аудита), living-spec-фрагмент pre-commit **выключен** после фазы 4 (DoD переезжает на spec-дельты; до этого — оставляем как warn).
-- `AGENTS.md` — канонический ≤500 строк (ADR-0002), `CLAUDE.md` → симлинк; инфра-блок USA v4 (260 строк) переезжает в `docs/DEPLOY_USA.md`.
-- Весь kit-дроп + openspec закоммичены; `sdd-ci.yml` реально гоняется на PR.
-
-## 3. Спец-код в sdd-kit (новое и правки)
-
-### 3.1 Багфиксы kit (независимо от миграции — bite каждый профиль)
+### 2.1 Багфиксы kit (фаза 0, независимо от миграции)
 
 | # | Баг | Файл | Фикс |
 |---|---|---|---|
-| B1 | `wc -l` по `.spec-guard-paths` считает комментарии → ложное «guard enabled (2 paths)» | `templates/sdd-doctor.sh:~100` | strip `#`-строк перед подсчётом (как в `spec-guard.cjs:33`) |
+| B1 | `wc -l` по `.spec-guard-paths` считает комментарии → ложное «guard enabled» | `templates/sdd-doctor.sh:~100` | strip `#`-строк (как `spec-guard.cjs:33`) |
 | B2 | living-spec-фрагмент pre-commit не стрипает `#`-строки | `templates/living-spec-check.sh` | тот же strip |
-| B3 | `SDD_REVIEW_BASE ?= dev`, а у CF default branch `main` → `sdd-review` диффает несуществующий ref | `templates/Makefile.sdd` | новая переменная профиля `PROFILE_REVIEW_BASE`, install.sh подставляет; fallback — автоопределение `origin/HEAD` |
-| B4 | `install.sh:337` пропускает `openspec init`, если dirs существуют, даже пустые (0 файлов) → «вечно пустой openspec» | `templates/../install.sh` | считать директорию отсутствующей, если в ней 0 файлов |
+| B3 | `SDD_REVIEW_BASE ?= dev`, у CF default branch `main` | `templates/Makefile.sdd` | `PROFILE_REVIEW_BASE` в профиле; fallback — `origin/HEAD` |
+| B4 | `install.sh:337` пропускает `openspec init` при существующих, но пустых dirs | `install.sh` | директория с 0 файлов = отсутствующая |
 
-### 3.2 Профиль `profiles/conversation_flow.env` (обновить)
+### 2.2 Профиль `profiles/conversation_flow.env`
 
 ```
-PROFILE_SPEC_GUARD_PATHS="engine/ api/ livekit_agent/ storage/ webhooks/ recording/ ttscache/ analytics/ reports/ rag/ monitoring/ copilot/ editor/src/ migrations/versions/"   # раскомментировать (фаза 5)
-PROFILE_LIVING_SPEC=1        # оставить до фазы 4, потом убрать
+PROFILE_SPEC_GUARD_PATHS="engine/ api/ livekit_agent/ storage/ webhooks/ recording/ ttscache/ analytics/ reports/ rag/ monitoring/ copilot/ editor/src/ migrations/versions/"   # включается фазой 5
+PROFILE_LIVING_SPEC=1        # постоянно (решение 5)
 PROFILE_REVIEW_BASE=main     # новое (B3)
 PROFILE_ENV_FILES=".env"
 ```
 
-### 3.3 Payload `profiles/conversation_flow/` (новое)
+### 2.3 Payload `profiles/conversation_flow/`
 
-- `AGENTS.md` — готовый канонический (карта модулей из §14, команды, инварианты, порядок чтения), по образцу payload'ов WBN/VA.
+- **Полный слепок сконвертированных спек** `openspec/specs/**` + архив `openspec/changes/archive/tz-0NN-*/` (результат фазы 3) — seed при install, только для этого репо.
 - `openspec/config.yaml` — с `references: [cybernet-specs]` и context-блоком.
-- `.claude/skills/tz/SKILL.md` — **наследник `/patch`**: тот же recon-before-text, §0-позиция, «проверить перед реализацией», 11 инвариантов платформы, но артефакт = `openspec/changes/tz-NNN-<slug>/` (proposal.md с §0 и блокквотом зависимостей, spec-дельты `## ADDED/MODIFIED Requirements` + Scenario, tasks.md = критерии приёмки). Русский язык сохраняем.
-- `.claude/skills/tz-implement/SKILL.md` — **наследник `/patch-implement`**: фаза 0 reconcile + «код важнее спеки» STOP, фаза 1 план+STOP-гейт, логичные коммиты «ТЗ №NN §M», `make test` после каждого, spec-дельта в тех же коммитах, замеры latency, финальный отчёт, **не пушить**. Отличия: вместо §8.x/§17 обновляются spec-дельты change; архивирование по ADR-0011/0012.
-- `/patch-review` **не портируем как скилл** — его роль закрывают `plan-griller` (формат/консистентность, `## Grill` в proposal.md) + facts-vs-code блок, который добавляем в промпт грилла для этого профиля (или отдельный `tz-review` тонкой прослойкой — решить на грилле).
-- `.claude/agents/repo-auditor.md` — **поднять в общие шаблоны kit** (`templates/agents/`): аддитивен, эквивалента нет, полезен всем профилям. Вопрос грилла.
+- `AGENTS.md` — канонический ≤500 строк (карта модулей, команды, инварианты).
+- `.claude/skills/tz/SKILL.md` — наследник `/patch`: recon-before-text, §0-позиция, «проверить перед реализацией», 11 инвариантов платформы; артефакт = `openspec/changes/tz-NNN-<slug>/` (proposal.md, spec-дельты `## ADDED/MODIFIED Requirements` + Scenario, tasks.md = критерии приёмки). Русский.
+- `.claude/skills/tz-implement/SKILL.md` — наследник `/patch-implement`: фаза 0 reconcile + «код важнее спеки» STOP; фаза 1 план + STOP-гейт; логичные коммиты «ТЗ №NN §M», `make test` после каждого; **фаза 3: правится openspec-спека (канон), затем агент генерирует из дельты обновление § DOCUMENTATION.md + §17 + версия — в тех же коммитах**; замеры latency; не пушить.
+- `.claude/skills/tz-review/SKILL.md` — тонкий наследник `/patch-review` (ADR-0020): механический аудит change-документа — формат, facts-vs-code грепом, brand-lint, номер, вердикт `готово к реализации`/`требует правок`; документ не правит; бежит **перед** plan-griller. НЕ дубль гриллера (тот — допрос с записью `## Grill`).
+- `.claude/agents/repo-auditor.md` — переезжает в `templates/agents/` (решение 9), в payload не нужен.
 
-### 3.4 Конвертеры (`sdd-kit/tools/cf/`, запускаются вручную, не гейты)
+### 2.4 Конвертеры (`sdd-kit/tools/cf/`, ручной запуск, не гейты)
 
-- `mine-section.md` — промпт-инструкция для spec-miner-прогона по одному § DOCUMENTATION.md → `openspec/specs/<capability>/spec.md` (Requirement/Scenario **пишутся заново** — в LIVING SPEC 0 MUST и нет Given/When/Then, механическая конвертация невозможна; факт из аудита). Вход: § + карта тестов + §14-аннотации → `enforced:` якоря.
-- `patch2stub.py` (опционально, фаза 3) — генерирует в `openspec/changes/archive/tz-0NN-*/proposal.md` стабы-ссылки на `docs/patches/patchNN-*.md`, не трогая оригиналы. Нужен только если хотим единый архив; вопрос грилла.
-- `anchors-from-tests.py` — из `tests/README.md` + имён `test_patchNN.py` + 195 путей в DOCUMENTATION.md собирает черновой список `enforced:` якорей на capability (сырьё для майнинга).
+- `mine-section.md` — промпт для sonnet-агента: § DOCUMENTATION.md → `openspec/specs/<capability>/spec.md` (рерайт в Requirement/Scenario — в исходнике 0 MUST; вход: § + карта тестов + §14-аннотации → `enforced:` якоря).
+- `verify-section.md` — промпт верификации capability против кода (протокол STORE_VERIFICATION): каждое Requirement подтверждено чтением кода, расхождения — в `DEFECTS_CF.md`.
+- `patch2change.md` — промпт конвертации patchNN → `changes/archive/tz-0NN-*/` (proposal.md из ТЗ + ссылка на оригинал, tasks.md из критериев приёмки). Механика, sonnet.
+- `anchors-from-tests.py` — из `tests/README.md` + `test_patchNN.py` + 195 путей в DOCUMENTATION.md собирает черновые `enforced:` якоря по capability.
+
+## 3. Разбивка на capabilities (~20)
+
+`flow-schema` (§3/5/6), `flow-execution` (§4), `voice-pipeline` (§8.1–8.4, 8.15), `telephony` (§8.5, 8.9–8.10, 11.3a), `call-control` (§8.6, 8.8, 8.13, 8.22), `recording` (§8.7, 11.5), `tts` (§8.11–8.12, 8.14), `asr` (§8.20), `observers` (§8.16–8.18), `mcp` (§8.19), `cost-analytics` (§8.21, 11.10), `editor-ui` (§9, 11.2.2), `copilot` (§10), `persistence-versioning` (§11.1–11.2), `webhooks` (§11.4), `monitoring` (§11.6), `tenancy-auth` (§11.7–11.8), `rag` (§11.9), `timezones` (§11.11), `public-api-v1` (§13.3e + integration-guide, сверка со store-контрактом).
 
 ## 4. Фазы
 
-### Фаза 0 — kit-багфиксы и гигиена (sdd-kit, ~полдня)
-B1–B4 из §3.1; вычистить `templates/__pycache__/`, `templates/.ruff_cache/` + .gitignore. Прогнать self-CI (bootstrap-smoke).
+### Фаза 0 — kit-багфиксы и гигиена (~полдня)
+B1–B4; `repo-auditor` → `templates/agents/` + kit_manifest; вычистить `templates/__pycache__/`, `.ruff_cache/`; self-CI зелёный.
 
 ### Фаза 1 — фундамент в conversation_flow (~полдня)
-1. `rm -r openspec/` (пустые dirs) → `openspec init` → `config.yaml` из payload (store `references:` появится в фазе 2).
-2. Закоммитить весь kit-дроп: `Makefile.sdd` + include, hooks, agents, скиллы kit, скрипты, `feature_flags.py`, `.spec-guard-paths` (пока пустой, с комментом «включается фазой 5»), `sdd-ci.yml`, `autoreview.yml`, `.claude/settings.json`, `.mcp.json`. Отдельно решить судьбу грязного `patch49-components.md` (+129/−61 — нарушение собственного append-only; **вопрос грилла**).
-3. `AGENTS.md`/`CLAUDE.md`: USA v4 → `docs/DEPLOY_USA.md`; собрать канонический AGENTS.md (payload); `CLAUDE.md` → симлинк. Проверить `make sdd-check` — теперь не вакуумно.
+1. patch49: показать diff Даниилу → он коммитит как есть (решение 8).
+2. `rm -r openspec/` (пустые dirs) → `openspec init` → `config.yaml` (store `references:` — в фазе 2).
+3. Закоммитить kit-дроп (коммитит Даниил): `Makefile.sdd` + include, hooks, agents, скиллы, скрипты, `feature_flags.py`, `.spec-guard-paths` (пустой, коммент «включается фазой 5»), `sdd-ci.yml`, `autoreview.yml`, `.claude/settings.json`, `.mcp.json`.
+4. `AGENTS.md`/`CLAUDE.md`: USA v4 → `docs/DEPLOY_USA.md`; канонический AGENTS.md; `CLAUDE.md` → симлинк. `make sdd-check` — не вакуумно.
 
 ### Фаза 2 — кросс-репо контракты в store (~1 день)
-По процессу store (ADR-0018): change в cybernet-specs → PR → review владельцев.
-- `cf-dialer-integration-api` — из `docs/integration-guide.md` (829 строк, EN, /v1 + webhook HMAC). Store-формат: проза + якоря `file.py:line` (ADR-0017), Provenance + отметка «response shapes authoritative here, requests — OpenAPI».
-- `cf-rag-contract` — из `cybernetrag_openapi.json` + §11.9 (входящий контракт с CybernetRAG).
-- Обновить `SOURCES.md` (закрывает пункт «have conversation_flow publish its /v1 call API + webhook payloads») и README-таблицу; в CF — `references:` в config.yaml.
+По ADR-0018: change в cybernet-specs → PR → ревью владельцев потребителей.
+- `cf-dialer-integration-api` — из `integration-guide.md` (829 строк, EN; проза + якоря `file.py:line`, Provenance, отметка «responses authoritative here»).
+- `cf-rag-contract` — из `cybernetrag_openapi.json` + §11.9.
+- Обновить `SOURCES.md` + README-таблицу store; в CF — `references:` в config.yaml.
 
-### Фаза 3 — cutover процесса (~1 день + пилот)
-1. Установить payload-скиллы `tz`/`tz-implement` (профиль, `--refresh`-ом).
-2. `docs/patches/README.md`: «архив закрыт на №84; новые ТЗ — `openspec/changes/tz-NNN-*`»; старую трилогию скиллов пометить deprecated (удалить после пилота).
-3. **Пилот: следующее реальное ТЗ №85 прогоняется полным новым циклом** (tz → plan-griller → test-author → tz-implement → review → archive). Friction-лог в `sdd-kit/docs/DRYRUN_CF.md` (по образцу DRYRUN_WEB2318). Критерий выхода: цикл прошёл без ручных обходов, `make test` зелёный, spec-дельта провалидирована.
-4. Опционально `patch2stub.py` для единого архива.
+### Фаза 3 — полная конвертация (главная фаза, ~2–3 недели, sonnet-агенты волнами)
+Для каждой capability: `mine-section` → `verify-section` (полная сверка с кодом) → `id:`/`enforced:` метаданные (ADR-0017) → `openspec validate --strict` + `spec-lint` чистый. Расхождения — в `DEFECTS_CF.md` (тикет-материал, поведение не «чинится» молча).
+Порядок волн (по нормативности): 1) `flow-schema`, `flow-execution`; 2) `public-api-v1`, `webhooks`, `persistence-versioning`; 3) голосовой слой (§8 → 8 capabilities); 4) остальное.
+Параллельно: `patch2change` по всем 83 патчам → `changes/archive/`.
+По завершении: слепок `openspec/**` копируется в `profiles/conversation_flow/` (решение 2); в DOCUMENTATION.md шапку — строка «канон поведения — openspec/specs/, документ ведётся параллельно (ADR-0019)»; `docs/patches/README.md` — «архив закрыт на №84, новые ТЗ — openspec/changes/».
 
-### Фаза 4 — майнинг LIVING SPEC (волнами, ~2–4 недели фоном)
-Приоритет по нормативности и риску дрейфа (из аудита):
-- Волна 1: `flow-schema` (§3/5/6), `flow-execution` (§4) — ядро, самое нормативное.
-- Волна 2: `public-api-v1` (§13.3e, сверка со store-контрактом), `webhooks` (§11.4), `persistence-versioning` (§11.1–11.2).
-- Волна 3: голосовой слой §8 → `voice-pipeline`, `telephony`, `call-control`, `recording`, `tts`, `asr`, `observers`, `mcp` (2324 строки, режем по подсекциям).
-- Волна 4: остальное (`editor-ui`, `copilot`, `cost-analytics`, `monitoring`, `tenancy-auth`, `rag`, `timezones`).
+### Фаза 4 — cutover процесса и пилот
+1. Установить payload-скиллы `tz`/`tz-implement`; старую трилогию пометить deprecated (удаление — после пилота и грилла по дедупликации).
+2. **Пилот — реальное следующее ТЗ №85** полным циклом: tz → plan-griller → test-author → tz-implement (включая агент-генерацию обновления DOCUMENTATION.md) → review → archive. Friction-лог в `sdd-kit/docs/DRYRUN_CF.md`. Критерий выхода: цикл без ручных обходов, `make test` зелёный, спека и DOCUMENTATION.md обновлены синхронно.
 
-Каждая волна: spec-miner по `tools/cf/mine-section.md` → верификация против кода (протокол STORE_VERIFICATION) → `id:`/`enforced:` → соответствующий § DOCUMENTATION.md усыхает до обзор+ссылка (в том же PR). §17 не трогаем. После волны — `spec-lint` чистый.
+### Фаза 5 — enforcement (~час, после пилота)
+Включить `PROFILE_SPEC_GUARD_PATHS` (14 префиксов); `SPEC_LINT_STRICT=1` для CF после стабилизации спек. Living-spec-warn остаётся (решение 5).
 
-### Фаза 5 — включение enforcement (~час, после волны 2)
-Раскомментировать `PROFILE_SPEC_GUARD_PATHS` (сначала префиксы вымытых capabilities, полный список после волны 3); living-spec-фрагмент оставить warn до конца фазы 4, затем убрать `PROFILE_LIVING_SPEC`; TODO в Makefile.sdd про `SPEC_LINT_STRICT=1` — включить для CF, когда все волны пройдены.
+## 5. Что берём из code-conventions в sdd-kit
 
-## 5. Язык
-
-Предложение (вопрос грилла): **репо-локальные спеки и proposal.md — по-русски** (команда, LIVING SPEC, коммиты — русские; ADR-0017 язык не фиксирует), заголовки `### Requirement:` / `#### Scenario:` / WHEN/THEN — английские ключевые слова (нужны валидатору), тело — русское. **Store-контракты — только английский** (правило cybernet-specs).
-
-## 6. Что берём из code-conventions в sdd-kit
-
-Из сравнения `sdd-kit-vs-code-conventions.md` — граница «kit = коммитимые файлы, plugin = сессия» остаётся. Конкретно в kit:
-
-| # | Что | Действие | Обоснование |
+| # | Что | Действие | Статус |
 |---|---|---|---|
-| C1 | **Zero-click подключение плагина** | `install.sh` дописывает в `.claude/settings.json` репо `extraKnownMarketplaces` + `enabledPlugins: code-conventions@cybernet` (спросив y/N) | закрывает шаг 4 PORT-плана; CF-разработчик получает clean-code/gof/project-structure/KB-инъекцию без ручной установки |
-| C2 | **Дедупликация ревьюеров** | как только C1 сделан — `install.sh` перестаёт копировать агентов, которые дублируются плагином (`database-reviewer`); `backend-reviewer`/`planner`/`plan-griller`/`test-author` остаются kit-only | убирает «двойные ревьюеры в одной сессии» (gap №2 сравнения) |
-| C3 | **Drift-check** | лёгкий CI-джоб в sdd-kit: diff kit-овских `feature-flow`/`database-reviewer` против копий в code-conventions, WARN при расхождении | gap №1 сравнения (плагин от 2026-07-31 не знает ADR-0017/0018) |
-| C4 | **rtk-конфликт** | решить: `setup-dev.sh` перестаёт ставить rtk через curl, если обнаружен `rtk-plugin` из marketplace (проверка + skip) | PORT §5.3, висит с 2026-07-30 |
-| C5 | gherkin-spec | **не берём** | второй спец-диалект; у kit уже есть Scenario в OpenSpec-дельтах. Плагину — пометить «для не-SDD репо» (не наша сторона) |
-| C6 | clean-code / gof / project-structure / KB-инъекция | **не берём в kit** | сессионный слой, закрывается C1 |
+| C1 | Zero-click подключение плагина | `install.sh` дописывает `extraKnownMarketplaces` + `enabledPlugins: code-conventions@cybernet` (y/N) | в работу (закрывает шаг 4 PORT-плана) |
+| C2 | Дедупликация ревьюеров (`database-reviewer`) | сначала слияние (канон — кит, у плагинной копии забрать Write/Edit); кит перестаёт копировать только когда плагин станет обязательным | решено (ADR-0020) |
+| C3 | Drift-check | CI-джоб в sdd-kit: diff с копиями плагина `feature-flow`/`database-reviewer` + 5 общих блоков по маркерам заголовков, WARN; внутри кита — equality-проверка 70 общих строк ревьюеров в `--refresh` | решено (ADR-0020), в работу |
+| C4 | rtk-конфликт | `setup-dev.sh` пропускает curl-установку rtk при обнаруженном `rtk-plugin` | в работу |
+| C5 | gherkin-spec | не берём (второй спец-диалект) | закрыто |
+| C6 | clean-code / gof / project-structure / KB | не берём (сессионный слой, закрывается C1) | закрыто |
 
-Прим.: back-port prompt-injection-guard'ов в 4 агента плагина (gap №5) — работа на стороне code-conventions, в этот план не входит.
-
-## 7. Риски
+## 6. Риски
 
 | Риск | Митигция |
 |---|---|
-| Майнинг §8 (2324 стр.) забуксует, останутся «две правды» надолго | волны с приоритетом; правило «вымытый § сразу усыхает» — двух полных копий не существует ни дня; living-spec-warn держит DoD до конца |
-| Команда/агенты продолжат писать в docs/patches по привычке | deprecated-пометка в трилогии скиллов + README + CLAUDE.md обновлён в фазе 3; spec-guard (фаза 5) физически требует активный change |
-| Рерайт в Requirement/Scenario внесёт смысловой дрейф от кода | верификация каждой волны против кода (протокол STORE_VERIFICATION), `enforced:` якоря из карты тестов, spec-lint freshness |
-| `--refresh` затрёт локальные правки payload-скиллов | payload-файлы — repo-owned после установки (как AGENTS.md); в manifest не включать |
-| Пилот №85 покажет, что новый цикл медленнее патчей | friction-лог + right-to-rollback: трилогия остаётся deprecated-но-рабочей до конца пилота |
+| Конвертация 9470 строк + 83 патча забуксует, новый процесс не стартует | волны с фиксированным порядком; пилот не блокируется хвостовыми волнами 3–4 (ядро+API достаточно для большинства ТЗ) — но по решению 4 cutover только после ПОЛНОЙ конвертации, так что дедлайн фазы 3 — управляемый риск №1 |
+| Рерайт внесёт смысловой дрейф от кода | полная верификация каждой capability (решение 3), `enforced:` якоря из карты тестов, spec-lint freshness |
+| Параллельное ведение двух текстов разъедется | канон назначен (openspec), обновление DOCUMENTATION.md генерирует агент из дельты в тех же коммитах, living-spec-warn ловит забытое |
+| Команда продолжит писать в docs/patches | README + deprecated-пометка + spec-guard (фаза 5) требует активный change |
+| `--refresh` затрёт слепок/скиллы payload | payload — repo-owned, в manifest не входит |
+| Пилот покажет, что цикл медленнее патчей | friction-лог + трилогия deprecated-но-рабочая до конца пилота |
 
-## 8. Вопросы для грилла
+## 7. Открытые вопросы (вне этого плана)
 
-1. Судьба `/patch-review`: тонкий `tz-review` скилл или facts-vs-code блок внутрь plan-griller-промпта профиля?
-2. `patch2stub.py`: нужен ли единый архив, или `docs/patches/` просто остаётся историей рядом?
-3. Язык репо-спек: русский с англ. ключевыми словами (предложение §5) — ок?
-4. `repo-auditor` — поднимать в общие шаблоны kit для всех профилей?
-5. Грязный `patch49-components.md` (+129/−61): закоммитить как есть с новым номером-коррекцией (по собственному правилу репо) или откатить?
-6. Нумерация: продолжаем сквозную `tz-085…` или переходим на YouTrack-id (у CF тикеты не в YouTrack-флоу WEB-*)?
-7. Целевой размер DOCUMENTATION.md после миграции (~2500 строк с §17 или §17 тоже выносим в архив-файл)?
-8. C2 (перестать копировать `database-reviewer`): не рано ли, пока плагин не стал обязательным для всей команды?
-9. Кто владелец store-PR'ов фазы 2 со стороны потребителей (WBN/VA ревьюеры)?
-10. Пилот №85: ждём реальное ТЗ или берём что-то из DEFECTS_BACKLOG (65 находок) как синтетический прогон?
+1. ~~Грилл №2 — дедупликация команд~~ — **проведён 2026-08-03, решения в [ADR-0020](ADR/ADR-0020-dedup-commands-reviewers.md)** (tz-review добавлен в payload §2.3; C2/C3 закрыты в §5; фиксы planner/plan-griller/openspec-1.7.0 — по списку PROMPT_AUDIT_SDD_KIT.md P0).
+2. Владельцы-ревьюеры store-PR фазы 2 со стороны WBN/VA.
+3. Дефекты из `DEFECTS_CF.md` (появятся в фазе 3) — триаж в тикеты.
+4. Работы на стороне code-conventions (решены здесь, делаются там): пересинк database-reviewer и feature-flow с кита, бэкпорт hardening-преамбулы + вердикт-формата в python/fastapi-reviewer, HIGH=Warning в python-reviewer (ADR-0020 п. 1, 3, 5, 7).

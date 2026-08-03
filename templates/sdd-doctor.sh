@@ -105,8 +105,17 @@ if [ -n "$ROOT" ]; then
   fi
   [ -f .claude/settings.json ] && ok repo.hooks "Claude hooks configured (.claude/settings.json)" \
     || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
-  [ -f .spec-guard-paths ] && ok repo.spec-guard "spec-guard enabled ($(wc -l < .spec-guard-paths | tr -d ' ') guarded path(s))" \
-    || warn repo.spec-guard "no .spec-guard-paths — spec-guard hook is a no-op" "create .spec-guard-paths (code path prefixes, one per line)"
+  if [ -f .spec-guard-paths ]; then
+    # count only real prefixes: skip comments and blank lines (same rule as spec-guard.cjs)
+    GUARD_PATHS=$(grep -cv -e '^[[:space:]]*#' -e '^[[:space:]]*$' .spec-guard-paths || true)
+    if [ "${GUARD_PATHS:-0}" -gt 0 ]; then
+      ok repo.spec-guard "spec-guard enabled ($GUARD_PATHS guarded path(s))"
+    else
+      warn repo.spec-guard ".spec-guard-paths has no path prefixes (comments only) — spec-guard hook is a no-op" "add code path prefixes, one per line"
+    fi
+  else
+    warn repo.spec-guard "no .spec-guard-paths — spec-guard hook is a no-op" "create .spec-guard-paths (code path prefixes, one per line)"
+  fi
 
   # graphify index (navigation/context only, ADR-0004 — never a gate, so this
   # is info-level even when absent). Only reported when the CLI is installed.

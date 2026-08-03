@@ -5,7 +5,8 @@
 if [ -f .spec-guard-paths ]; then
   CODE_TOUCHED=0
   while IFS= read -r prefix; do
-    [ -n "$prefix" ] || continue
+    # skip blank lines and comments (same rule as spec-guard.cjs)
+    case "$prefix" in ''|\#*) continue ;; esac
     if git diff --cached --name-only | grep -q "^$prefix"; then CODE_TOUCHED=1; break; fi
   done < .spec-guard-paths
   if [ "$CODE_TOUCHED" = 1 ] && ! git diff --cached --name-only | grep -q "^docs/DOCUMENTATION.md$"; then
