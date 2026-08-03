@@ -71,7 +71,7 @@ cross-service one earns the full grill.
 |---|---|
 | light | minimal change (why + what + a Scenario for the regression test); skip the plan grill. The test is still written before the fix, by `test-author` |
 | standard | this skill as written |
-| deep | + architecture research before planning (compare options, write an ADR) + the grill is mandatory |
+| deep | + architecture research before planning (compare options, record the comparison in the change's `design.md` — ADRs are kit-level and live in sdd-kit; target repos have no `docs/ADR/`) + the grill is mandatory |
 
 - Tier set in the ticket -> use it as the default.
 - The developer may ALWAYS override the tier.
@@ -86,11 +86,13 @@ cross-service one earns the full grill.
 ## 2. Plan as an OpenSpec change
 
 - Deep tier first: research architecture options (context7 for library/API
-  docs), compare them, record the decision as an ADR. Model binding is
+  docs), compare them, record the comparison and the decision in the change's `design.md` (`openspec instructions design --change <id> --json` lists its sections); ADRs stay in sdd-kit for cross-cutting/process decisions. Model binding is
   automatic: plan and grill run as the `planner` / `plan-griller` subagents
   (`model: opus` in their frontmatter, ADR-0013); the implementation runs
   on the session model; bulk mechanical steps can drop to haiku.
-- Run the `planner` agent: `/opsx:propose "WEB-XXXX: <what changes>"` -
+- Run the `planner` agent: `/opsx:propose "WEB-XXXX: <what changes>"` (a subagent
+  cannot invoke slash commands - it follows `.claude/commands/opsx/propose.md`
+  through the openspec CLI; see `planner.md`) -
   proposal + spec deltas + tasks. It starts from step 1's
   `openspec/changes/<change-id>/intake.md`.
 - Reference the ticket id in the change. Spec-guard requires this active
@@ -100,6 +102,10 @@ cross-service one earns the full grill.
   ONE change; a flag only if the half-built epic must stay invisible in prod
   (see 4b, ADR-0015). Archive the change when the flag is on in prod by default
   (ADR-0011), or - flagless - when the last task is merged and verified.
+- Touching a cross-repo contract? The spec edit itself is a separate change + PR in
+  `cybernet-specs` (its README, "How to add or change a contract"); this change keeps
+  the reasoning and a `tasks.md` task naming that store change id, and is not archived
+  while the store PR is open (ADR-0018).
 - Standard/deep: interrogate the plan before implementing - the `plan-griller`
   agent asks (edge cases, rollback, migrations, cross-service impact), the
   developer answers; anything he cannot answer becomes a question to the ticket

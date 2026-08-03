@@ -35,6 +35,10 @@ touches so your assertions name real things.
    # spec: <requirement-id> / <scenario>
    ```
 
+   `<requirement-id>` is the delta's `<!-- id: ... -->` when it has one. A
+   delta aimed at a store contract carries no `id` by convention (ADR-0017) -
+   then use the `### Requirement:` title verbatim. Never invent an id.
+
 4. **AAA structure**: Arrange / Act / Assert, in that order, visibly separated.
    The name says the behavior (`test_rejects_expired_token_with_401`), not the
    function under test.

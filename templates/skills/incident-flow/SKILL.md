@@ -56,3 +56,7 @@ deliverable; hand it to the owner and **STOP** - no change, no code.
   a staging reproduction), record before/after in the ticket/PR body, link the
   root-cause doc from the PR. The handoff comment points at the RAISE
   reproduction steps + that before/after evidence.
+
+- Fix touches a cross-repo contract? The spec edit is a separate change + PR in
+  `cybernet-specs`; this change carries a `tasks.md` task naming it and is not archived
+  while that PR is open (ADR-0018).

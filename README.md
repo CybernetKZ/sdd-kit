@@ -114,6 +114,15 @@ target directory name matches a profile, install.sh additionally:
 - for the store repo itself (`PROFILE_IS_STORE=1`): minimal install - local
   registration + a strict-validate CI gate, nothing else.
 
+The store is read-only for a service repo. A repo change that needs a
+cross-repo contract edited keeps the reasoning in its own `proposal.md`, but
+the spec edit itself is a separate change + PR in `cybernet-specs`; the repo
+change's `tasks.md` carries an explicit task linking to it and cannot be
+archived while that PR is open (ADR-0018). Spec metadata differs by location:
+local `openspec/specs/**` requirements carry `<!-- id: -->` / `<!-- enforced: -->`
+(read by `spec-lint.py`), store contracts stay prose with `file.py:line`
+anchors (ADR-0017).
+
 Shipped profiles: web-backend-new, voice-agent-constructor-backend,
 voice-agent-postcall-analitics-backend, cybernet3.0, web-frontend-new,
 conversation_flow, cybernet-specs (the store). Unknown repos fall back to the

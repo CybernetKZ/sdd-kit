@@ -23,3 +23,5 @@
 | [0014](ADR-0014-drop-headroom.md) | Headroom выпилен | 0-2% сжатия, ломает префикс prompt-кэша, +45..62% к счёту; экономия остаётся за rtk/ponytail/graphify | принято |
 | [0015](ADR-0015-advisory-first.md) | Advisory-first | branch protection не включаем: серверные гейты - сигналы; флаги - по требованию (dormant); store - контекст для агента; conversation_flow вне кита | принято |
 | [0016](ADR-0016-test-author-agent.md) | Тесты пишет агент test-author | тесты до кода пишет выделенный агент по спек-дельте; владение фазой 3 человеком-QA - целевое состояние | принято |
+| [0017](ADR-0017-spec-metadata-convention.md) | Метаданные спек | локальные спеки репо - с `id`/`enforced` (их читает spec-lint), контракты стора - проза + якоря `file.py:line` | принято |
+| [0018](ADR-0018-store-edit-from-repo-change.md) | Правка стор-контракта из репо-change | текст спеки правится только отдельным change/PR в cybernet-specs; в `tasks.md` репо-change'а обязательна задача-связка; архивация ждёт стор-PR | принято |
