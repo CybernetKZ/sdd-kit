@@ -9,6 +9,9 @@ adds what is missing.
 - New to the team or to SDD -> `docs/ONBOARDING.md`.
 - How the process works (signal -> merged PR) -> `WORKFLOW.md`.
 - Installing the kit into a repo -> keep reading this file.
+- Installed already, "what do I actually use, and how do I start a task?" ->
+  [After install: what to use](#after-install-what-to-use) and
+  [Working a new task](#working-a-new-task).
 
 ## Usage
 
@@ -77,13 +80,13 @@ clean: `git status` shows the repo exactly as before install.
 | Artifact | Purpose |
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
-| `openspec/` | OpenSpec init (`--tools claude`); specs + delta-changes live here |
-| `Makefile.sdd` (+ `-include` in Makefile) | `make sdd-check`: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags` (blocking) + spec-lint (advisory until `SPEC_LINT_STRICT=1`); every failure prints a concrete `next:` step |
+| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `Makefile.sdd` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
+| `Makefile.sdd` (+ `-include` in Makefile) | 6 targets: `sdd-check` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `sdd-flags`, `sdd-doctor`, `sdd-test` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `sdd-review` (local AI review of the diff), `sdd-index` (graphify graph, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
 | `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - no process step requires a flag** (ADR-0015): flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails CI. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
 | `.github/workflows/sdd-ci.yml` | the SDD gate on every pull request - **advisory today**: no branch protection, no required check (ADR-0015); + `tbd-gates` job (ADR-0006): branch age (warn >2 days, red >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
 | `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
-| `.claude/agents/` | `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) + `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016) |
-| `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
+| `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
+| `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol after the colon. Only the path is resolved; an anchor that resolves to no file makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |

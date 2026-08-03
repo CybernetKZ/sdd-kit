@@ -339,6 +339,12 @@ repo_section() {
       [ -n "$PROFILE_OPENSPEC_SEED_REF" ] || break
       if [ -n "$(git ls-tree -r --name-only "$r" -- openspec 2>/dev/null | head -1)" ]; then SEED_REF="$r"; break; fi
     done
+    # Declining is a deliberate "scaffold an empty skeleton" — not the missing-ref
+    # error below, so clear the profile ref along with SEED_REF.
+    if [ -n "$SEED_REF" ] \
+       && ! ask "restore openspec/ ($(git ls-tree -r --name-only "$SEED_REF" -- openspec | wc -l | tr -d ' ') files) from $SEED_REF?" y; then
+      SEED_REF=""; PROFILE_OPENSPEC_SEED_REF=""
+    fi
     if [ -n "$SEED_REF" ]; then
       git checkout "$SEED_REF" -- openspec
       say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, staged — review and commit)"

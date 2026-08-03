@@ -3,6 +3,29 @@
 Дата начала: 2026-08-03. Формат: как DEFECTS_BACKLOG.md — записано, не чинилось; тикет-материал.
 Источники: `## Mismatches and defects` двух store-дельт (фаза 2) + отчёты верификаторов capability-спек (фаза 3, дополняется).
 
+## Статус: какие дефекты уже стали требованиями (2026-08-03)
+
+Реестр превратился в очередь работ. На ветке `main` Даниил написал восемь патчей, каждый закрывает найденное; они сконвертированы в **активные** `openspec/changes/` (не архив — код по ним ещё не написан, проверено построчно: ни одного `tests/test_patch9[2-9].py`, ни записи в §17).
+
+| Change | Патч | Дефекты | Спек-дельты |
+|---|---|---|---|
+| `tz-092-tenant-isolation-repositories` | patch92 | **V1a, V1b, TA3**, V1c, V1c+, TA8, V1e | webhooks, copilot, observers, persistence-versioning |
+| `tz-093-auth-account-takeover-token-audience` | patch93 | **TA1**, TA2, TA4, TA5 (+фиксация TA7) | tenancy-auth |
+| `tz-094-transfer-dial-trunk-limits` | patch94 | T1 | telephony |
+| `tz-095-tts-cache-org-isolation` | patch95 | T2 | tts |
+| `tz-096-cancel-end-start-turn-lock` | patch96 | VP1 | voice-pipeline |
+| `tz-097-migration-idempotency-symbolic-draft` | patch97 | V2, V3, V4 | persistence-versioning |
+| `tz-098-rag-client-non-ragerror-resilience` | patch98 | R2, R13 | rag |
+| `tz-099-webhook-url-scheme-enforcement` | patch99 | D1 | webhooks |
+
+Итого требования написаны на **три CRITICAL из четырёх** (V1a, V1b/TA3, TA1) и на большинство HIGH. **Без требования пока: RG1 (CRITICAL, базы знаний RAG)**, TA9, TA10, CC1, CC2, CA1–CA6, DB1, EU1–EU3, VP2–VP4, O1, A1, E1–E5, M1 (починен в ките), плюс D2–D12 и R3–R12 (стор-контракты).
+
+Замечания к текстам патчей (обнаружены при конвертации, автор — Даниил):
+- **patch92 §1** говорит «`get`/`list`/`retry` у `WebhookDeliveryRepository`», но одноимённые `get`/`list` есть и у `WebhookEndpointRepository` (`storage/repos/webhooks.py:26,68`) — при реализации скоупить именно `:269/:281/:286`, иначе легко починить не тот класс.
+- **patch93 §2** просит «брать `client_id` из настроек, дефолт `cflow-spa`» — поле `AuthSettings.client_id` с таким дефолтом уже существует (`api/auth.py:64,106`), нужен только его ввод в `verify_token`; новое поле конфига не требуется.
+- **patch95 §3** — опечатка в исходнике: «自-истечение» (китайский иероглиф вместо «само-»).
+- **TA7 подтверждён как уже безопасный**: `UserUpdate` (`api/users.py:65`) содержит только `role`/`display_name`, перевод между организациями через `PATCH` невозможен.
+
 ## Фаза 2 — контракт дозвонщика (add-cf-dialer-integration-api), 12 шт.
 
 Полные формулировки — в дельте `cybernet-specs/openspec/changes/add-cf-dialer-integration-api/specs/cf-dialer-integration-api/spec.md`.
@@ -59,6 +82,25 @@
 | ✅ G7 | **ЗАКРЫТ ПОЛНОСТЬЮ** 2026-08-03: ASR-часть — 5 Req в `asr`, TTS-часть — 5 Req в `tts` (`picker-catalog-fetch`, `picker-client-filter`, `picker-inline-fallback`, `voices-page-actions`, `voices-page-check`). В обеих спеках сужены блоки `## Out of Scope`/`## Вне границ`, которые раньше исключали UI-слой целиком — именно эта формулировка и породила G7. ASR-часть: `picker-catalog-fetch`, `picker-client-filter`, `picker-inline-fallback`, `models-page-actions`, `models-page-check`. Исходный текст: UI-слои `AsrModelPicker/AsrModelsPage` (asr), `VoicesPage/VoicePicker` (tts) — не Requirement и не в исключениях | `editor/src/` | верификаторы asr, tts |
 | ✅ G9 | **ЗАКРЫТ** 2026-08-03 → `monitoring.worker-health-port` (владелец — `monitoring`: `worker_load.py` уже её якорь, отдельной capability под пул воркеров нет). Покрыты обе половины механизма, чего требовал N3: чистый резолв env и подключение к запуску. `resolve_health_port()` + `WorkerOptions(port=…)` через `_worker_kwargs` (`agent.py:2321-2334`): — порт health/status-сервера голосового воркера из `CFLOW_AGENT_HEALTH_PORT` (чтобы несколько LiveKit-агентов на одном хосте не конфликтовали за bind) не покрыт ни одной спекой. Прежняя оценка «место требования — capability, владеющая пулом голосовых воркеров» осталась в силе по смыслу, но такой capability нет, поэтому владельцем назначен `monitoring` | `livekit_agent/worker_load.py:61-88` (мерж `e62d5e5d`) | fixup monitoring |
 | ✅ G8 | **ЗАКРЫТ** 2026-08-03 → 4 Req в `copilot` (`ui-proposal-rendering`, `message-feedback`, `conversation-share-link`, `testcase-asserts-contract`) + перекрёстная ссылка в `editor-ui/spec.md`, так что дыра между спеками закрыта с обеих сторон. Побочно вскрыт TA10. Исходный текст: сквозной пробел между двумя спеками: §10.6 UI предложений Copilot (diff-рендер, счётчик 1/N, ✓/✗, Undo) — `editor-ui/spec.md:14` отдаёт Copilot отдельной capability, а `copilot/spec.md` UI не берёт. Плюс §10.4: эндпоинт фидбека `POST .../feedback` (`api/copilot.py:372-377`) и шаринг `?copilot=<id>`; §10.5: контракт TestCase/asserts (типы ассертов, `max_turns` 12 с потолком `MAX_TURNS_HARD=40`, `simulate.py:25,124` — клэмп не специфицирован и не тестируется) | `editor/src/copilot/`, `api/copilot.py`, `copilot/simulate.py` | верификатор copilot |
+
+### Пробелы покрытия ТЗ №85–91 (найдены 2026-08-03 при догоне архива)
+
+ТЗ №85–91 существовали только патчами (архив отставал на 7 номеров) и были сконвертированы в `openspec/changes/archive/tz-085…091`. Агент-конвертер проверил покрытие текущими спеками **грепом по ключевым словам** и заявил «явных нулевых пробелов нет» — **заявление опровергнуто** отдельным верификатором, читавшим требования: 2 покрыты полностью, 2 частично, **3 не покрыты вовсе**. Образцовый ложный положительный: строка `rate_limit_per_minute` в `public-api-v1/spec.md` совпала по тексту, но нормирует пред-существующее поведение ТЗ №27 (резолюция лимита на запрос), а не новую редактируемость ТЗ №87. Это восьмой раз, когда «расхождений нет» скрывало реальный пробел.
+
+| # | ТЗ | Что не покрыто | Куда |
+|---|---|---|---|
+| G10 | №87 | **Ядро требования не специфицировано вообще**: `PATCH /api/api-keys/{key_id}` (правка `rate_limit_per_minute` без ротации секрета), `default_rate_limit_per_minute` в листинге, 409 на отозванный ключ, ролевой гард (Member 403), UI-поле и колонка | `tenancy-auth` (владелец `api_keys`), `public-api-v1` |
+| G11 | №86 | 4 решения из ~6: `created_by_user_id` публикации (грep по всем спекам — 0 совпадений, есть только старое `created_by` со значением «user»/«user+copilot»), резолюция отображения `{id, display_name}` в листингах и панели версий, identity в маршруте фронта `#/editor/<name>`, вестигиальность `flows.active` и удаление старых роутов (`GET/PUT /api/flow`, `POST .../open` как мутация) | `persistence-versioning`, `editor-ui` |
+| G12 | №88 | **Полностью MISSING**: прогрев LLM-endpoint'ов для резидентности системного префикса в KV-кэше — мастер-гейт на записи справочника, тумблер на агенте, периодический контур в воркерах, guardrail «warm-запросы вне usage/cost», метрика residency. Грep дал только TTS-прогрев (`tts.publish-warmup`, №31/№32) — другой механизм | `voice-pipeline`/`flow-schema`, плюс строка в `cost-analytics.known-gaps` симметрично TTS-прогреву (которой там тоже нет) |
+| G13 | №89 | **Полностью MISSING**: относительный офсет времени реплики — хелпер `fmtOffset`, цепочка якоря нуля (`talk_from → audio_started_at → started_at → min(spoke_at??ts)`), правило «абсолют только в тултипе», исключение монитора телефонии | `editor-ui` |
+| G14 | №85 | PARTIAL: литерал ноты происхождения `tts_from_metrics` в `cost.notes` не нормирован (есть только соседний образец `amd_in_classifier`); нет требования на обратную совместимость со звонками без ключа `usage.tts` | `cost-analytics` |
+| G15 | №91 | PARTIAL: точечная per-agent отмена решения №60 (AssemblyAI EOT) при `mode=stt` — в `asr/spec.md` есть только исходное №60, opt-in override не описан | `asr` |
+
+Покрыты полностью и проверены чтением требований, а не грепом: **№90** (fallback немого узла — `flow-execution.silent-fallback`, `max-silent-hops`, предупреждение `silent_no_default` в `flow-schema`) и **№91** (режимы детекции совпадают буква-в-букву, `unlikely_threshold` со скаляр/словарь-семантикой, миграция через алиасы `CFLOW_TURN_DETECTION`, двойное ожидание у `stt`, realtime-ограничение) — кроме G15.
+
+**Вердикт по CA1 и CA6 после ТЗ №85** (запрашивался отдельно): **CA6 остаётся в силе** и уже явно зафиксирован как открытый дефект в `tts/spec.md` («Mismatches»): №85 закрыл узкую дыру «кэш выключен», но CA6 по конструкции не устраняет — раз `tts_chunks` непуст (пусть и обрезан на 500-й записи), беспотолочная ветка `usage["tts"]` не используется вовсе. Не усугублён, ортогонален приоритетному правилу D2. **CA1 остаётся в силе**: №85 добавляет параллельный путь ценообразования по `TTSMetrics` со своей огрублённой атрибуцией, но логику подбора записи справочника и rate-binding (`cost-analytics.llm-rate-binding`), где живёт CA1, не трогает.
+
+| G16 | дрейф | **Нет ни одного якоря на `editor/src/shell/TelephonyPage.tsx` и ни на один `values/**.yaml`** — проверено: `grep -rl TelephonyPage openspec/specs/` даёт 0, `values/` не упоминается ни в одной спеке (при этом на `editor/src` якорей всего 42). Следствие: правка телефонного UI на `main` (коммит `ac7cd5b1`, id транка и сущностей LiveKit SIP в списке транков, версия документа `1.89.1`) прошла бы все гейты незаметно. Найдено скриптом `main-drift.sh` — он специально выводит изменённые файлы БЕЗ якорей отдельным списком, вместо того чтобы молча их отбрасывать | `editor/src/shell/TelephonyPage.tsx`, `values/**` | main-drift.sh |
 
 ### Расхождения в самой LIVING SPEC (не в спеках openspec)
 
