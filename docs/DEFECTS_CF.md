@@ -28,7 +28,7 @@
 
 | # | Уровень | Суть |
 |---|---|---|
-| R1 | HIGH | Лимиты `SearchRequest` (limit 1..100, threshold 0..1) не энфорсятся в `KnowledgeSearchSettings` — `limit: 500` даёт 422 без ретрая, RAG у флоу молча выключен навсегда |
+| ~~R1~~ | **ОТОЗВАН 2026-08-03** | ❌ Ложноположительный. Проверено лично: `KnowledgeSearchSettings._threshold_range` (0..1) и `._limit_range` (1..100) в `engine/schema.py:697-709` **энфорсят** границы (ValueError при выходе), существуют с исходного коммита ТЗ №42 (`29e0a64d`). Найден майнером `rag` при сверке, подтверждён чтением кода. **Требуется правка store-дельты** `add-cf-rag-contract` — пункт «(a)» её секции Mismatches неверен |
 | R2 | HIGH | Мягкая деградация ловит только `RagError`; парсинг ответа внутри — изменение схемы `SearchResponse` продюсером роняет тёрн `ValidationError`'ом |
 | R3 | MEDIUM | Method-agnostic retry-цикл ретраит оба POST без объявленной идемпотентности |
 | R4 | MEDIUM | `GET /knowledge-bases/{id}` пагинирует вложенные `files` по 10, CF не шлёт параметров — безопасно случайно |
@@ -86,6 +86,17 @@
 | V4 | MEDIUM | код | `expand-contract`: сужающая смена типа (`alter_column(type_=…)`) линтером НЕ детектится, хотя требование объявляет её заблокированной; маркер `allow-destructive` файловый, не по-операционный |
 
 Пробелы тестов, обнажившие V1–V3: нет тестов на cross-org для deliveries/copilot/component+observer usage; нет теста «на Postgres `_upgrade_to_*` — no-op» (поэтому V2 и не замечали); нет теста «discard/restore сохраняет черновик символическим».
+
+### Волна 3: voice-pipeline (верификация 2026-08-03, opus) — 4 MISMATCH, 25 req
+
+| # | Уровень | Тип | Суть |
+|---|---|---|---|
+| VP1 | **HIGH** | код (гонка) | `cancel_end()` (`engine/engine.py:1968-1989`) и `start()` (`:300-325`) мутируют `SessionState` **вне `_turn_lock`** (замок держит только `process_user_input`, `:347`). `_take_pending_end` гарантирует лишь однократное потребление pending-end: если `cancel_end` побеждает в гонке, его `_finish_cancel_end`/`_arrive`/`_say` идут в одном executor-потоке, пока новый тёрн `process_user_input` (с замком) идёт в другом — ровно та конкурентная мутация состояния, которую ТЗ №72 §2 объявляет невозможной. Теста на `start`/`cancel_end` вне замка нет |
+| VP2 | MEDIUM | код | Усечение при barge-in не адресовано тёрном: `amend_last_agent_utterance` (`engine.py:436`) / `state.amend_last_agent_block` (`state.py:236`) режут ПОСЛЕДНИЙ блок агента. Если прерванный item тёрна N приходит после того, как реплика N+1 уже в истории, усекается реплика N+1. Асимметрия с `confirm_spoken(turn)`/`attach_turn_metrics(turn)`, которые адресованы тёрном |
+| VP3 | MEDIUM | код + док | Realtime: собственный тул агента с именем `search_knowledge_base` перехватывается синтетическим RAG-хендлером в рантайме (`realtime_runtime.py:301-307`) при наличии блока `knowledge` — вопреки спеке и §8.15 («собственный тул агента выигрывает»). Правило держится только на этапе компиляции (`realtime_compile.py:287`); рантайм-перехват не покрыт тестом |
+| VP4 | INFO (security) | код | `provider_params` из флоу логируется дословно для deepgram/soniox STT (`voice_config.py:747,777`) — единственный канал, через который секрет, положенный оператором в параметры провайдера, попадёт в логи, несмотря на env-only политику ключей |
+
+Спека-side (исправлено fixup'ом, не дефекты кода): Scenario «отсутствие таймингов LiveKit не синтезируется» противоречил соседнему требованию и коду (`agent.py:951-955` оценивает по своим якорям с маркером `estimated`); `message-timestamps` заявлял `ts` «на всех каналах», а realtime-путь (`realtime_runtime.py:91-93`) пишет историю без `ts`/`spoke_at`/`turn`/`pending`; три неточных якоря.
 
 ### Волна 3: tts (верификация 2026-08-03, sonnet) — 18/18 CONFIRMED, 1 новый дефект кода
 
