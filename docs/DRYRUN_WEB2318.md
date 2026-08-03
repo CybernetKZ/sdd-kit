@@ -111,6 +111,12 @@ M2.3 чист: `AKIA[0-9A-Z]{16}` в staged-файле заблокировал 
 |---|---|---|---|
 | M2-3 | **Ruff-автофикс может породить пустой коммит**: если автофикс полностью откатывает staged-правку (M2.4: `ea80bdbd` "add incorrect format" - пустой), git создаёт коммит, потому что его проверка на "пусто" идёт до pre-commit-хука | средний | **исправлено**: после ре-стейджа `git diff --cached --quiet` -> блок "ruff autofix reverted all staged changes" (проверено в песочнице: мусорный коммит больше не создаётся) |
 
+M2.5 чист: коммит в `dev` - WARN + пропущен ("prefer a branch + pull request",
+`2b2bbcde` создан); блок в protected-ветку показан в песочнице на `master`
+("commit blocked", override `SDD_ALLOW_PROTECTED=1`). **Блок M2 закрыт**: 3 находки
+(M2-1 AGENTS.md в .gitignore, M2-2 JSON-шум spec-lint, M2-3 пустой коммит после
+автофикса), все закрыты.
+
 ## Шаг 3 (test-author) - фрикция
 
 _(заполняется по итогам прогона)_
