@@ -568,10 +568,14 @@ EOF
     put ruff.toml ruff.toml
   fi
 
-  # ----- 7. Claude Code settings (NOT in the manifest: repos add own hooks;
-  #          if settings.json already exists, merge the hooks block by hand —
-  #          `--refresh` only warns when the two differ)
+  # ----- 7. Claude Code settings (NOT in the manifest: repos add own hooks).
+  #          A brand-new settings.json is the kit template verbatim (nothing
+  #          to merge). A pre-existing one is left alone by put() — but the
+  #          kit hooks just copied into .claude/hooks/ in step 5 are dead
+  #          unless something in settings.json invokes them, so wire in
+  #          whichever ones are missing (additive, never touches the rest).
   put settings.json .claude/settings.json
+  merge_settings_hooks .claude/settings.json
 
   # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
   if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
