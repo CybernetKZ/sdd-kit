@@ -10,6 +10,8 @@ Incidents arrive as loose Telegram messages ("не было end_call со сто
 (`.claude/skills/feature-flow/SKILL.md`) with the differences below — everything
 else is identical: tier rules, the gates (spec, tests before code, sdd-check,
 review, CI), its step-3 test rules, no spec-guard bypass for urgent work.
+`ADR-XXXX` references point at the sdd-kit repo's `docs/ADR/`; the essentials are
+inlined in the two skills, so neither needs them present in this repo.
 
 ## Step 1 becomes: collect the evidence
 
@@ -20,15 +22,19 @@ review, CI), its step-3 test rules, no spec-guard bypass for urgent work.
   collector (https://github.com/CybernetKZ/incident_collect):
   `collect_incident.py <uuid>` pulls logs, Redis state and DB rows (first run:
   clone it and fill its `.env` per its README). Read it BEFORE forming a theory.
-- Searching by symptom: if a fresh graphify index exists
-  (`graphify-out/graph.json`), start with a graph query
-  (`graphify query "<symptom>"`, navigation only — ADR-0004, always verify in
-  code), then grep/read the code.
+- Searching by symptom: grep the logs for the failing symbol/handler name, then
+  probe the graph by that SYMBOL, never by prose (`graphify explain "<sym>"`,
+  then `affected "<sym>"` for blast radius) — navigation only, ADR-0004, and
+  `[INFERRED]` edges are guesses: verify in code either way.
 
 ## New step: root-cause document, before any plan
 
-Timeline, what happened vs what the spec says should happen (`openspec/specs/` or
-`openspec show <spec> --type spec --store cybernet-specs`), root cause with
+Write it to `openspec/changes/<change-id>/intake.md` (create the dir early) so it
+survives into the plan — feature-flow step 1's convention; the planner folds it
+into proposal.md. Timeline, what happened vs what the spec says should happen
+(`openspec/specs/`, or the store: `openspec store list` -> `openspec list --specs
+--store cybernet-specs` -> `openspec show <spec> --type spec --store
+cybernet-specs`; `openspec view` never reads the store), root cause with
 file:line, blast radius (one call? all campaigns of a firm?). Then classify
 honestly — **code bug / client misuse / infra**. Misuse or infra: the doc IS the
 deliverable; hand it to the owner and **STOP** — no change, no code.

@@ -37,12 +37,15 @@ OpenSpec change and uncommitted work from before the last context compaction.
 
 ## Codebase search
 
-- Order: if `graphify-out/graph.json` exists, start with a graph query
-  (`graphify query "<question>"`) for orientation, then confirm with
-  grep/read; no index yet — go straight to grep/read.
+- Order: if `graphify-out/graph.json` exists, orient in the graph first, then
+  confirm with grep/read; no index yet — go straight to grep/read.
+- Probe by SYMBOL, never by prose (a free-form question makes BFS start from its
+  capitalized words and returns noise): `graphify explain "<sym>"` (file:line +
+  typed edges) first, then `affected "<sym>"` (what breaks if it changes),
+  `path "A" "B"`, `query "<sym1> <sym2>"`.
 - Build/update the index: `make sdd-index` (manual, run before a big intake).
-- The graph is navigation/context only (ADR-0004) — its edges are INFERRED,
-  never treat them as verified facts; always confirm in the actual code.
+- The graph is navigation/context only (ADR-0004): `[EXTRACTED]` edges come from
+  the AST, `[INFERRED]` ones are guesses — confirm both in the actual code.
 
 ## Do not edit by hand
 

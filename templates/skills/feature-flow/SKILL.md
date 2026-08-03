@@ -9,34 +9,56 @@ The team's standard path from a YouTrack ticket to a merged PR. Business
 writes tickets loosely (sometimes one line, sometimes LLM-drafted with
 contract/logic mistakes) - so step 1 exists to catch that BEFORE any code.
 
+`ADR-XXXX` references point at the sdd-kit repo's `docs/ADR/`; the essentials are
+inlined here, so this skill stands alone without them (never copy ADRs in).
+
 ## 1. Task intake - interrogate the ticket first
 
 - Read the ticket (youtrack MCP: `get_issue WEB-XXXX` + comments).
 - Planned tasks arrive through the RAISE intake process (ADR-0009) and should
   carry the request form: current problem, expected outcome, alternatives
-  considered, RICE score. Pull those fields into the change's why-section -
-  the requester already wrote that context.
-- Form missing or incomplete: list the missing fields, post questions for the
-  ticket author WITH your recommended answers, and continue working on the
-  recommended answers in parallel. Stop and wait ONLY on serious business
-  forks (pricing, client commitments, data deletion). Validating requests is
-  the RAISE process owner's job, not yours.
-- Cross-check every claim against reality: if a fresh graphify index exists
-  (`graphify-out/graph.json`), start with a graph query for orientation
-  (`graphify query "<ticket claim>"`, navigation only — ADR-0004, always
-  verify in code), then grep/read the code and specs.
+  considered, RICE score. Pull those into the change's why-section - the
+  requester already wrote that context.
+- Form missing or incomplete: list the missing fields and keep working on your
+  recommended answers. Stop and wait ONLY on serious business forks (pricing,
+  client commitments, data deletion) - validating requests is the RAISE process
+  owner's job, not yours.
+- Cross-check every claim against reality: start from the graph for orientation
+  (navigation only — ADR-0004). Probe by SYMBOL, never by prose - a free-form
+  question makes BFS start from its capitalized words and returns noise:
+  `graphify explain "<sym>"` (file:line + typed edges) first, then
+  `affected "<sym>"` (what breaks if it changes), `path "A" "B"`,
+  `query "<sym1> <sym2>"`. `[EXTRACTED]` edges come from the AST, `[INFERRED]`
+  ones are guesses - verify both in code. No `graphify-out/graph.json` and the
+  repo is large? Build one first: `make sdd-index` (on a Claude subscription the
+  first build runs via the interactive `/graphify` command, no API key; later
+  updates need none). Then check:
   - the code (does this already exist? does it conflict with current logic?),
-  - repo specs (`openspec view`, `openspec/specs/`),
-  - cross-service contracts (`openspec show <spec> --type spec --store cybernet-specs`).
-- Output: a list of contradictions, gaps, and questions for the analyst
-  (Dina/Olga) or business owner. Post as a ticket comment (ask the user first).
-- Blocking questions stop the DECISION, not the hands: while the author
-  answers, build a prototype on the recommended answer - explicitly marked
-  as a prototype, with a request to verify it. The answer either confirms
-  the direction or the prototype is cheaply discarded. The prototype lives
-  behind the same OpenSpec change and never bypasses gates; nothing merges
-  while a blocking question is open. Non-blocking assumptions: write them
-  down explicitly and proceed.
+  - repo specs in `openspec/specs/` - empty for the touched capability in a
+    brownfield repo: lean on the store + the code, and consider running the
+    `spec-miner` agent for that capability first,
+  - cross-service contracts, in this order: `openspec store list` (is the store
+    reachable at all) -> `openspec list --specs --store cybernet-specs` ->
+    `openspec show <spec> --type spec --store cybernet-specs`. `openspec view`
+    only prints the local dashboard and never reads the store.
+  - store freshness: it is a local clone - `git -C <store path> log -1`, pull if
+    stale; each store spec ends with `Last verified: <date> @ <sha>`, and if the
+    service repo has moved far past that sha, treat the contract as a lead, not
+    gospel.
+- Output: contradictions, gaps, and questions with your recommended answers,
+  addressed to the ticket author, else the RAISE process owner; if neither is
+  set, say so explicitly in the change and proceed on the recommended answers.
+  Post as a ticket comment (ask the user first).
+- Where the intake output lives (it must not evaporate before step 2): write it
+  down as soon as it exists. Before the change exists, `mkdir -p
+  openspec/changes/<change-id>` and write `openspec/changes/<change-id>/intake.md`;
+  once the change exists it belongs in the change itself - the planner folds
+  intake.md into proposal.md (findings into the why-section, unanswered questions
+  into `## Open questions`) and deletes it.
+- Blocking questions stop the DECISION, not the hands: while the author answers,
+  prototype on the recommended answer - explicitly marked as a prototype, under
+  the same OpenSpec change, gates unchanged; nothing merges while a blocking
+  question is open. Non-blocking assumptions: write them down and proceed.
 
 ## 1b. Pick the tier (ADR-0010)
 
@@ -55,6 +77,9 @@ cross-service one earns the full grill.
 - The developer may ALWAYS override the tier.
 - Nothing set -> decide yourself from the signals: RAISE category, number of
   services touched, migrations, new/changed contracts.
+- Tier and size are independent: a deep tier that cannot fit a 2-day branch is
+  planned as an epic from the start (one change, several ticket-sized PRs) -
+  decided here, not discovered in step 2.
 - Write the tier AND its justification into the change (proposal.md) so the
   reviewer can challenge it.
 
@@ -66,23 +91,20 @@ cross-service one earns the full grill.
   (`model: opus` in their frontmatter, ADR-0013); the implementation runs
   on the session model; bulk mechanical steps can drop to haiku.
 - Run the `planner` agent: `/opsx:propose "WEB-XXXX: <what changes>"` -
-  proposal + spec deltas + tasks.
+  proposal + spec deltas + tasks. It starts from step 1's
+  `openspec/changes/<change-id>/intake.md`.
 - Reference the ticket id in the change. Spec-guard requires this active
   change before code edits in guarded paths.
-- Size the change for a 2-day branch (ADR-0006 - a warning in CI, not a
-  block: ADR-0015). Bigger than that is an epic: split into YouTrack tasks
-  (1 task = 1 PR, ADR-0013) under ONE change. A feature flag is optional here
-  (ADR-0015): take one only if the half-built epic must stay invisible in
-  prod (see 4b). With a flag, the change is archived when the flag is enabled
-  in prod by default (ADR-0011); without one, when the last task is merged
-  and verified.
-- Standard/deep: interrogate the plan before implementing: the
-  `plan-griller` agent asks the questions - edge cases, rollback,
-  migrations, cross-service impact - and the developer answers; anything
-  the developer cannot answer becomes a question to the ticket author.
-  Fix the plan, not the code later. Record the grill as a `## Grill` section in proposal.md - the
-  sharp questions and the accepted answers, one line per decision. It
-  archives with the change, so the "why option B" history survives.
+- Size the change for a 2-day branch (ADR-0006 - a CI warning, not a block).
+  Bigger is an epic: split into YouTrack tasks (1 task = 1 PR, ADR-0013) under
+  ONE change; a flag only if the half-built epic must stay invisible in prod
+  (see 4b, ADR-0015). Archive the change when the flag is on in prod by default
+  (ADR-0011), or - flagless - when the last task is merged and verified.
+- Standard/deep: interrogate the plan before implementing - the `plan-griller`
+  agent asks (edge cases, rollback, migrations, cross-service impact), the
+  developer answers; anything he cannot answer becomes a question to the ticket
+  author. Fix the plan, not the code later. Record it as a `## Grill` section in
+  proposal.md, one line per decision, so the "why option B" history survives.
 
 ## 3. Tests from the spec delta - before implementation
 
@@ -90,10 +112,9 @@ The implementer does NOT write the tests. The change (its spec delta) goes
 through the test step before any implementation code:
 
 - Validate the spec delta first: every Requirement has at least one measurable
-  Scenario (WHEN/THEN), edge cases are covered (invalid input, permissions,
-  empty values, repeated calls), no conflict with existing contracts.
-  A spec delta that fails validation comes BACK to you - fix the Scenarios,
-  not the tests. Your job in step 2 is to write Scenarios that are testable.
+  Scenario (WHEN/THEN), edge cases covered (invalid input, permissions, empty
+  values, repeated calls), no conflict with existing contracts. A delta that
+  fails validation comes BACK to you - fix the Scenarios, not the tests.
 - Run the `test-author` agent (ADR-0016): one test (or an explicit skip with a
   reason) per Scenario, each carrying a tracer comment
   `# spec: <requirement-id> / <scenario>`. An independent agent then
@@ -103,9 +124,9 @@ through the test step before any implementation code:
   A test that unexpectedly passes is a finding (the behavior may already
   exist), not something to force red.
 - Human QA ownership of this step is the TARGET state (ADR-0016): today the
-  agent writes, a human validates before the flag goes to prod (flagless
-  changes: before the release, `ready_to_test` holds it - ADR-0013). Note in
-  the PR that the tests were agent-generated without human QA validation.
+  agent writes, a human validates before prod (flagless: before the release,
+  `ready_to_test` holds it - ADR-0013). Say in the PR that the tests were
+  agent-generated without human QA validation.
 - Light tier: the spec delta's single Scenario yields one regression test that
   reproduces the bug/gap and fails on the current code - that IS the RED.
 
@@ -123,25 +144,21 @@ through the test step before any implementation code:
 
 ## 4b. Feature flags and contract migrations (ADR-0007, ADR-0011, ADR-0015)
 
-- Flags are **on demand, not a process step** (ADR-0015): no step here requires
-  creating one. Reach for a flag when the work genuinely must ship dark -
-  a contract migration, a branch-by-abstraction replacement, or an epic whose
-  half-built state must not be reachable in prod.
-- Open question until answered (ADR-0015): who sets `FLAG_<NAME>=1` on stage
-  and prod, and where (helm values? service `.env`? CI/CD vars?). Settle that
-  with the owner before declaring your first real flag.
-- When you do take one, it ships dark behind it: `feature_flags.py`
-  maps flag name -> `expires` date, access only via `is_enabled("name")`, enable
-  with `FLAG_<NAME>=1`. Full lifecycle: the module docstring + ADR-0007.
-- OFF everywhere by default - the flag name and `FLAG_<NAME>=1` go in the QA
-  handoff comment (ADR-0011 §2, step 8).
+- Flags are **on demand, not a process step** (ADR-0015). Reach for one only when
+  the work must ship dark - a contract migration, a branch-by-abstraction
+  replacement, or an epic whose half-built state must not be reachable in prod.
+- Open question (ADR-0015): who sets `FLAG_<NAME>=1` on stage/prod and where
+  (helm values? service `.env`? CI/CD vars?) - settle it before your first flag.
+- When you take one: `feature_flags.py` maps flag name -> `expires` date, access
+  only via `is_enabled("name")`, enable with `FLAG_<NAME>=1`, OFF everywhere by
+  default; flag name + `FLAG_<NAME>=1` go in the QA handoff comment (ADR-0011 §2,
+  step 8). Full lifecycle: the module docstring + ADR-0007.
 - `make sdd-flags` fails CI 7 days past `expires`; "delete the flag" is a task
   in the same change's tasks.md.
 - Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
   The change MUST carry an expand/contract plan (new fields optional -> both
   sides read -> flag flips the producer -> old fields removed before `expires`);
-  cross-repo flags use the same `expires` date in both repos, written in the
-  contract spec (ADR-0007 §3).
+  cross-repo flags share one `expires` date, written in the contract spec (§3).
 - Large replacement (HubTalk, Asterisk removal): branch by abstraction, deleted
   after cutover (ADR-0007 §5).
 
@@ -151,10 +168,9 @@ through the test step before any implementation code:
 
 ## 6. Review
 
-- `make sdd-check` green, then run the reviewer agents
-  (`.claude/agents/backend-reviewer.md` and, when the diff touches SQL, the
-  ORM or migrations, `.claude/agents/database-reviewer.md`) on the diff -
-  or open the PR and let autoreview do it.
+- `make sdd-check` green, then run the reviewer agents on the diff
+  (`backend-reviewer`, plus `database-reviewer` when the diff touches SQL, the
+  ORM or migrations) - or open the PR and let autoreview do it.
 - Fix CRITICAL/HIGH that are in scope of the ticket. Out-of-scope findings:
   add `TODO`/`NOTE` with the ticket id, do not silently expand scope.
 - Re-run the tests after applying review fixes.
@@ -164,14 +180,12 @@ through the test step before any implementation code:
 - Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
 - Body: what changed, why, test plan (link the tests/Scenarios). Say if the
   tests were agent-generated without human QA validation (ADR-0016).
-- CI checks on the PR: sdd-gate, the tests, the TBD gates (branch age, PR
-  size), autoreview. **All of them are advisory today** (ADR-0015): no branch
-  protection, no required check - a red gate does not stop the merge, it tells
-  you something is wrong. Treat red as red anyway; that is the whole deal.
-  What actually blocks you is local: spec-guard and the pre-commit hook.
-- Planned, not implemented yet (ADR-0012 p.8): the traceability gate (each
-  Scenario ⇄ one test) and the QA quality gate — treat them as review
-  discipline until they exist as CI checks.
+- CI checks on the PR: sdd-gate, the tests, the TBD gates (branch age, PR size),
+  autoreview. **All advisory today** (ADR-0015) - no branch protection, nothing
+  required; a red gate does not stop the merge, it tells you something is wrong.
+  Treat red as red anyway. What actually blocks you is local: spec-guard and the
+  pre-commit hook. The traceability gate (each Scenario ⇄ one test) and the QA
+  quality gate are review discipline until CI has them (ADR-0012 p.8).
 
 ## 8. Handoff (ADR-0011)
 
