@@ -198,8 +198,10 @@ SDK), которые не удалось подтвердить, **не утве
     `,` (`file.py:A,B`); суффикс может быть символом, номером строки или
     диапазоном `12-34`.
   Дефект M1: `agent.py:build_agent_session`, которого никогда не существовало,
-  прошёл все гейты; `spec-lint.py` теперь валидирует символ подстрокой — но
-  только в применённом каноне, дельты им не проверяются (см. шаг 6).
+  прошёл все гейты. `spec-lint.py` теперь валидирует символ подстрокой и в
+  каноне, и в дельтах активных change'ев — но в дельте нерезолвящийся якорь
+  печатается **советом**, а не нарушением (законный случай нового файла),
+  поэтому разбор каждой такой строки — обязанность автора, см. шаг 6.
 - `## MODIFIED Requirements` — правила идентичности (иначе openspec не сматчит
   требование при архивации и канон получит дубль вместо правки):
   - `### Requirement: <имя>` — **побуквенно** как в
@@ -307,25 +309,36 @@ python scripts/lint_brand.py      # или --stdin для текста из ча
 внутри `sdd-check` являются `AGENTS.md ≤ 500 строк`, `openspec validate --strict`
 и `sdd-flags`.
 
-**Что на авторинге ТЗ проверяется, а что нет** — не обещать себе лишнего:
+**Что на авторинге ТЗ проверяется чем** — дельты активных change'ов
+`spec-lint.py` теперь читает сам (`check_deltas`, `openspec/changes/*/specs/*/spec.md`;
+`changes/archive/**` пропускается осознанно — закрытая история):
 
-| Что | На авторинге change'а | Когда проверяется реально |
+| Что | Чем на авторинге | Блокирует? |
 |---|---|---|
-| структура дельты, `### Requirement:`/`#### Scenario:`, англ. ключевые слова | **да** — `openspec validate --all --strict` читает и `changes/**` | сразу |
-| whitelist ключей `id`/`entities`/`enforced`, дубли `id`, `## Invariants` без Scenario | **нет** — `spec-lint.py` сканирует только `openspec/specs/*/spec.md`, дельты в `openspec/changes/**` не читает вообще | при применении дельты в канон — фаза 3 `/tz-implement` |
-| существование файла и символа в `enforced:` | **нет**, по той же причине | там же |
-| brand-clean текста proposal | **да** — `lint_brand.py` сканирует все `.md` | сразу |
+| структура дельты, `### Requirement:`/`#### Scenario:`, англ. ключевые слова | `openspec validate --all --strict` (читает и `changes/**`) | да, exit≠0 |
+| whitelist ключей `id`/`entities`/`enforced` (`unknown_key`), `missing_id`, `missing_enforced`, `#### Scenario:` под `## Invariants` | `spec-lint.py` по дельте, наравне с каноном | да — идёт в общий счётчик `metadata violations`, `SPEC_LINT_STRICT=1` ⇒ exit 1 |
+| существование файла и символа в `enforced:` | `spec-lint.py` по дельте — **как совет**: `note: anchor does not resolve yet: <якорь> (expected only if this change creates it)` | нет, в violations не идёт |
+| дубль `id` в дельте | **не проверяется намеренно**: `MODIFIED` переиспользует канонический `id` по замыслу, коллизия там — норма | — |
+| свежесть `> Last verified:` | у дельт не считается вообще — дельта описывает поведение, которого ещё нет | — |
+| brand-clean текста proposal | `lint_brand.py` (сканирует все `.md`, включая proposal) | да |
 
-Поэтому якоря дельты на авторинге проверяются **руками**, тем же резолвером,
-которым потом будет проверять канон (как делал пилот `tz-100`):
+Почему якорь — совет, а не нарушение: дельта **законно** называет символ,
+который change только создаст. Отсюда обязанность автора, которую инструмент
+за него не выполнит — разобрать каждую `note` по правилу §3.2:
+
+- файл создаётся этим change'ем ⇒ `note` ожидаема, в `tasks.md` обязана быть
+  задача, которая файл создаёт, а в proposal — упоминание, что он новый;
+- файл существует, а символа в нём нет ⇒ **это дефект дельты**, а не «совет»:
+  якорь переставить на существующий символ-контейнер, планируемый хелпер описать
+  текстом требования. Именно так прошёл дефект M1.
+
+Вывод по дельтам печатается отдельным блоком (`spec-lint: N change delta(s)
+checked, M with findings`; перечисляются только дельты с находками). Проверить
+один якорь точечно, не читая всю дельту:
 
 ```bash
-grep -rhoP 'enforced: \K.*(?= -->)' openspec/changes/tz-NNN-*/specs/ | python3 -c 'import sys,importlib.util as u;from pathlib import Path;s=u.spec_from_file_location("sl",".claude/scripts/spec-lint.py");m=u.module_from_spec(s);s.loader.exec_module(m);[print("OK " if m.resolve_anchor(a.strip(),Path(".")) else "BAD",a.strip()) for a in sys.stdin]'
+python3 -c 'import importlib.util as u,sys;from pathlib import Path;s=u.spec_from_file_location("sl",".claude/scripts/spec-lint.py");m=u.module_from_spec(s);s.loader.exec_module(m);print(m.resolve_anchor(sys.argv[1],Path(".")) or "does not resolve")' 'storage/repos/knowledge.py:KnowledgeBaseRepository._row'
 ```
-
-Каждая `BAD` — блокирующая: файла нет либо символ/номер строки в нём не найден.
-Законное исключение одно — планируемый якорь в **новом** файле (правило §3.2);
-его помечать в `tasks.md` и в `/tz-review`, а не «исправлять» подгонкой имени.
 
 Все зелёные — передать change на `/tz-review`. Реализация без вердикта ревью
 и без заполненного `## Grill` не начинается.
