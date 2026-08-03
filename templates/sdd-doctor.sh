@@ -93,8 +93,16 @@ if [ -n "$ROOT" ]; then
   [ "$JSON" = 0 ] && echo "[sdd-doctor] repo: $ROOT"
   cd "$ROOT" || exit 1
 
-  [ -f AGENTS.md ] && ok repo.agents-md "AGENTS.md present" \
-    || warn repo.agents-md "AGENTS.md missing" "run sdd-kit/install.sh --repo-only $ROOT"
+  if [ -f AGENTS.md ]; then
+    if git check-ignore -q AGENTS.md 2>/dev/null; then
+      warn repo.agents-md "AGENTS.md present but gitignored — it will never reach git/CI/teammates" \
+        "remove AGENTS.md (and CLAUDE.md) from .gitignore, then commit the file"
+    else
+      ok repo.agents-md "AGENTS.md present"
+    fi
+  else
+    warn repo.agents-md "AGENTS.md missing" "run sdd-kit/install.sh --repo-only $ROOT"
+  fi
   [ -f .claude/settings.json ] && ok repo.hooks "Claude hooks configured (.claude/settings.json)" \
     || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   [ -f .spec-guard-paths ] && ok repo.spec-guard "spec-guard enabled ($(wc -l < .spec-guard-paths | tr -d ' ') guarded path(s))" \
