@@ -26,7 +26,7 @@ sdd-kit/uninstall.sh --force /path/to/repo  # also delete kit files that were mo
 Re-running is safe. Every question has a default and plain Enter accepts it
 (`[Y/n]` = yes, `[y/N]` = no). `SDD_KIT_ASSUME_YES=1` or no TTY takes all the
 defaults without asking; in that mode nothing that downloads and runs remote
-code is executed — the command to run yourself is printed instead. The YouTrack
+code is executed - the command to run yourself is printed instead. The YouTrack
 token is only ever read from an interactive prompt.
 
 `bootstrap.sh` and `setup-dev.sh` still work as deprecated shims for
@@ -54,7 +54,7 @@ reports zero. Repo-owned files are never touched: `AGENTS.md`, `CLAUDE.md`,
 `openspec/**`, `.mcp.json`. `.claude/settings.json` is compared, never written:
 if its `hooks` block drifted from the template you get a WARN and merge by hand
 (the repo may have added its own hooks). Review the result with `git diff`
-before committing. `--refresh` is the repo section only — machine tools have no
+before committing. `--refresh` is the repo section only - machine tools have no
 refresh semantics, re-run `--machine-only` for those.
 
 ## Uninstall
@@ -68,7 +68,7 @@ are team content and are never force-deleted. The `CLAUDE.md -> AGENTS.md`
 rename is offered back;
 `openspec/` (specs + changes) is deleted only after an explicit yes. The
 central store registration is machine-wide state shared by every repo: it is
-unregistered only on an interactive yes or with `--force` — an unattended run
+unregistered only on an interactive yes or with `--force` - an unattended run
 (no TTY / `SDD_KIT_ASSUME_YES=1`) keeps it and prints the manual command. On an untouched install the round trip is
 clean: `git status` shows the repo exactly as before install.
 

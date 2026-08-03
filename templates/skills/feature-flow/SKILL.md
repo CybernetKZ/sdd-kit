@@ -24,7 +24,7 @@ inlined here, so this skill stands alone without them (never copy ADRs in).
   client commitments, data deletion) - validating requests is the RAISE process
   owner's job, not yours.
 - Cross-check every claim against reality: start from the graph for orientation
-  (navigation only — ADR-0004). Probe by SYMBOL, never by prose - a free-form
+  (navigation only - ADR-0004). Probe by SYMBOL, never by prose - a free-form
   question makes BFS start from its capitalized words and returns noise:
   `graphify explain "<sym>"` (file:line + typed edges) first, then
   `affected "<sym>"` (what breaks if it changes), `path "A" "B"`,

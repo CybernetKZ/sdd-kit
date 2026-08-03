@@ -1,4 +1,4 @@
-# AGENTS.md — context for AI agents
+# AGENTS.md - context for AI agents
 
 <!-- Limit: 500 lines. Enforced by `make sdd-check`. -->
 <!-- CLAUDE.md in this repository is a symlink to this file (ADR-0002). -->
@@ -11,7 +11,7 @@ navigation, tool tiering, "never commit"). Extra Cursor skills for this repo:
 ## What this service is
 
 `voice-agent-constructor-backend` (VA / VAC) is a **single FastAPI service** that
-is the *constructor* — the configuration plane — for AI voice agents. It owns
+is the *constructor* - the configuration plane - for AI voice agents. It owns
 everything a voice agent is made of, but it does not place or handle calls: the
 calling platform lives in the sibling repo `web-backend-new` (WBN), and VAC
 publishes agent configuration to it.
@@ -23,7 +23,7 @@ What it owns:
   post-call-analysis templates and segments, controller/telephony/call settings.
 - **Provider catalogues**: `llm` / `llm_provider`, `asr` / `asr_provider`,
   `tts` / `tts_provider` / `tts_model` / `tts_type`, `vad`, `language`, `gender`,
-  `background` — DB-driven, seeded by migrations, no hardcoded provider names.
+  `background` - DB-driven, seeded by migrations, no hardcoded provider names.
 - **Agent templates** (`agent_template`, `template_topic`): serialize a working
   agent into an `AgentTemplateConfigV1` blob and instantiate new agents from it
   via "default cascade + overlay".
@@ -32,7 +32,7 @@ What it owns:
 - **Conversation flows** (`conversation_flow`): versioned flow content (JSONB
   nodes) with validation status, rename/copy under a lock.
 - **Tools** (`tool`): OpenAI-function-compatible tool definitions bound to agents.
-- **Agent → WBN sync**: RabbitMQ RPC (`AgentWbRpcClient` / consumer) plus a
+- **Agent -> WBN sync**: RabbitMQ RPC (`AgentWbRpcClient` / consumer) plus a
   TaskIQ worker that retries and dead-letters `CREATE/UPDATE/DELETE_AGENT_WB`.
 
 Stack (from `backend/pyproject.toml`): Python 3.11, FastAPI, Pydantic v2 +
@@ -42,12 +42,12 @@ Redis (cashews cache), FastStream (RabbitMQ), TaskIQ + taskiq-aio-pika, boto3
 
 Two HTTP surfaces from one process (`backend/main.py`):
 
-- public API — `api/v1/*`, mounted under `settings.API_URL`;
-- internal API — `api/internal/v1/*`, a **mounted sub-application** at
+- public API - `api/v1/*`, mounted under `settings.API_URL`;
+- internal API - `api/internal/v1/*`, a **mounted sub-application** at
   `/internal`, guarded by an `x-api-key` middleware
   (`api/internal/middleware/security.py`); see
   `backend/internal_endpoints_readme.md`;
-- health probes — `/health/live`, `/health/ready`, `/health` (readiness returns
+- health probes - `/health/live`, `/health/ready`, `/health` (readiness returns
   503 in production mode during graceful shutdown).
 
 ## Commands
@@ -60,23 +60,23 @@ Everything runs through Docker Compose from the repository root
 
 Run locally:
 
-- `make setup` — create the external `cybernet-network` and the pgadmin volume
+- `make setup` - create the external `cybernet-network` and the pgadmin volume
   (required once; the `migrate*` targets depend on it).
-- `make build` / `make build_no_cache` — build images.
-- `make run` — start everything detached; `make run_verbose` — foreground.
-- `make deploy` — stop, build, wait for `va-db` healthy, then start.
+- `make build` / `make build_no_cache` - build images.
+- `make run` - start everything detached; `make run_verbose` - foreground.
+- `make deploy` - stop, build, wait for `va-db` healthy, then start.
 - `make status` / `make logs [service]` / `make stop` / `make down`.
-- `make enter_backend` — shell inside the running `va-backend` container.
+- `make enter_backend` - shell inside the running `va-backend` container.
 - API on `localhost:8010` (`/docs`), internal API on `/internal/docs`, debugger
   port `5688`, Postgres on `5442`, Redis on `6389`, pgAdmin on `5010`.
 
 Database and migrations:
 
-- `make create_db` / `make drop_db` — run `database/create_db.py` / `drop_db.py`.
-- `make migrate` — `alembic revision --autogenerate`; note the message is
+- `make create_db` / `make drop_db` - run `database/create_db.py` / `drop_db.py`.
+- `make migrate` - `alembic revision --autogenerate`; note the message is
   **hardcoded** to `"auto-migration from CI/CD"`, there is no `name=` argument.
   Fix the message in the generated file yourself.
-- `make migrate_upgrade` / `make migrate_downgrade` — `alembic upgrade head` /
+- `make migrate_upgrade` / `make migrate_downgrade` - `alembic upgrade head` /
   `alembic downgrade` (one step).
 
 Tests:
@@ -85,7 +85,7 @@ Tests:
   (`tests/unit/test_kb_delete_agent_cleanup.py`,
   `tests/unit/test_agent_conversation_flow_lock.py`); the whole `tests/api/v1/*`
   block is commented out in the `Makefile`. Failures are collected into
-  `test_errors.tmp` and printed, and **`make test` still exits 0** — read its
+  `test_errors.tmp` and printed, and **`make test` still exits 0** - read its
   output, do not trust the exit code.
 - Full suite (what CI does not run for you yet):
   `docker compose run --rm va-backend sh -c "export ENV='TEST' && pytest -s -v --disable-warnings"`.
@@ -98,7 +98,7 @@ Tests:
 
 SDD checks:
 
-- `make sdd-check` (from `Makefile.sdd`) — asserts `AGENTS.md` exists and is
+- `make sdd-check` (from `Makefile.sdd`) - asserts `AGENTS.md` exists and is
   ≤500 lines, warns on leftover template placeholders, and runs
   `npx @fission-ai/openspec@1.7.0 validate --all --strict`. This is the required
   PR gate (`.github/workflows/sdd-ci.yml`).
@@ -148,13 +148,13 @@ backend/
 
 Repository root, outside `backend/`:
 
-- `openspec/` — specs and changes (see below).
-- `docs/` — a **separate git repository** shared with WBN; VA docs are indexed in
+- `openspec/` - specs and changes (see below).
+- `docs/` - a **separate git repository** shared with WBN; VA docs are indexed in
   `docs/MAP_VA.md` (folders `va-project-logic/`, `va-project-rules/`, `va-asr/`,
   `va-tts/`, `va-llm/`, `va-devops/`, `va-graceful-shutdown/`, `va-not-task/`).
-- `openapi/` — a small standalone docs/schema project (its own Dockerfile,
+- `openapi/` - a small standalone docs/schema project (its own Dockerfile,
   Makefile and `redoc-static.html`).
-- `extra_scripts/` — also a separate git repository: `extract_service_logic/`,
+- `extra_scripts/` - also a separate git repository: `extract_service_logic/`,
   `graceful-shutdown-test-app/`, style tests.
 - `config/redis/redis.conf`, `postman-collections/`, `.github/workflows/`
   (per-environment CI/CD: STAGE/PROD k8s, USA, UZ, Mexico, db-backup, sdd-gate,
@@ -162,7 +162,7 @@ Repository root, outside `backend/`:
 
 ## Specs and contracts
 
-- Capability specs for this repository: `openspec/specs/` — currently
+- Capability specs for this repository: `openspec/specs/` - currently
   **`openspec/specs/agent-configuration/spec.md`** (~704 lines, extracted by
   `spec-miner` from `app/agent/service/agent_service.py`,
   `api/v1/agent/agent.py`, `app/agent/model/agent.py`). It is the normative
@@ -189,16 +189,16 @@ Repository root, outside `backend/`:
 
 ## Do not edit by hand
 
-- `backend/migrations/versions/*.py` — Alembic revisions. Generate with
+- `backend/migrations/versions/*.py` - Alembic revisions. Generate with
   `make migrate`, then review; never hand-write a new revision file. Several
   large ones are data seeds (`bdf2b27166df_insert_initial_data.py`,
   `e2d8a9c3f4b6_add_parakeet_11labs_aws.py`, ...).
-- `docs/MAP_VA.md` and `docs/MAP.md` — regenerated by `python3 docs/build_map.py`
+- `docs/MAP_VA.md` and `docs/MAP.md` - regenerated by `python3 docs/build_map.py`
   and automatically by the `docs/.githooks/pre-commit` hook.
-- `graphify-out/` — knowledge graph output, rebuilt by a post-commit hook
+- `graphify-out/` - knowledge graph output, rebuilt by a post-commit hook
   (`.graphifyignore` controls scope).
-- `openapi/openapi.json`, `openapi/redoc-static.html` — generated from the app.
-- `backend/.env*` — environment files, not in git; the tracked sample is
+- `openapi/openapi.json`, `openapi/redoc-static.html` - generated from the app.
+- `backend/.env*` - environment files, not in git; the tracked sample is
   `backend/voice-agent-constructor-backend.env`.
 - Caches and artifacts: `.ruff_cache/`, `.mypy_cache/`, `.complexipy_cache/`,
   `.pytest_cache/`, `logs/`, `backend/log/`, `*.log`, `test_errors.tmp`, and the
@@ -206,21 +206,21 @@ Repository root, outside `backend/`:
 
 ## Repository rules
 
-1. **Layering is strict.** `api/v1/<module>` (endpoints, DI, status codes) →
-   `app/<module>/service` (all business logic) → `app/<module>/repo` (all DB
-   access) → `app/<module>/model`. Endpoints hold no business logic; services
+1. **Layering is strict.** `api/v1/<module>` (endpoints, DI, status codes) ->
+   `app/<module>/service` (all business logic) -> `app/<module>/repo` (all DB
+   access) -> `app/<module>/model`. Endpoints hold no business logic; services
    issue no queries; repos hold no business rules.
 2. **Base classes are mandatory.** Models inherit `BaseModel`
    (`app/base/model/base_model.py`: `id` BigInteger + `uuid` + `created_at` /
    `updated_at` / `deleted_at` + `enabled`), schemas inherit `BaseSchema`,
    services inherit `BaseService`, repos inherit `BaseRepo`. Use SQLAlchemy 2.0
-   style — `Mapped[...]` + `mapped_column()`, `relationship(back_populates=...)`,
+   style - `Mapped[...]` + `mapped_column()`, `relationship(back_populates=...)`,
    `TYPE_CHECKING` imports for relationship types. Never `Column()`.
 3. **Naming follows this code, not WBN's.** `BaseRepo` exposes generic
    `get_by_id` / `get_by_uuid` / `get_list` / `get_by_filters`; module repos add
    `fetch_*` and `find_*` query helpers (see `app/agent/repo/agent_repo.py`).
    Services expose `get_*` / `create` / `update` / `delete` and return schemas,
-   not ORM rows — mapping goes through `BaseMapper.to_dto` / `to_entity`.
+   not ORM rows - mapping goes through `BaseMapper.to_dto` / `to_entity`.
    snake_case for functions and variables, PascalCase for classes,
    UPPER_SNAKE_CASE for constants. Deletes are soft (`deleted_at`).
 4. **Datetime discipline is test-enforced.** Import `datetime`, `date`, `time`,
@@ -234,7 +234,7 @@ Repository root, outside `backend/`:
    details) go into an enum in `app/base/enum.py` (33 enums today, e.g.
    `Message`, `RPCRequestAction`, `RagKnowledgeBaseStatus`, `DeploymentMode`);
    configuration numbers, timeouts, limits and endpoints go into
-   `core/config.py` — nested `BaseSettings` groups reached as
+   `core/config.py` - nested `BaseSettings` groups reached as
    `settings.redis.*`, `settings.rabbitmq.*`, `settings.s3.*`,
    `settings.shutdown.*`, `settings.taskiq_worker.*`, `settings.agent_prompt.*`.
    Provider names and endpoints belong in the database, not in code.
@@ -252,17 +252,17 @@ Repository root, outside `backend/`:
 9. **Graceful shutdown is a contract.** Any new long-lived resource (broker,
    client, pool) must register a cleanup callback via
    `graceful_shutdown_manager.register_cleanup_callback()` in the `main.py`
-   lifespan, keeping the existing order (broker → cache → RAG client → Redis →
+   lifespan, keeping the existing order (broker -> cache -> RAG client -> Redis ->
    DB). Coverage lives in `tests/shutdown/` and
    `tests/test_graceful_shutdown.py`.
 10. **Cache invalidation is part of the change.** Agent read models are cached
     with `cashews` (`app/base/cache.py`, `app/base/cache_utils.py`); any write
-    path that changes agent configuration must invalidate the matching keys —
+    path that changes agent configuration must invalidate the matching keys -
     see `tests/unit/test_agent_kb_cache_invalidation.py` and
     `tests/unit/test_kb_delete_agent_cleanup.py`.
 11. **`app/agent/service/agent_service.py` is a 7311-line monolith** (~145
     methods) and its router `api/v1/agent/agent.py` is 1749 lines with 49 route
-    handlers — the next largest router has 12. **Do not add new endpoint or
+    handlers - the next largest router has 12. **Do not add new endpoint or
     business logic to either file.** New agent-adjacent behaviour goes into a
     focused service module (the pattern already used by `agent_rpc_service.py`,
     `agent_asr_settings_service.py`, `post_call_analysis_segment_service.py`,
@@ -271,5 +271,5 @@ Repository root, outside `backend/`:
 12. **Stay in scope.** Implement only what the ticket asks. If you find an
     unrelated bug, write a short note so a separate ticket can be opened instead
     of fixing it in the same change. Verify claims against the code, not against
-    docs or old reports — several `docs/va-*` files describe superseded
+    docs or old reports - several `docs/va-*` files describe superseded
     behaviour.

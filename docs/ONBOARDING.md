@@ -152,7 +152,7 @@ sdd-kit ставит SDD-обвес, но НЕ секреты и НЕ подни
 ## Спеки: откуда берутся и как не протухают
 
 - Первичные спеки добывает агент **spec-miner** из кода (по одной capability за раз).
-- В каждой спеке есть `Last verified (commit)` и якоря `enforced:` на код —
+- В каждой спеке есть `Last verified (commit)` и якоря `enforced:` на код -
   `<!-- enforced: path/to/file.py:ClassName.method -->`, путь обязателен: его spec-lint
   и резолвит (голый `ClassName.method()` даст MISSING).
 - **spec-lint** сравнивает их с реальными изменениями кода: спека устарела - увидишь

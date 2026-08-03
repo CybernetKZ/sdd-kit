@@ -1,4 +1,4 @@
-# AGENTS.md — context for AI agents
+# AGENTS.md - context for AI agents
 
 <!-- Limit: 500 lines. Checked by make sdd-check. -->
 <!-- CLAUDE.md in this repo is a symlink to this file (ADR-0002). -->
@@ -16,23 +16,23 @@ retries are scheduled. Services talk over RabbitMQ queues and Redis streams
 (`TELEPHONY_IN`, `CHAT_IN`, `POST_CALL_ANALYTICS_LLM_REPORT`) and share one
 PostgreSQL database.
 
-- `backend/` — main FastAPI app: REST API (`api/v1`, `api/internal/v1`), call
+- `backend/` - main FastAPI app: REST API (`api/v1`, `api/internal/v1`), call
   campaigns, calls/call events, firms/users, DB models and Alembic migrations,
   background task workers, WebSockets.
-- `validation-service/` + `validation-worker` — validates uploaded call-campaign
+- `validation-service/` + `validation-worker` - validates uploaded call-campaign
   files (RabbitMQ `VALIDATION_IN` -> `VALIDATION_OUT`).
-- `asterisk-json-creator-llm/` — turns a `CallBatchMessage` into Asterisk call
+- `asterisk-json-creator-llm/` - turns a `CallBatchMessage` into Asterisk call
   files + `EngineRedisJson` (agent prompt/config) and `XADD`s them to
   `stream:call_campaign_{uuid}`.
-- `call-dispatcher-llm/` — manager/worker dispatcher: pops dial jobs per campaign,
+- `call-dispatcher-llm/` - manager/worker dispatcher: pops dial jobs per campaign,
   honours campaign speed, working hours and retry timing.
-- `post-call-processor-llm/` — consumes telephony and judge/LLM report streams,
+- `post-call-processor-llm/` - consumes telephony and judge/LLM report streams,
   resolves the call outcome, writes results to DB/S3, fires agent webhooks and
   schedules retries (timer-based and cycle-gated).
-- `post-chat-processor/` — the same post-processing role for chat conversations
+- `post-chat-processor/` - the same post-processing role for chat conversations
   (`CHAT_IN`).
-- `sso-service/` — authentication / SSO (own Alembic migrations).
-- `api-gateway-service/` — edge proxy: SSO auth middleware, rate limiting,
+- `sso-service/` - authentication / SSO (own Alembic migrations).
+- `api-gateway-service/` - edge proxy: SSO auth middleware, rate limiting,
   route rules, WebSocket proxying, graceful shutdown.
 
 Supporting dirs: `docs/` (documentation, see `docs/MAP.md`), `openspec/` (specs),
@@ -44,23 +44,23 @@ Supporting dirs: `docs/` (documentation, see `docs/MAP.md`), `openspec/` (specs)
 Everything runs through Docker Compose from the repo root (`docker-compose.yml`);
 `make` with no target prints the full help.
 
-- `make help` — list all targets (default goal).
-- `make build` / `make build_no_cache` — build images.
-- `make run` — start all services detached; `make run_verbose` — foreground.
-- `make build_run` / `make run_rebuild` — build then start.
-- `make watch` — Compose watch mode (auto rebuild on change).
+- `make help` - list all targets (default goal).
+- `make build` / `make build_no_cache` - build images.
+- `make run` - start all services detached; `make run_verbose` - foreground.
+- `make build_run` / `make run_rebuild` - build then start.
+- `make watch` - Compose watch mode (auto rebuild on change).
 - `make status` / `make logs [service]` / `make stop` / `make down`.
-- `make enter_backend` — shell inside the running backend container.
-- `make test` — backend tests: `docker compose run --rm backend sh -c "export ENV='TEST' && pytest"`.
-- `make sdd-check` — SDD checks (AGENTS.md present and ≤500 lines, `openspec validate --all --strict`); defined in `Makefile.sdd`.
-- `make migrate name="..."` — autogenerate an Alembic revision for backend.
-- `make migrate_upgrade` / `make migrate_downgrade` — apply / revert one migration.
+- `make enter_backend` - shell inside the running backend container.
+- `make test` - backend tests: `docker compose run --rm backend sh -c "export ENV='TEST' && pytest"`.
+- `make sdd-check` - SDD checks (AGENTS.md present and ≤500 lines, `openspec validate --all --strict`); defined in `Makefile.sdd`.
+- `make migrate name="..."` - autogenerate an Alembic revision for backend.
+- `make migrate_upgrade` / `make migrate_downgrade` - apply / revert one migration.
 - `make create_db` / `make drop_db` / `make clear_redis_cache`.
-- `make poetry_install` — `poetry install --no-root` inside the backend container.
-- `make update_env` — regenerate `.env` files from their `.env.example` (`scripts/update_env.sh`).
-- `make check_network` / `make check_rabbitmq` / `make monitor_resource_usage` — diagnostics.
-- `./run_e2e_test.sh` — end-to-end scenario run.
-- `post-call-processor-llm/run_tests.py` + `post-call-processor-llm/docker-compose.test.yml` — PCP test runner (its tests are not part of `make test`).
+- `make poetry_install` - `poetry install --no-root` inside the backend container.
+- `make update_env` - regenerate `.env` files from their `.env.example` (`scripts/update_env.sh`).
+- `make check_network` / `make check_rabbitmq` / `make monitor_resource_usage` - diagnostics.
+- `./run_e2e_test.sh` - end-to-end scenario run.
+- `post-call-processor-llm/run_tests.py` + `post-call-processor-llm/docker-compose.test.yml` - PCP test runner (its tests are not part of `make test`).
 
 Compose files: `docker-compose.yml` (default local/dev), `docker-compose-local.yml`,
 `docker-compose.prod.yml`, `docker-compose.web2001-local-e2e.yml` and
@@ -68,11 +68,11 @@ Compose files: `docker-compose.yml` (default local/dev), `docker-compose-local.y
 
 ## Module map
 
-Top level — one service per directory (see the service list above). Each service
+Top level - one service per directory (see the service list above). Each service
 has its own `pyproject.toml` / `poetry.lock`, `Dockerfile.<service>`, `main.py`
 and `values/` for deployment.
 
-### backend/ (see also “Project Structure” below)
+### backend/ (see also "Project Structure" below)
 
 `api/v1` and `api/internal/v1` (endpoints) -> `app/{module}/service` (business
 logic) -> `app/{module}/repo` (DB access) -> `app/{module}/model`; `app/base/`
@@ -114,31 +114,31 @@ logic and contracts), `wbn-project-rules/`, `wbn-post-call-processor/`,
 - Changes go through `openspec/changes/<id>/` (rule: **no code without a spec**;
   for refactoring/tooling work set `skip_specs: true` in the change metadata).
   Completed changes live in `openspec/changes/archive/`.
-- `make sdd-check` runs `openspec validate --all --strict` — it must stay green.
+- `make sdd-check` runs `openspec validate --all --strict` - it must stay green.
 - Shared cross-service contracts belong in the central store repo (ADR-0001),
   wired in via `references:` in `openspec/config.yaml`.
 - Until that move is done, the **source of truth for Redis keys, streams, TTLs and
   owner/consumer** is in `docs/wbn-project-logic/`:
-  - `POST_CALL_PROCESSOR_LLM_REDIS_CONTRACT.md` — normative table of all Redis
+  - `POST_CALL_PROCESSOR_LLM_REDIS_CONTRACT.md` - normative table of all Redis
     keys/streams (any doc that disagrees with it is wrong).
-  - `TELEPHONY_IN_REDIS_STREAM_CONTRACT.md` — the `TELEPHONY_IN` stream contract.
-  - `OVERALL LOGIC_240526.md` — narrative cross-service boundary contract
+  - `TELEPHONY_IN_REDIS_STREAM_CONTRACT.md` - the `TELEPHONY_IN` stream contract.
+  - `OVERALL LOGIC_240526.md` - narrative cross-service boundary contract
     (BACKEND -> ASTERISK-JSON-CREATOR -> CALL-DISPATCHER -> POST-CALL-PROCESSOR /
     POST-CHAT-PROCESSOR).
 
 ## Generated, do not hand-edit
 
-- `backend/migrations/versions/*.py` — Alembic revisions; create them with
+- `backend/migrations/versions/*.py` - Alembic revisions; create them with
   `make migrate name="..."` (autogenerate), never hand-write a new file.
   Same for `sso-service/migrations/versions/` (gitignored, see `.gitignore`).
-- `docs/MAP.md`, `docs/MAP_VA.md` — regenerated by `python3 docs/build_map.py`,
+- `docs/MAP.md`, `docs/MAP_VA.md` - regenerated by `python3 docs/build_map.py`,
   and automatically on commit via the `docs/` submodule hook `docs/.githooks/pre-commit`.
-- `docs/wbn-project-logic/_traces_*/` — per-service call traces generated by
+- `docs/wbn-project-logic/_traces_*/` - per-service call traces generated by
   `extra_scripts/extract_service_logic/` (see the command in `OVERALL LOGIC_240526.md`).
-- `graphify-out/` (root and per-service) — graphify output, driven by `.graphifyignore`.
-- `.env` files produced by `make update_env` / `scripts/update_env.sh` — edit the
+- `graphify-out/` (root and per-service) - graphify output, driven by `.graphifyignore`.
+- `.env` files produced by `make update_env` / `scripts/update_env.sh` - edit the
   `.env.example` source instead.
-- Coverage/test artifacts (`htmlcov/`, `*.log`, `reports/`) — regenerate, don’t edit.
+- Coverage/test artifacts (`htmlcov/`, `*.log`, `reports/`) - regenerate, don't edit.
 
 ---
 

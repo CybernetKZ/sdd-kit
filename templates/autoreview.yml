@@ -1,7 +1,7 @@
 # Auto-review on pull requests (see docs/archive/autoreviewer.md verdict).
 # Logic layer: repo reviewer agents (.claude/agents/) via headless `claude -p`,
 # fed a static-tool report it must verify before reporting.
-# Deterministic lint lives in pre-commit (ruff --fix) — not duplicated here.
+# Deterministic lint lives in pre-commit (ruff --fix) - not duplicated here.
 #
 # Auth: Claude Code SUBSCRIPTION (OAuth), NOT an Anthropic API key.
 # One-time setup: run `claude setup-token` on a logged-in machine and save the

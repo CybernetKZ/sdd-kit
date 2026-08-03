@@ -64,9 +64,9 @@ cd /путь/к/репозиторию && /путь/к/sdd-kit/install.sh --refr
 удаления. `--force` удаляет файлы кита даже изменёнными (полезно, когда в репозитории
 стоит старая версия кита); AGENTS.md и openspec/ - командный контент, force их не
 трогает никогда. Переименование `CLAUDE.md -> AGENTS.md` предлагается откатить;
-`openspec/` (спеки + change'и) удаляется только после явного «да». Регистрация центрального
+`openspec/` (спеки + change'и) удаляется только после явного "да". Регистрация центрального
 стора - машинное состояние, общее для всех репозиториев: снимается только при интерактивном
-«да» или с `--force`; unattended-прогон (нет TTY / `SDD_KIT_ASSUME_YES=1`) её сохраняет и
+"да" или с `--force`; unattended-прогон (нет TTY / `SDD_KIT_ASSUME_YES=1`) её сохраняет и
 печатает ручную команду. На нетронутой установке раунд-трип чистый: `git status` показывает
 репозиторий ровно таким, каким он был до установки.
 
@@ -82,7 +82,7 @@ cd /путь/к/репозиторию && /путь/к/sdd-kit/install.sh --refr
 | `.github/workflows/autoreview.yml` | Автоматическое ревью PR: ИИ-ревью через headless `claude -p` с общим промптом `.claude/scripts/review-prompt.md`, которому подаётся отчёт статических анализаторов (radon, complexipy, vulture, semgrep security patterns), и он обязан его проверить перед публикацией; без секрета `CLAUDE_CODE_OAUTH_TOKEN` job завершается за секунды |
 | `.claude/agents/` | `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy) для шага ИИ-ревью + `planner` и `plan-griller` (план и гриль фазы 2 на opus через `model` frontmatter, ADR-0013) + `test-author` (падающие тесты фазы 3 по спек-дельте, sonnet, ADR-0016) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (блокирует правки кода без активной `openspec/changes/<id>/`), блокировщик `git commit --no-verify` и пакет выживания при PreCompact (`.claude/last-session-state.md` - активное изменение + незакоммиченная работа, чтобы агенты продолжали работу после компакции; идея из ProjectStore, ADR-0008) |
-| `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1`. Формат якоря: `<!-- enforced: path/to/file.py:ClassName.method -->` — сначала путь от корня репозитория, после двоеточия символ. Резолвится только путь; якорь, который не указывает на существующий файл, делает спеку MISSING (голые якоря вида `ClassName.method()` больше не резолвятся — см. «Заметки о дизайне») |
+| `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1`. Формат якоря: `<!-- enforced: path/to/file.py:ClassName.method -->` - сначала путь от корня репозитория, после двоеточия символ. Резолвится только путь; якорь, который не указывает на существующий файл, делает спеку MISSING (голые якоря вида `ClassName.method()` больше не резолвятся - см. "Заметки о дизайне") |
 | `.git/hooks/pre-commit` | Защита от коммитов в защищённые ветки (main/master/prod/stage блокируются, dev предупреждает; `SDD_ALLOW_PROTECTED=1` обходит), автофикс+форматирование ruff для застейдженного Python, проверки гигиены (маркеры слияния, файлы >5 МБ, `breakpoint()`, паттерны секретов/токенов, новые сабмодули, битый JSON/TOML/YAML) + `make sdd-check` (если хук уже есть, сливается вручную) |
 | `.claude/scripts/review-prompt.md` | Единственный канонический промпт ИИ-ревью: его читают и `make sdd-review`, и `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | Доктор окружения (`make sdd-doctor`): нужные утилиты (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI и авторизация, регистрация в сторе, токен youtrack, наличие хуков/pre-commit, и (по профилю) наличие файлов `.env` для каждого сервиса, нужных свежему клону - только пути, никогда не значения секретов; запускается в конце bootstrap; находки в формате `{level, group, code, message, next}` с точной командой-исправлением, `--json` для машин (ADR-0008) |

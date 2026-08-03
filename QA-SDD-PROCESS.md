@@ -1,9 +1,9 @@
 # QA-процесс в Spec-Driven Development
 
-> **Статус: target-процесс — включён не везде.** Примеры путей и команд взяты из
+> **Статус: target-процесс - включён не везде.** Примеры путей и команд взяты из
 > `web-backend-new` (WBN); в других репозиториях они другие. Реально действующие
 > (блокирующие) гейты перечислены в [WORKFLOW.md](WORKFLOW.md), раздел
-> «Status: what runs today vs what is planned» — traceability gate и QA quality
+> "Status: what runs today vs what is planned" - traceability gate и QA quality
 > gate пока не реализованы.
 
 **Ключевая идея:** разработка пишет манифест фичи (OpenSpec change) ДО кода.
