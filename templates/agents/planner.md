@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Writes the OpenSpec change for a ticket - proposal + spec deltas + tasks. Use in phase 2 (Plan) of feature-flow/incident-flow, after the ticket is interrogated and the tier is picked. Runs on opus per ADR-0010.
-tools: ["Read", "Grep", "Glob", "Bash"]
+tools: ["Read", "Grep", "Glob", "Bash", "Write", "Edit"]
 model: opus
 ---
 

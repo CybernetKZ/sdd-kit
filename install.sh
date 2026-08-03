@@ -127,6 +127,7 @@ agents/database-reviewer.md .claude/agents/database-reviewer.md
 agents/planner.md .claude/agents/planner.md
 agents/plan-griller.md .claude/agents/plan-griller.md
 agents/test-author.md .claude/agents/test-author.md
+agents/repo-auditor.md .claude/agents/repo-auditor.md
 skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
 skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
 spec-lint.py .claude/scripts/spec-lint.py
@@ -205,22 +206,14 @@ repo_section() {
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install 22"
   fi
 
-  # openspec CLI, single source of the pin for this script: prefer a global
-  # install, fall back to pinned npx (slower, no install). The other pin lives
-  # in templates/Makefile.sdd, which runs standalone inside target repos.
+  # openspec CLI, single source of the pin for this script: always the pinned
+  # npx version, never an unpinned global `openspec` binary (a global install
+  # can drift ahead of this script's tested version and silently change
+  # generator output - P0-1). The other pin lives in templates/Makefile.sdd,
+  # which runs standalone inside target repos.
   # openspec-pin
   OPENSPEC="npx -y @fission-ai/openspec@1.7.0"
-  if command -v openspec >/dev/null 2>&1; then
-    OPENSPEC="openspec"
-    say "found:   openspec CLI ($(openspec --version 2>/dev/null || echo 'version unknown'))"
-  elif ask_install "Install the OpenSpec CLI globally?" y \
-       "npm install -g @fission-ai/openspec@latest"; then
-    npm install -g @fission-ai/openspec@latest
-    OPENSPEC="openspec"
-    say "installed: openspec CLI (global)"
-  else
-    say "using npx fallback for openspec commands (no global install)"
-  fi
+  say "using pinned openspec CLI: @fission-ai/openspec@1.7.0 (via npx)"
 
   # The store repo needs only itself: local registration + validate gate.
   if [ "$PROFILE_IS_STORE" = 1 ]; then
@@ -334,7 +327,9 @@ repo_section() {
   if [ ! -e CLAUDE.md ]; then ln -s AGENTS.md CLAUDE.md; say "created: CLAUDE.md -> AGENTS.md"; fi
 
   # ----------------------------------------------------------------- 4. OpenSpec
-  if [ ! -d openspec ]; then
+  # B4 (ADR-0019): empty dirs (0 files) count as missing — a bare openspec/ skeleton
+  # must not block init forever.
+  if [ ! -d openspec ] || [ -z "$(find openspec -type f -print -quit 2>/dev/null)" ]; then
     say "initializing OpenSpec (--tools claude)..."
     $OPENSPEC init --tools claude
   else

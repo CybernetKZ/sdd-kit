@@ -41,7 +41,7 @@ conversation_flow входит в scope sdd-kit (частично отменяе
 |---|---|---|---|
 | B1 | `wc -l` по `.spec-guard-paths` считает комментарии → ложное «guard enabled» | `templates/sdd-doctor.sh:~100` | strip `#`-строк (как `spec-guard.cjs:33`) |
 | B2 | living-spec-фрагмент pre-commit не стрипает `#`-строки | `templates/living-spec-check.sh` | тот же strip |
-| B3 | `SDD_REVIEW_BASE ?= dev`, у CF default branch `main` | `templates/Makefile.sdd` | `PROFILE_REVIEW_BASE` в профиле; fallback — `origin/HEAD` |
+| B3 | `SDD_REVIEW_BASE ?= dev`, у CF default branch `main` | `templates/Makefile.sdd` | автоопределение `origin/HEAD` в самом Makefile, fallback `dev` (без профильной переменной — Makefile.sdd байт-сравнивается при `--refresh`, подстановка сломала бы сравнение) |
 | B4 | `install.sh:337` пропускает `openspec init` при существующих, но пустых dirs | `install.sh` | директория с 0 файлов = отсутствующая |
 
 ### 2.2 Профиль `profiles/conversation_flow.env`
@@ -76,8 +76,8 @@ PROFILE_ENV_FILES=".env"
 
 ## 4. Фазы
 
-### Фаза 0 — kit-багфиксы и гигиена (~полдня)
-B1–B4; `repo-auditor` → `templates/agents/` + kit_manifest; вычистить `templates/__pycache__/`, `.ruff_cache/`; self-CI зелёный.
+### Фаза 0 — kit-багфиксы и гигиена (~полдня) — **ВЫПОЛНЕНА 2026-08-03, не закоммичена**
+B1–B4 ✅; `repo-auditor` → `templates/agents/` + kit_manifest ✅; кэши вычищены ✅; сверх плана — P0-2 (planner получил Write/Edit), P0-3 (plan-griller переписан в one-shot, 48 строк), P0-1-пин (`$OPENSPEC` больше не падает на глобальный непиненный бинарь — всегда `npx -y @fission-ai/openspec@1.7.0`). Локальные проверки зелёные (bash -n, node --check, py_compile); закоммитить + прогнать self-CI (bootstrap-smoke) — Даниил.
 
 ### Фаза 1 — фундамент в conversation_flow (~полдня)
 1. patch49: показать diff Даниилу → он коммитит как есть (решение 8).

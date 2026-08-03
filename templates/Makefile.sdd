@@ -14,7 +14,8 @@ sdd-flags:
 # subscription login (no shared tokens; CI AI-step stays optional).
 # The prompt itself lives in .claude/scripts/review-prompt.md — one canonical
 # text shared with .github/workflows/autoreview.yml.
-SDD_REVIEW_BASE ?= dev
+# default review base = the repo's actual default branch (origin/HEAD), fallback dev (B3, ADR-0019)
+SDD_REVIEW_BASE ?= $(shell git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' | grep . || echo dev)
 sdd-review:
 	@command -v claude >/dev/null || { echo "FAIL: claude CLI not found"; echo "next: install Claude Code and log in"; exit 1; }
 	@test -f .claude/scripts/review-prompt.md || { echo "FAIL: .claude/scripts/review-prompt.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
