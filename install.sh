@@ -270,6 +270,107 @@ assemble_pre_commit() {
   chmod +x "$dst"
 }
 
+# merge_settings_hooks <destination settings.json> — additively wires any kit
+# hook (block-no-verify.cjs, spec-guard.cjs, pre-compact.cjs) that install.sh
+# already copied into .claude/hooks/ but that is not yet referenced anywhere
+# in the destination's `hooks` object. Two callers: the install pass (after
+# `put settings.json`, since a pre-existing settings.json is left alone by
+# put() and may predate the kit) and `--refresh` (refresh_settings_hooks()).
+#
+# Why additive-merge instead of "detect and warn": the warn-only path (the
+# old refresh_settings_hooks()) left the three kit hooks on disk but
+# unreachable — files present, protection off, and only --refresh users ever
+# saw the warning. Wiring them in immediately means the hooks that were just
+# installed actually run, with zero new manual steps.
+#
+# Safety, so this never becomes the thing it was written to prevent:
+#   - only ADDS hook entries; an existing command string anywhere in the
+#     destination's hooks tree is left exactly where it is — never removed,
+#     reordered, or replaced. A repo's own hook (e.g. pretooluse_guard.py in
+#     conversation_flow) always survives untouched.
+#   - idempotent: a kit hook command already present (from a prior run, or a
+#     repo that wired it by hand) is skipped, so re-running adds nothing new.
+#   - atomic write (tmp file + `os.replace`), so a crash mid-write cannot
+#     leave a half-written settings.json.
+#   - json.load/json.dump (python3), never sed/awk on JSON.
+#   - a destination that isn't valid JSON is left untouched and reported —
+#     never blindly overwritten.
+merge_settings_hooks() {
+  local dst="$1" out
+  [ -f "$dst" ] || return 0
+  out="$(python3 - "$KIT/templates/settings.json" "$dst" <<'PY'
+import json, os, sys
+
+kit_path, dst_path = sys.argv[1], sys.argv[2]
+
+with open(kit_path) as f:
+    kit = json.load(f)
+try:
+    with open(dst_path) as f:
+        dst = json.load(f)
+except Exception as exc:
+    print(f"UNREADABLE:{exc}")
+    sys.exit(0)
+
+if not isinstance(dst.get("hooks"), dict):
+    dst["hooks"] = {}
+
+def command_set(groups):
+    cmds = set()
+    for g in groups:
+        for h in g.get("hooks", []):
+            c = h.get("command")
+            if c:
+                cmds.add(c)
+    return cmds
+
+added = []
+for event, kit_groups in kit.get("hooks", {}).items():
+    dst_groups = dst["hooks"].setdefault(event, [])
+    existing = command_set(dst_groups)
+    for kg in kit_groups:
+        matcher = kg.get("matcher")
+        for h in kg.get("hooks", []):
+            cmd = h.get("command")
+            if not cmd or cmd in existing:
+                continue
+            target = next((g for g in dst_groups if g.get("matcher") == matcher), None)
+            if target is None:
+                target = {"matcher": matcher, "hooks": []} if matcher is not None else {"hooks": []}
+                dst_groups.append(target)
+            target.setdefault("hooks", []).append(h)
+            existing.add(cmd)
+            label = event + (f"/{matcher}" if matcher else "")
+            added.append(f"{label}: {cmd}")
+
+if added:
+    tmp = dst_path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(dst, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, dst_path)
+    for line in added:
+        print(f"ADDED:{line}")
+PY
+)"
+  case "$out" in
+    *UNREADABLE:*)
+      warn "$dst is not valid JSON — could not check/wire kit hooks; fix it manually, then re-run"
+      return 0 ;;
+  esac
+  if [ -z "$out" ]; then
+    say "ok:      $dst — kit hooks already wired"
+  else
+    while IFS= read -r line; do
+      case "$line" in
+        ADDED:*) say "wired:   $dst — ${line#ADDED:}" ;;
+      esac
+    done <<EOF
+$out
+EOF
+  fi
+}
+
 # load_profile <repo-basename> — resets the PROFILE_* globals to their defaults
 # and then sources profiles/<repo-basename>.env if it exists. Shared by the
 # install pass and --refresh (which needs PROFILE_LIVING_SPEC / PROFILE_IS_STORE).
@@ -475,12 +576,43 @@ repo_section() {
     fi
     if [ -n "$SEED_REF" ]; then
       git checkout "$SEED_REF" -- openspec
-      say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, staged — review and commit)"
+      # Symmetry with the rest of the install (everything else lands
+      # untracked, Makefile shows ` M`): unstage so `git status` reads the
+      # same way everywhere and a stray `git commit` right after install
+      # doesn't silently pick up only openspec/ while leaving the rest of
+      # the install for later. Restricted to the openspec pathspec, so any
+      # unrelated staged content the caller already had stays untouched.
+      git reset -- openspec >/dev/null 2>&1 || true
+      say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, untracked — review and commit)"
       # The seed ref carries openspec/ content only — the vendor-generated
       # .claude/skills/openspec-* tooling never lived on that branch, so it
       # must be (re)generated here or the repo ends up with a seeded
       # openspec/ and zero openspec skills.
       ensure_openspec_claude_tooling
+      # B5: the seed ref is a fixed historical snapshot — it has no idea what
+      # landed on HEAD since it was cut. Checking `is-ancestor SEED_REF HEAD`
+      # alone is not enough: it also fails (correctly, but for the WRONG
+      # reason) when the seed branch has simply moved ahead of HEAD and
+      # already contains every HEAD commit — that case is not stale. The
+      # actual defect is commits that exist on HEAD but were never seen by
+      # the seed, so count those directly.
+      BEHIND_COUNT=$(git rev-list --count "$SEED_REF..HEAD" 2>/dev/null || echo '?')
+      if [ "$BEHIND_COUNT" != 0 ]; then
+        warn "openspec/ seed '$SEED_REF' has not seen $BEHIND_COUNT commit(s) that are on HEAD — restored specs/changes may be stale or already implemented"
+        say "next: re-run spec-lint for freshness and review openspec/changes/* (not archive/) against HEAD — archive any change whose work already landed"
+        CHANGE_CANDIDATES=""
+        for d in openspec/changes/*/; do
+          [ -d "$d" ] || continue
+          cname=$(basename "$d")
+          [ "$cname" = archive ] && continue
+          tzid=$(printf '%s' "$cname" | grep -oE '^tz-[0-9]+' | head -1)
+          [ -n "$tzid" ] || continue
+          if git log --oneline "$SEED_REF..HEAD" 2>/dev/null | grep -qi "$tzid"; then
+            CHANGE_CANDIDATES="$CHANGE_CANDIDATES $cname"
+          fi
+        done
+        [ -n "$CHANGE_CANDIDATES" ] && say "next: candidates already touched on HEAD (each change's tz-NNN appears in git log $SEED_REF..HEAD, verify before archiving):$CHANGE_CANDIDATES"
+      fi
     elif [ -n "$PROFILE_OPENSPEC_SEED_REF" ]; then
       # A profile that names a seed ref HAS specs to restore. Falling through to an
       # empty init here swaps hundreds of Requirements for a skeleton that passes
@@ -683,28 +815,13 @@ refresh_file() {
   say "refreshed: $dst (+$added/-$removed lines)"
 }
 
-# .claude/settings.json is never rewritten: a repo may have added its own hooks
-# (pretooluse_guard.py in conversation_flow). Compare the `hooks` object only.
+# .claude/settings.json is never wholesale-rewritten: a repo may have added
+# its own hooks (pretooluse_guard.py in conversation_flow). Delegates to the
+# same merge_settings_hooks() the install pass uses, so a repo that installed
+# before this existed (or drifted since) gets caught up on --refresh too.
 refresh_settings_hooks() {
   [ -f .claude/settings.json ] || { say "missing:   .claude/settings.json (run install.sh --repo-only)"; return 0; }
-  if python3 - "$KIT/templates/settings.json" .claude/settings.json <<'PY'
-import json, sys
-
-def hooks(path):
-    try:
-        with open(path) as fh:
-            return json.load(fh).get("hooks")
-    except Exception:
-        return "<unreadable>"
-
-sys.exit(0 if hooks(sys.argv[1]) == hooks(sys.argv[2]) else 1)
-PY
-  then
-    say "ok:      .claude/settings.json hooks match the template"
-  else
-    warn ".claude/settings.json: hooks differ from template — merge manually (repo may have custom hooks)"
-    echo "        next: diff <(python3 -m json.tool $KIT/templates/settings.json) <(python3 -m json.tool .claude/settings.json)" >&2
-  fi
+  merge_settings_hooks .claude/settings.json
 }
 
 # .git/hooks/pre-commit is assembled, not copied (LIVING SPEC splice), and a
