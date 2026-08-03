@@ -87,7 +87,7 @@ clean: `git status` shows the repo exactly as before install.
 | `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
-| `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol after the colon. Only the path is resolved; an anchor that resolves to no file makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
+| `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol (or line/range) after the colon. **Both halves are checked**: a missing file or a symbol that does not appear in it makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
@@ -143,12 +143,135 @@ repo.
 
 1. Fill the TODOs in `AGENTS.md`.
 2. Create `.spec-guard-paths` (code path prefixes, one per line) to enable
-   spec-guard - automatic for known repos (see Profiles).
-3. Seed specs with the spec-miner agent, one capability at a time.
-4. GitHub: make `sdd-gate` a required check, enable branch protection on dev.
+   spec-guard - automatic for known repos (see Profiles). Until this file has a
+   non-comment line, spec-guard and the LIVING SPEC pre-commit fragment are
+   deliberate no-ops.
+3. Seed `openspec/specs/` one capability at a time. The kit does **not** ship a
+   spec-miner agent - use the `openspec-explore` / `openspec-sync-specs` skills,
+   or a machine-level miner agent of your own; the conversation_flow run that
+   produced the current convention is written up in `docs/SPEC_MINER_PILOT.md`
+   and `docs/STORE_VERIFICATION.md`. Anchor format is
+   `<!-- enforced: path/to/file.py:ClassName.method -->` and `spec-lint.py`
+   validates **both** halves - a fabricated symbol makes the spec MISSING.
+4. Run `make sdd-doctor` and clear the FAILs. WARNs are advisory clutter
+   reports, not blockers.
 5. AI review auth (subscription, no API key): tokens are PER-DEVELOPER,
    machine-level - no shared GitHub secret. Run reviews locally with
    `make sdd-review`; the CI AI-step skips (in seconds) when no secret exists.
+
+GitHub branch protection and required checks are intentionally **not** part of
+setup: enforcement stays local and advisory today (ADR-0015). Turning the
+server gates on is one deliberate, separate decision.
+
+## After install: what to use
+
+Three kinds of thing land in the repo. Only the middle column blocks anything.
+
+**Skills** - prompt-level workflows you invoke. Two ship with the kit and are
+model-invocable (an agent may pick them up on its own); the six `openspec-*`
+skills come from `openspec init` and carry `disable-model-invocation: true`,
+meaning they run only when you name them.
+
+| Skill | Use it for | OpenSpec wiring |
+|---|---|---|
+| `/feature-flow` | a YouTrack feature/bugfix ticket, end to end (8 steps, tier table) | reads `openspec/specs/` + the store, writes `openspec/changes/<id>/intake.md`, then drives the change through to archive |
+| `/incident-flow` | a prod incident reported in chat | same change machinery, but the root-cause doc is the first deliverable |
+| `/openspec-propose` | create a change (proposal + spec deltas + tasks) | writes `openspec/changes/<id>/` |
+| `/openspec-update-change` | amend a change already in flight | rewrites the same dir |
+| `/openspec-apply-change` | implement against a change | reads `tasks.md` |
+| `/openspec-archive-change` | close a shipped change | moves it to `openspec/changes/archive/` and folds deltas into `openspec/specs/` |
+| `/openspec-sync-specs` | reconcile specs with reality | rewrites `openspec/specs/` |
+| `/openspec-explore` | find out what is already specified before writing anything | read-only over `openspec/` |
+
+**Agents** - subagents you delegate a phase to. They cannot invoke skills, so
+each carries the relevant protocol inline.
+
+| Agent | Phase | Model | OpenSpec wiring |
+|---|---|---|---|
+| `planner` | 2 - plan | opus | **writes** `openspec/changes/<id>/` (proposal + spec deltas + tasks) |
+| `plan-griller` | 2 - interrogate the plan | opus | **reads** the change, returns a paste-ready `## Grill` block for `proposal.md`; the dialogue itself belongs to the main session (ADR-0012) |
+| `test-author` | 3 - RED tests | sonnet | **reads** the spec delta, one test per `#### Scenario:`, tracer comment `# spec: <requirement-id> / <scenario>` |
+| `executor` | 4 - implement | sonnet | **reads** `tasks.md`, drives RED to green; never commits, never edits tests, stops and reports on deviation (ADR-0021) |
+| `backend-reviewer` | 5 - review | sonnet | reads the diff + specs |
+| `database-reviewer` | 5 - review | sonnet | reads migrations/queries |
+| `repo-auditor` | any time | inherits | read-only agent-readiness scorecard for the repo |
+
+**Utils** - the deterministic half. These are the only things that can stop you.
+
+| Util | Blocks? | What it does |
+|---|---|---|
+| `make sdd-check` | yes (pre-commit + CI job) | AGENTS.md present/≤500 lines, `openspec validate --all --strict`, `sdd-flags`; spec-lint advisory |
+| `.claude/scripts/spec-lint.py` | only with `SPEC_LINT_STRICT=1` | spec freshness (`> Last verified: <date> (commit <hash>)` vs `git diff` over `enforced:` anchors) + metadata (`id`+`enforced` on every Requirement, ids unique, whitelisted keys only, no `#### Scenario:` under `## Invariants`) |
+| `.git/hooks/pre-commit` | yes | protected branches, hygiene, secrets, ruff autofix, then `sdd-check` when spec-related files are staged |
+| `.claude/hooks/spec-guard.cjs` | yes, once `.spec-guard-paths` is filled | no code edits without an active change |
+| `.claude/hooks/block-no-verify.cjs` | yes | no `--no-verify` / `commit -n` |
+| `make sdd-doctor` | no | environment + repo + clutter audit, `--json` for machines |
+| `make sdd-test` | no | ruff + pytest, advisory (ADR-0015); `SDD_TEST_CMD` overrides for monorepos |
+| `make sdd-review` | no | local AI review of `git diff $(SDD_REVIEW_BASE)...HEAD` |
+| `make sdd-index` | no | graphify graph for navigation only (ADR-0004) |
+| `make sdd-flags` | yes | expired feature flags: WARN for 7 days, then FAIL |
+
+Are they wired to OpenSpec correctly? Yes, with two things to know. The CLI is
+pinned to `1.7.0` in four places (`# openspec-pin`) - bump them together or
+`sdd-check` and `sdd-doctor` will disagree. And `openspec validate --all
+--strict` checks *structure* (a Requirement needs at least one Scenario, a
+change needs its deltas), while `spec-lint.py` checks *truthfulness* (do the
+`enforced:` anchors point at symbols that exist, is the spec still fresh). Both
+run inside `make sdd-check`; neither replaces the other.
+
+## Working a new task
+
+The pipeline is one shape with three depths. Pick the depth from the tier table
+in `.claude/skills/feature-flow/SKILL.md` §1b (ADR-0010/ADR-0021) - preparation
+depth varies, **the gates never do**.
+
+```
+ticket -> intake -> change -> [grill] -> RED tests -> implement -> review -> PR -> archive
+```
+
+| Tier | When | Pipeline |
+|---|---|---|
+| light | one obvious change, no design questions | intake -> change -> `test-author` -> `executor` |
+| standard | the default | + `planner` writes the change, + `plan-griller` interrogates it |
+| deep | architecture, cross-repo contract, risky data path | + `openspec instructions design` research pass, grill by agent |
+
+Concretely, for "we have a new task":
+
+1. **Invoke `/feature-flow` with the ticket id.** It does the intake
+   interrogation and picks the tier; everything below happens inside it. Doing
+   the steps by hand is fine too - the skill is the checklist, not a wrapper.
+2. **Read before writing.** `/openspec-explore` (or the store:
+   `openspec list --specs --store cybernet-specs`) tells you what is already
+   specified. Changing documented behaviour is a different task than adding to
+   it.
+3. **Create the change**, not the code: `openspec/changes/<id>/` with
+   `proposal.md`, the spec deltas, and `tasks.md`. `planner` for standard/deep.
+   This is what unblocks spec-guard.
+4. **Grill it, then review it - in that order.** `plan-griller` hardens the
+   plan; `tz-review`-style mechanical review verifies claims against the code.
+   These are not duplicates (ADR-0020): review first for facts, grill after for
+   design.
+5. **`test-author` writes failing tests from the spec deltas** - one per
+   `#### Scenario:`. RED before any production code (ADR-0016). The implementer
+   never writes its own tests.
+6. **`executor` implements** against `tasks.md` until the tests go green. It
+   stops and reports rather than improvising past the plan.
+7. **`make sdd-test`, `make sdd-check`, `make sdd-review`**, then the reviewer
+   agents on the diff.
+8. **PR -> merge -> archive the change** (`/openspec-archive-change`), which
+   folds the deltas into `openspec/specs/`. If the task touched a cross-repo
+   contract, the store edit is its own change + PR in `cybernet-specs`, and this
+   change cannot be archived while that PR is open (ADR-0018).
+
+**A repo may override this.** `conversation_flow` is the live example: it runs a
+project-local `/tz -> /tz-review -> plan-griller -> test-author -> /tz-implement`
+trilogy instead of `feature-flow`, keeps `docs/DOCUMENTATION.md` as a LIVING
+SPEC in parallel with `openspec/specs/` forever, and keeps `.spec-guard-paths`
+empty on purpose while the conversion runs (ADR-0019,
+`docs/PLAN_CF_MIGRATION.md`). There, `feature-flow` is installed but used only
+as the source of the tier table. Always read the target repo's `AGENTS.md`
+before assuming the kit's default flow applies - the repo's own lints and guards
+outrank the kit's.
 
 ## Per-developer tools: install.sh --machine-only
 
@@ -164,7 +287,7 @@ sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 **ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook),
 **Graphify** (repo knowledge graph - faster/cheaper code analysis; PyPI name
-`graphify`), **ast-grep** (AST codemods for bulk mechanical refactors).
+`graphifyy`, installed as `graphifyy[postgres,sql]`), **ast-grep** (AST codemods for bulk mechanical refactors).
 `make sdd-doctor` warns when a core tool is missing.
 
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
@@ -185,6 +308,8 @@ prompt-cache prefix, measured +45..62% cost - see
 - `YOUTRACK_MCP_DIR` - where youtrack-mcp lives (default search: ~/dev, ~/cybernet).
 - `SDD_KIT_ASSUME_YES=1` - auto-confirm installs in non-TTY runs (never the token).
 - `SPEC_LINT_STRICT=1` - make spec freshness/metadata violations blocking.
+- `SDD_TEST_CMD` - replace the `make sdd-test` command (monorepos, non-pytest stacks).
+- `SDD_REVIEW_BASE` - diff base for `make sdd-review` (default `origin/HEAD`, fallback `dev`).
 - `SDD_ALLOW_PROTECTED=1` - one-off bypass of the protected-branch commit guard.
 - `SDD_STORE_ID` / `SDD_STORE_DIR` / `SDD_STORE_GIT` - central spec store id,
   local checkout path, and clone URL (defaults: cybernet-specs,
@@ -218,8 +343,18 @@ Spec anchors are paths, not symbols. `spec-lint` used to resolve a bare
 `git grep`; in a monorepo that over-matched same-named classes across services
 and made `enforced_files` counts fiction. The resolver was dropped: write the
 path in the spec (`path/to/file.py:ClassName.method`), and the symbol after the
-colon stays there for humans and code-explorer. `spec-miner` emits that format;
-older specs mined with bare symbols report MISSING until rewritten.
+colon stays there for humans and code-explorer. Older specs mined with bare
+symbols report MISSING until rewritten. The symbol half is validated too: a
+miner that invented `agent.py:build_agent_session` used to pass every gate
+(conversation_flow defect M1), so `spec-lint` now requires the symbol to appear
+in the named file.
+
+Decision trail for the workflow shape: **ADR-0021** (executor subagent + the
+tier->pipeline->models table), **ADR-0020** (`tz-review` and `plan-griller` are
+not duplicates - review first, grill after), **ADR-0019** (conversation_flow
+onboarding: convert and verify all specs first, only then run a task on the new
+process), **ADR-0010** (three tiers vary preparation, never gates). Index with
+one-line summaries: `docs/ADR/README.md`.
 
 And today even the CI half is advisory on purpose (ADR-0015): branch
 protection is off and no check is required, so the only pieces that actually
@@ -229,7 +364,7 @@ decision, deferred rather than cancelled.
 
 ## Attribution
 
-Reviewer agents and spec-miner are adapted from
+The reviewer agents are adapted from
 [everything-claude-code](https://github.com/affaan-m/ECC) (MIT).
 
 ## Layout
@@ -239,10 +374,18 @@ install.sh            installer: --repo-only (repo assets) / --machine-only (dev
 uninstall.sh          per-repo uninstaller (reverses install.sh, keeps team edits)
 bootstrap.sh          deprecated shim -> install.sh --repo-only
 setup-dev.sh          deprecated shim -> install.sh --machine-only
+WORKFLOW.md           end-to-end team flow + a live "what runs today vs planned" table
+QA-SDD-PROCESS.md     the QA half: tests before code, from the spec delta
 profiles/             per-repo overrides: spec-guard paths, store wiring, py/no-py
+                      (+ optional payload dirs copied into the repo)
 templates/            everything installed into repos (English-only)
-  agents/             reviewer agents for autoreview
-  skills/             team skills (feature-flow: ticket-to-PR workflow)
+  agents/             the 7 subagents (planner, plan-griller, test-author,
+                      executor, backend-reviewer, database-reviewer, repo-auditor)
+  skills/             team skills (feature-flow, incident-flow)
+tools/cf/             conversation_flow migration instructions - run by hand,
+                      NOT installed (mine-section, verify-section, patch2change, ...)
+docs/                 ADR/ (the decision registry), GLOSSARY.md, ONBOARDING.md,
+                      SDD_KIT_LAYERS.md, PLAN_CF_MIGRATION.md, DEFECTS_CF.md, ...
 ```
 
 ## Benchmarks
