@@ -21,9 +21,11 @@ try {
     .map((d) => d.name);
 } catch { /* no openspec — still useful for branch/diff state */ }
 
-// Diff base: the remote's default branch when known (origin/main, origin/dev, ...),
-// otherwise plain "dev". sh() swallows errors, so a missing base just yields "n/a".
-const base = (sh("git symbolic-ref --short refs/remotes/origin/HEAD") || "dev");
+// Diff base: the working base branch. Kit workflow branches off dev, so prefer
+// origin/dev when it exists (origin/HEAD is usually main and drags dev-vs-main
+// noise into the diff); fall back to the remote default, then plain "dev".
+const base = sh("git rev-parse --verify --quiet origin/dev") ? "origin/dev"
+  : (sh("git symbolic-ref --short refs/remotes/origin/HEAD") || "dev");
 
 const packet = [
   "# Session state before compaction (written by pre-compact hook)",
