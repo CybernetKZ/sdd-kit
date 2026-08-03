@@ -17,7 +17,12 @@
 # scripts, Makefile.sdd, CI workflows, pre-commit) when the target drifted from
 # the template, and reports a per-file (+added/-removed) summary. Repo-owned
 # files (AGENTS.md, .spec-guard-paths, feature_flags.py, .claude/expected-env,
-# ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched.
+# ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched
+# wholesale. The one exception: .claude/settings.json's `hooks` block is
+# additively merged (merge_settings_hooks(), both on install and --refresh) —
+# any kit hook copied into .claude/hooks/ that is not yet referenced gets
+# wired in; a repo's own hook entries (e.g. pretooluse_guard.py) are never
+# removed, reordered, or replaced.
 # --refresh always implies the repo section only: the machine tools have no
 # refresh semantics (re-run --machine-only for those), so --repo-only is
 # redundant with it (accepted, ignored).
@@ -156,6 +161,55 @@ stamp_openspec_skills() {
   done
 }
 
+# ensure_openspec_claude_tooling — (re)generate the .claude/skills/openspec-*
+# and .claude/commands/opsx/* Claude Code tooling for an openspec/ that
+# already exists (seed-restored, or "left alone" because it predated the kit)
+# but may be missing that tooling entirely.
+#
+# `openspec init --tools claude` unconditionally rewrites every skill/command
+# file ("Refreshed: Claude Code") even when nothing changed — verified against
+# the pinned CLI (@fission-ai/openspec 1.7.0): re-running it on an already-
+# tooled repo wipes hand-edits (e.g. our own disable-model-invocation stamp).
+# `openspec update` is the idempotent, version-aware counterpart: a no-op when
+# already current, and it restores only what is missing — but it detects
+# "configured" by the presence of a prior tooling file and otherwise prints
+# "No configured tools found" and does nothing. So: use `update` whenever any
+# tooling marker already exists (repairs partial/missing skills without
+# touching the rest), and fall back to `init --tools claude` only when there
+# is no marker at all (first time — nothing to preserve, safe to create).
+# Neither command touches openspec/specs, openspec/changes, or config.yaml
+# content (checked empirically in the sandbox before writing this).
+ensure_openspec_claude_tooling() {
+  if { [ -d .claude/skills ] && ls -d .claude/skills/openspec-* >/dev/null 2>&1; } \
+     || [ -d .claude/commands/opsx ]; then
+    say "syncing OpenSpec Claude Code tooling (openspec update)..."
+    $OPENSPEC update
+  else
+    say "generating OpenSpec Claude Code tooling (openspec init --tools claude)..."
+    $OPENSPEC init --tools claude
+  fi
+  strip_opsx_commands
+}
+
+# strip_opsx_commands — ADR-0020 §8: the openspec-* skills are the only
+# supported entry point; the /opsx:* slash commands duplicate them and bypass
+# the disable-model-invocation stamp's intent (they are not skills, so the
+# stamp does not apply to them). `openspec init --tools claude` and `openspec
+# update` both write .claude/commands/opsx/*.md unconditionally alongside the
+# skills (checked empirically) — delete that directory right after every
+# generation/sync call, but never touch anything else a repo may keep under
+# .claude/commands/: only opsx/ is ours, and the parent is removed too only
+# if stripping opsx/ left it empty.
+strip_opsx_commands() {
+  [ -d .claude/commands/opsx ] || return 0
+  rm -rf .claude/commands/opsx
+  say "removed: .claude/commands/opsx (ADR-0020 §8 — openspec-* skills cover this, not slash commands)"
+  if [ -d .claude/commands ] && [ -z "$(find .claude/commands -mindepth 1 -print -quit 2>/dev/null)" ]; then
+    rmdir .claude/commands
+    say "removed: .claude/commands (now empty)"
+  fi
+}
+
 # ------------------------------------------------------------- kit manifest --
 # The kit-owned files: ONE source of truth, used by both the install pass
 # (put(), never overwrites) and `--refresh` (overwrites what drifted).
@@ -164,7 +218,11 @@ stamp_openspec_skills() {
 # Deliberately NOT here — repo-owned, never overwritten by --refresh:
 #   AGENTS.md, CLAUDE.md, .spec-guard-paths, feature_flags.py,
 #   .claude/expected-env, ruff.toml, openspec/**, .mcp.json,
-#   .claude/settings.json (its `hooks` block is compared and warned about only),
+#   .claude/settings.json (never wholesale-rewritten; its `hooks` block is
+#   additively merged by merge_settings_hooks() — see that function for why:
+#   the kit hooks it copies into .claude/hooks/ are useless if nothing in
+#   settings.json invokes them, so wiring them in is part of installing them,
+#   not a repo-owned decision; existing hook entries are never touched),
 #   store-ci.yml (store profile: handled separately, see PROFILE_IS_STORE).
 #
 # .git/hooks/pre-commit is listed but never copied verbatim: it is assembled by
@@ -379,7 +437,24 @@ repo_section() {
     say "created: AGENTS.md (renamed from CLAUDE.md)"
   fi
   if [ ! -e AGENTS.md ]; then put AGENTS.md AGENTS.md; fi  # profile payload may have provided it already — avoid a second "exists" line
-  if [ ! -e CLAUDE.md ]; then ln -s AGENTS.md CLAUDE.md; say "created: CLAUDE.md -> AGENTS.md"; fi
+  if [ -f CLAUDE.md ] && [ ! -L CLAUDE.md ]; then
+    # ADR-0002 violation: AGENTS.md and CLAUDE.md exist as two separate real
+    # files. Which one is canonical (and what to carry over from the other)
+    # is a human decision — the installer must not guess-merge them. Staying
+    # silent here is worse than the noise: it would leave a real project
+    # context (often the pre-existing CLAUDE.md) diverging from an AGENTS.md
+    # scaffold, exactly the drift ADR-0002 exists to prevent.
+    AGENTS_LINES=$(wc -l < AGENTS.md | tr -d ' ')
+    CLAUDE_LINES=$(wc -l < CLAUDE.md | tr -d ' ')
+    warn "AGENTS.md ($AGENTS_LINES lines) and CLAUDE.md ($CLAUDE_LINES lines) exist as two separate files — ADR-0002 requires CLAUDE.md to be a symlink to AGENTS.md. Not auto-merging: picking the canonical file is a human decision."
+    if [ "$CLAUDE_LINES" -gt "$AGENTS_LINES" ]; then
+      say "next: CLAUDE.md is larger — it is likely the real project context and AGENTS.md an unfilled scaffold. Move CLAUDE.md's content into AGENTS.md, then: git rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md"
+    else
+      say "next: review both files, merge whichever holds the real content into AGENTS.md (the canonical file), then: git rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md"
+    fi
+  elif [ ! -e CLAUDE.md ]; then
+    ln -s AGENTS.md CLAUDE.md; say "created: CLAUDE.md -> AGENTS.md"
+  fi
 
   # ----------------------------------------------------------------- 4. OpenSpec
   # B4 (ADR-0019): empty dirs (0 files) count as missing — a bare openspec/ skeleton
@@ -401,6 +476,11 @@ repo_section() {
     if [ -n "$SEED_REF" ]; then
       git checkout "$SEED_REF" -- openspec
       say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, staged — review and commit)"
+      # The seed ref carries openspec/ content only — the vendor-generated
+      # .claude/skills/openspec-* tooling never lived on that branch, so it
+      # must be (re)generated here or the repo ends up with a seeded
+      # openspec/ and zero openspec skills.
+      ensure_openspec_claude_tooling
     elif [ -n "$PROFILE_OPENSPEC_SEED_REF" ]; then
       # A profile that names a seed ref HAS specs to restore. Falling through to an
       # empty init here swaps hundreds of Requirements for a skeleton that passes
@@ -414,9 +494,14 @@ repo_section() {
     else
       say "initializing OpenSpec (--tools claude)..."
       $OPENSPEC init --tools claude
+      strip_opsx_commands
     fi
   else
     say "exists:  openspec/ (left alone)"
+    # A pre-existing openspec/ (predates the kit, or came from a migration
+    # branch) is not proof the Claude tooling was ever generated for it —
+    # repair/generate it the same way the seed-restore path does.
+    ensure_openspec_claude_tooling
   fi
 
   # -------------------------------- 4a. stamp disable-model-invocation (ADR-0020 §8)

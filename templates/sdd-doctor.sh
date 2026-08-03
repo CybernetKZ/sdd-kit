@@ -103,6 +103,38 @@ if [ -n "$ROOT" ]; then
   else
     warn repo.agents-md "AGENTS.md missing" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
+
+  # ADR-0002: CLAUDE.md must be a symlink to AGENTS.md. Only meaningful once
+  # AGENTS.md exists (the branch above already reports its absence).
+  if [ -f AGENTS.md ]; then
+    if [ ! -e CLAUDE.md ]; then
+      note repo.claude-symlink "CLAUDE.md absent (optional — some tools/OSes don't need it)" "ln -s AGENTS.md CLAUDE.md"
+    elif [ -L CLAUDE.md ]; then
+      CLAUDE_TARGET=$(readlink CLAUDE.md)
+      if [ "$CLAUDE_TARGET" = "AGENTS.md" ]; then
+        if git check-ignore -q CLAUDE.md 2>/dev/null; then
+          warn repo.claude-symlink "CLAUDE.md -> AGENTS.md but gitignored — it will never reach git/CI/teammates" \
+            "remove CLAUDE.md from .gitignore, then commit the symlink"
+        else
+          ok repo.claude-symlink "CLAUDE.md -> AGENTS.md"
+        fi
+      else
+        warn repo.claude-symlink "CLAUDE.md is a symlink but points to '$CLAUDE_TARGET', not AGENTS.md (ADR-0002)" \
+          "rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md"
+      fi
+    else
+      AGENTS_LINES=$(wc -l < AGENTS.md | tr -d ' ')
+      CLAUDE_LINES=$(wc -l < CLAUDE.md | tr -d ' ')
+      if [ "$CLAUDE_LINES" -gt "$AGENTS_LINES" ]; then
+        warn repo.claude-symlink "AGENTS.md ($AGENTS_LINES lines) and CLAUDE.md ($CLAUDE_LINES lines) are two separate files, and CLAUDE.md is the bigger one — the canonical file is likely mixed up (ADR-0002: AGENTS.md must be canonical, CLAUDE.md a symlink to it)" \
+          "review both, move CLAUDE.md's real content into AGENTS.md, then: git rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md"
+      else
+        warn repo.claude-symlink "AGENTS.md ($AGENTS_LINES lines) and CLAUDE.md ($CLAUDE_LINES lines) are two separate files (ADR-0002: CLAUDE.md must be a symlink to AGENTS.md)" \
+          "review both, merge whichever holds real content into AGENTS.md, then: git rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md"
+      fi
+    fi
+  fi
+
   [ -f .claude/settings.json ] && ok repo.hooks "Claude hooks configured (.claude/settings.json)" \
     || warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   if [ -f .spec-guard-paths ]; then
@@ -200,9 +232,57 @@ print(' '.join(sorted(servers - allowed)))
       [ -d "$s" ] || continue
       name=$(basename "$s")
       case "$name" in openspec-*|feature-flow|incident-flow|tz|tz-review|tz-implement) ;;
+        patch|patch-review|patch-implement)
+          note audit.skill-deprecated "deprecated skill kept on purpose: .claude/skills/$name (ADR-0019 §4 — retained to read the archived patch docs under docs/patches/, banner-marked DEPRECATED since 2026-08-03)" ;;
         *) warn audit.skill-extra "unexpected skill: .claude/skills/$name" "delete if unused: rm -r .claude/skills/$name" ;;
       esac
     done
+  fi
+
+  # 3b. Skills: openspec/ present but missing (some of) the 6 openspec-* skills
+  #     means the Claude Code tooling was never generated for it — the bug
+  #     this check exists for: openspec/ restored from a seed ref, or a
+  #     pre-existing openspec/ left alone, without `openspec init --tools
+  #     claude` / `openspec update` ever running. openspec-propose missing is
+  #     called out by name: templates/agents/planner.md and
+  #     templates/skills/feature-flow/SKILL.md hardcode
+  #     `.claude/skills/openspec-propose/SKILL.md` as the path a subagent
+  #     follows in lieu of invoking the skill directly — without the file,
+  #     that documented path is just broken, not merely "a skill missing".
+  #     Advisory only (ADR-0015 advisory-first) — the doctor diagnoses, it
+  #     never blocks.
+  if [ -d openspec ] && [ -n "$(find openspec -type f -print -quit 2>/dev/null)" ]; then
+    MISSING_OS_SKILLS=""
+    UNSTAMPED_OS_SKILLS=""
+    for want in openspec-explore openspec-propose openspec-apply-change \
+                openspec-update-change openspec-sync-specs openspec-archive-change; do
+      if [ ! -f ".claude/skills/$want/SKILL.md" ]; then
+        MISSING_OS_SKILLS="$MISSING_OS_SKILLS $want"
+      elif ! grep -q '^disable-model-invocation:[[:space:]]*true[[:space:]]*$' ".claude/skills/$want/SKILL.md"; then
+        UNSTAMPED_OS_SKILLS="$UNSTAMPED_OS_SKILLS $want"
+      fi
+    done
+    if [ -n "$MISSING_OS_SKILLS" ]; then
+      EXTRA_HINT=""
+      case " $MISSING_OS_SKILLS " in
+        *" openspec-propose "*) EXTRA_HINT=" (openspec-propose is hardcoded in templates/agents/planner.md and templates/skills/feature-flow/SKILL.md — its absence breaks the documented path, not just a missing skill)" ;;
+      esac
+      warn audit.skill-missing "openspec/ exists but missing skill(s):$MISSING_OS_SKILLS$EXTRA_HINT" "run: sdd-kit/install.sh --repo-only $ROOT  (regenerates the openspec-* skills)"
+    elif [ -n "$UNSTAMPED_OS_SKILLS" ]; then
+      warn audit.skill-unstamped "openspec skill(s) present but missing disable-model-invocation: true:$UNSTAMPED_OS_SKILLS (ADR-0020 §8)" "run: sdd-kit/install.sh --repo-only $ROOT  (stamps them)"
+    else
+      ok audit.skill-openspec "all 6 openspec-* skills present and stamped"
+    fi
+  fi
+
+  # 3c. ADR-0020 §8: /opsx:* slash commands are vendor noise left by `openspec
+  #     init --tools claude` / `openspec update` — the openspec-* skills are
+  #     the supported entry point, and the commands sit outside the
+  #     disable-model-invocation stamp's reach. install.sh strips this
+  #     directory right after every generation/sync call, but a manual
+  #     `openspec update` run later re-creates it — catch that here.
+  if [ -d .claude/commands/opsx ]; then
+    warn audit.opsx-commands ".claude/commands/opsx present (ADR-0020 §8: openspec-* skills are the supported entry point, not /opsx:* slash commands)" "rm -rf .claude/commands/opsx"
   fi
 
   # 4. Agents: the sdd-kit set (2 reviewers + planner + plan-griller + test-author) is expected.

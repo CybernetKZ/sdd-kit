@@ -5,10 +5,16 @@
 
 # Feature-flag expiry gate (ADR-0007): every registered flag has a death date.
 # No feature_flags.py in the repo -> nothing to check, passes.
+# Union of tracked (git ls-files) and working-tree (find) hits: a freshly
+# installed feature_flags.py is real on disk but not yet `git add`-ed, so
+# `git ls-files` alone misses it right when a fresh install is being checked.
 sdd-flags:
-	@FILES=$$(git ls-files '*feature_flags.py' 2>/dev/null); \
+	@FILES=$$( { git ls-files '*feature_flags.py' 2>/dev/null; find . -name feature_flags.py -not -path './.git/*' 2>/dev/null | sed 's|^\./||'; } | sort -u ); \
 	if [ -z "$$FILES" ]; then echo "sdd-flags: no flag registry — OK"; else \
-	for f in $$FILES; do python3 "$$f" --check || exit 1; done; fi
+	for f in $$FILES; do \
+	  git ls-files --error-unmatch "$$f" >/dev/null 2>&1 || echo "sdd-flags: NOTE untracked $$f — commit it so this gate stays effective"; \
+	  python3 "$$f" --check || exit 1; \
+	done; fi
 
 # AI review of your current branch vs dev, on YOUR machine with YOUR
 # subscription login (no shared tokens; CI AI-step stays optional).
@@ -33,6 +39,17 @@ sdd-check:
 	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
+	@# ADR-0002: AGENTS.md is canonical, CLAUDE.md must be a symlink to it.
+	@# WARN, never FAIL: pre-commit runs this target (pre-commit-hook.sh:110), so a
+	@# FAIL here blocks every commit in the repo until a human merges two real
+	@# context files — an editorial decision that must not hold the working tree
+	@# hostage (ADR-0015 advisory-first). Two repos are in this state today.
+	@if [ -f CLAUDE.md ] && [ ! -L CLAUDE.md ]; then \
+		echo "WARN: AGENTS.md and CLAUDE.md both exist as separate files (ADR-0002: CLAUDE.md must be a symlink to AGENTS.md)"; \
+		echo "next: pick the canonical file (usually the larger, real one), merge any missing content from the other into it, git rm the other, then: ln -s AGENTS.md CLAUDE.md"; \
+	elif [ -L CLAUDE.md ] && [ "$$(readlink CLAUDE.md)" != "AGENTS.md" ]; then \
+		echo "WARN: CLAUDE.md is a symlink but does not point to AGENTS.md (ADR-0002) — points to $$(readlink CLAUDE.md)"; \
+	fi
 	@if [ -d openspec ]; then \
 		command -v node >/dev/null || { echo "FAIL: node not found in PATH"; echo "next: install Node >= 20 (nvm install 20) — openspec validate runs via npx"; exit 1; }; \
 		node -e 'process.exit(parseInt(process.versions.node) >= 20 ? 0 : 1)' || { echo "FAIL: openspec needs Node >= 20, found $$(node -v) at $$(command -v node)"; echo "next: use Node >= 20 in THIS environment (nvm use 20); if the commit came from an IDE, fix the IDE's PATH/terminal and restart it"; exit 1; }; \
@@ -46,7 +63,7 @@ sdd-check:
 	@# then this becomes a real gate and the summary line below must say so.
 	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py; fi
 	@$(MAKE) --no-print-directory sdd-flags
-	@echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate, sdd-flags); spec-lint is advisory"
+	@echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate, sdd-flags); agent-context symlink and spec-lint are advisory"
 
 # Advisory single-entry test gate (ADR-0015): ruff + pytest, run on demand
 # (make sdd-test) and as an advisory CI job — NOT part of sdd-check, so

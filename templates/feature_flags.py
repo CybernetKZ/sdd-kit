@@ -50,19 +50,27 @@ def check() -> int:
         try:
             over = (today - dt.date.fromisoformat(expires)).days
         except (TypeError, ValueError):
-            print(f"FAIL: flag {name}: bad expires {expires!r} - need an ISO date (YYYY-MM-DD)")
+            print(
+                f"FAIL: flag {name}: bad expires {expires!r} - need an ISO date (YYYY-MM-DD)"
+            )
             failed += 1
             continue
         if over > GRACE_DAYS:
             print(f"FAIL: flag {name} expired {over} days ago")
-            print("next: delete the flag and its dead branch, or re-negotiate expires in review")
+            print(
+                "next: delete the flag and its dead branch, or re-negotiate expires in review"
+            )
             failed += 1
         elif over > 0:
-            print(f"WARN: flag {name} expired {over} days ago - {GRACE_DAYS - over} days until this blocks CI")
+            print(
+                f"WARN: flag {name} expired {over} days ago - {GRACE_DAYS - over} days until this blocks CI"
+            )
             warned += 1
     if failed:
         return 1
-    print(f"sdd-flags: {len(FLAGS)} flags, {warned} warnings, 0 expired past grace - OK")
+    print(
+        f"sdd-flags: {len(FLAGS)} flags, {warned} warnings, 0 expired past grace - OK"
+    )
     return 0
 
 
