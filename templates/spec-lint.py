@@ -183,6 +183,30 @@ def parse_spec(path: Path) -> dict:
     return spec
 
 
+def check_deltas(root: Path, spec_ids: dict) -> list[dict]:
+    """Metadata-check the spec deltas of active changes, before they reach the canon.
+
+    Deltas were invisible to this script until a change was applied, so a
+    fabricated key or symbol only surfaced at implementation time (CF defect M1,
+    found again during the phase-4 pilot). Freshness makes no sense here - a
+    delta describes behaviour that does not exist yet - and an unresolved anchor
+    is legitimate when the change creates the file, so anchors are reported as
+    advice and never as a violation.
+    """
+    out: list[dict] = []
+    for path in sorted((root / "openspec" / "changes").glob("*/specs/*/spec.md")):
+        if "archive" in path.relative_to(root).parts:
+            continue  # history: closed, never re-litigated
+        spec = parse_spec(path)
+        rel = str(path.relative_to(root))
+        unresolved = [a for a in sorted(set(spec["anchors"])) if not resolve_anchor(a, root)]
+        # ponytail: no duplicate-id check here - a MODIFIED delta reuses the
+        # canonical id by design, so collisions are the normal case, not a bug.
+        out.append({"delta": rel, "requirements": spec["requirements"],
+                    "violations": spec["violations"], "unresolved_anchors": unresolved})
+    return out
+
+
 def check_freshness(spec: dict, root: Path, cache: dict) -> dict:
     anchors = sorted(set(spec["anchors"]))
     missing, files = [], set()
@@ -279,9 +303,12 @@ def main() -> int:
                         "last_verified_date": spec["date"], "last_verified_commit": spec["commit"],
                         "violations": spec["violations"], **freshness})
 
+    deltas = check_deltas(root, seen_ids)
+
     totals = {status: sum(1 for r in results if r["status"] == status)
               for status in ("FRESH", "STALE", "UNVERIFIED", "MISSING")}
     violations = sum(len(r["violations"]) for r in results)
+    violations += sum(len(d["violations"]) for d in deltas)
     if args.json:
         payload = {"root": str(root), "strict": strict, "specs": results,
                    "totals": {**totals, "specs": len(results), "metadata_violations": violations}}
