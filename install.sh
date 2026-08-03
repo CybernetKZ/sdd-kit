@@ -169,6 +169,7 @@ load_profile() {
   PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
   PROFILE_SPEC_GUARD_PATHS=""
   PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
+  PROFILE_OPENSPEC_SEED_REF="" # git ref holding openspec/; restored instead of `openspec init` when openspec/ is empty
   if [ -f "$KIT/profiles/$1.env" ]; then
     # shellcheck disable=SC1090
     . "$KIT/profiles/$1.env"
@@ -331,8 +332,21 @@ repo_section() {
   # B4 (ADR-0019): empty dirs (0 files) count as missing — a bare openspec/ skeleton
   # must not block init forever.
   if [ ! -d openspec ] || [ -z "$(find openspec -type f -print -quit 2>/dev/null)" ]; then
-    say "initializing OpenSpec (--tools claude)..."
-    $OPENSPEC init --tools claude
+    # ponytail: seed from a git ref, not a vendored copy — the specs already live in
+    # the repo's own history, so there is nothing to keep in sync here.
+    local SEED_REF=""
+    for r in "origin/$PROFILE_OPENSPEC_SEED_REF" "$PROFILE_OPENSPEC_SEED_REF"; do
+      [ -n "$PROFILE_OPENSPEC_SEED_REF" ] || break
+      if [ -n "$(git ls-tree -r --name-only "$r" -- openspec 2>/dev/null | head -1)" ]; then SEED_REF="$r"; break; fi
+    done
+    if [ -n "$SEED_REF" ]; then
+      git checkout "$SEED_REF" -- openspec
+      say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, staged — review and commit)"
+    else
+      [ -z "$PROFILE_OPENSPEC_SEED_REF" ] || warn "openspec seed ref '$PROFILE_OPENSPEC_SEED_REF' not found or has no openspec/ — falling back to init"
+      say "initializing OpenSpec (--tools claude)..."
+      $OPENSPEC init --tools claude
+    fi
   else
     say "exists:  openspec/ (left alone)"
   fi
