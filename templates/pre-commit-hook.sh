@@ -54,6 +54,12 @@ if [ -n "$STAGED" ]; then
       echo "$PY" | xargs -r $RUFF check --fix --quiet -- 2>/dev/null || true
       echo "$PY" | xargs -r $RUFF format --quiet -- 2>/dev/null || true
       echo "$PY" | xargs -r git add --
+      # autofix can revert the staged changes entirely; git's own emptiness
+      # check ran before this hook, so without this guard an empty commit lands
+      if git diff --cached --quiet 2>/dev/null; then
+        echo "pre-commit: ruff autofix reverted all staged changes — nothing left to commit" >&2
+        exit 1
+      fi
     else
       echo "pre-commit: ruff not found (install ruff or uv) — skipping lint/format" >&2
     fi
