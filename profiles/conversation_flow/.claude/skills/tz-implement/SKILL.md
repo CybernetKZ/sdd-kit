@@ -16,7 +16,8 @@ description: Протокол реализации ТЗ (OpenSpec change) HubTal
 ## Фаза 0 — входные условия и сверка с кодом (до любого плана)
 
 1. Прочитать change целиком + `openspec/specs/` затронутых capability + прежние
-   ТЗ и §§, на которые он ссылается (шапка-цитата, `## Что затрагивается`).
+   ТЗ и §§, на которые он ссылается (шапка-цитата,
+   `## Что затрагивается в каноне при реализации`).
 2. **Проверить входные условия — при провале СТОП, не начинать:**
    - вердикт `/tz-review` есть и он «готово к реализации»;
    - `## Grill` в proposal.md заполнена и несёт шапку провенанса
@@ -31,8 +32,14 @@ description: Протокол реализации ТЗ (OpenSpec change) HubTal
    - `light`-тир: гриля нет законно; RED-тест по единственному Scenario —
      обязателен.
 3. Проверить по коду каждый фактический пункт change'а: существуют ли названные
-   файлы/поля/точки расширения, реализовано ли то, что `## Позиция` называет
-   реализованным, указывают ли якоря `enforced:` на существующие символы.
+   файлы/поля/точки расширения, реализовано ли то, что `## Why` называет уже
+   работающим, указывают ли якоря `enforced:` дельты на существующие символы
+   (`spec-lint.py` дельты **не читает** — прогнать резолвер руками):
+   ```bash
+   grep -rhoP 'enforced: \K.*(?= -->)' openspec/changes/tz-NNN-*/specs/ | python3 -c 'import sys,importlib.util as u;from pathlib import Path;s=u.spec_from_file_location("sl",".claude/scripts/spec-lint.py");m=u.module_from_spec(s);s.loader.exec_module(m);[print("OK " if m.resolve_anchor(a.strip(),Path(".")) else "BAD",a.strip()) for a in sys.stdin]'
+   ```
+   `BAD` законен только для файла, который создаёт этот change; всё остальное —
+   расхождение по п. 4.
 4. **Правило «код важнее спеки»:** если change противоречит фактическому коду
    (поле не там, механизм устроен иначе, «уже есть» отсутствует) —
    **остановиться и доложить расхождение** пользователю, а не подгонять код под
@@ -112,9 +119,12 @@ description: Протокол реализации ТЗ (OpenSpec change) HubTal
    ```bash
    PY=/opt/anaconda3/bin/python3.12 make test
    nvm use 20 && npm --prefix editor run build
-   make sdd-check                                  # validate --strict + spec-lint
-   python3 .claude/scripts/spec-lint.py
+   make sdd-check          # включает openspec validate --strict и spec-lint (последний advisory)
+   SPEC_LINT_STRICT=1 python3 .claude/scripts/spec-lint.py   # здесь — как гейт: дельта уже в каноне
    ```
+   Вторая строка не дубль первой: внутри `sdd-check` spec-lint выходит с 0 и его
+   находки — отчёт. После применения дельты в канон метаданные и якоря обязаны
+   быть чистыми, поэтому тот же скрипт прогоняется строгим режимом.
 
 ## Фаза 4 — ревью, приёмка, архивация
 

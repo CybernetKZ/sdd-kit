@@ -84,7 +84,7 @@ FRESH=13 / STALE=7 (причина STALE — мерж main, см. п. 3 «Нез
 
 **DB1 (MEDIUM, эксплуатация)** — ручка тюнинга даёт эффект, противоположный задокументированному: комментарий `storage/db.py:91-97` утверждает, что `pool_size=0` значит «без постоянных соединений», а в SQLAlchemy это «без лимита размера пула». Оператор, экономящий соединения, получает неограниченный пул на процесс.
 
-Сделаны шапки: `docs/DOCUMENTATION.md` (канон — `openspec/specs/`, документ ведётся параллельно), `docs/patches/README.md` (архив закрыт на ТЗ №84, сверено по факту: последний — `tz-084-programmatic-end-worker-handoff`).
+Сделаны шапки: `docs/DOCUMENTATION.md` (канон — `openspec/specs/`, документ ведётся параллельно), `docs/patches/README.md` (**исправлено 2026-08-03 после замечания Даниила**: каталог живой, на `main` патчи создаются по-прежнему — так появились №92–99; новым процессом файл здесь не создаётся, отказ от патчей — при cutover. Номер ТЗ считать с обязательным `git ls-tree origin/main docs/patches/`).
 
 ## Закрытие пробелов G1–G9 (2026-08-03, 5 агентов)
 
@@ -121,7 +121,7 @@ FRESH=13 / STALE=7 (причина STALE — мерж main, см. п. 3 «Нез
 ## Что дальше по плану
 2. Закрыть пробелы покрытия G1–G6 из DEFECTS_CF: G1 transfer-рантайм §8.9 ТЗ №28 (в `call-control`), G2 авто-завершение, G3 fast-hangup, G4 ТЗ №83 tail-commit, G5 каталог голосов TTS, G6 лог TTS-чанков.
 3. Слепок `openspec/**` → `sdd-kit/profiles/conversation_flow/` (ADR-0019 решение 2).
-4. Шапка DOCUMENTATION.md: «канон поведения — openspec/specs/, документ ведётся параллельно (ADR-0019)»; `docs/patches/README.md`: «архив закрыт на №84».
+4. Шапка DOCUMENTATION.md: «канон поведения — openspec/specs/, документ ведётся параллельно (ADR-0019)»; `docs/patches/README.md`: каталог живой (на `main` патчи продолжают создаваться), отставание ловится `main-drift.sh`.
 5. Фаза 4: payload-скиллы `tz`/`tz-review`/`tz-implement`, deprecated-пометка patch-трилогии, пилот на реальном ТЗ №85.
 6. Фаза 5: включить `PROFILE_SPEC_GUARD_PATHS` (14 префиксов), `SPEC_LINT_STRICT=1`.
 
