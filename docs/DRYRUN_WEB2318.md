@@ -75,6 +75,10 @@ openspec-propose - путь P1 работает), повторная правк�
 | M1-1 | Сообщение spec-guard двусмысленно: "Create a change (/opsx:propose) **or** mark it skip_specs: true" читается как альтернатива change'у, хотя `skip_specs` живёт в метаданных уже созданной change и машинно никем не читается (только конвенция AGENTS.md). Агент истолковал верно, но случайно | низкий | **исправлено**: формулировка "Create a change first...; refactor/tooling work needs one too - add skip_specs: true to its .openspec.yaml" (проверена на живом хуке) |
 | M1-2 | Любая активная change открывает **все** guard-пути (хук не сверяет файл с change) - осознанная простота из докстринга хука ("no AST/glob until it actually hurts"), advisory-first | инфо | принято, не чиним |
 
+M1.3 пройден без находок: `block-no-verify.cjs` (репо-версия кита) заблокировал
+`git commit --no-verify`, агент сам откатился на обычный коммит, pre-commit с
+sdd-check прошёл (`bd37baf2`, ветка `test-sdd-kit`, в коммите ровно 4 файла задачи).
+
 ## Шаг 3 (test-author) - фрикция
 
 _(заполняется по итогам прогона)_
