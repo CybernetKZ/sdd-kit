@@ -61,7 +61,8 @@
 | M0-1 | Wrap-up install.sh противоречил ADR-0015: шаги 2-3 подавали branch protection + required check как обязательные ручные шаги установки | средний | **исправлено**: один пункт "enforcement advisory по умолчанию (ADR-0015), включение - отдельное решение владельца" |
 | M0-2 | Двойное сообщение про AGENTS.md: `created: ... (profile payload)` и следом `exists: ... (left alone)` (payload-цикл + generic put) | низкий | **исправлено**: put для AGENTS.md пропускается, если файл уже есть |
 | M0-3 | Ожидания плана M0 неточны: `git status` не пуст (`.env.capture`, `extra_scripts/` не в .gitignore WBN) и ruff-замечание неверно (конфиг в `backend/pyproject.toml`, в git - инсталлер корректно оставил repo's own) | низкий | **исправлено**: план уточнён, дефекта кита нет |
-| M0-4 | `/graphify` - Unknown command в свежей сессии: скилл лежит в `~/.agents/skills/graphify/`, симлинка в `~/.claude/skills/` нет, а install.sh проверял только CLI (`command -v graphify`) и рапортовал "ok". Все подсказки кита ("run /graphify") были невыполнимы буквально (класс P1/G2) | высокий | **исправлено**: симлинк создан + install.sh чинит/создаёт его сам (`link_graphify_skill`) |
+| M0-4 | `/graphify` - Unknown command в свежей сессии: скилл лежит в `~/.agents/skills/graphify/`, симлинка в `~/.claude/skills/` нет, а install.sh проверял только CLI (`command -v graphify`) и рапортовал "ok". Все подсказки кита ("run /graphify") были невыполнимы буквально (класс P1/G2) | высокий | **исправлено**: симлинк создан + install.sh чинит/создаёт его сам (`link_graphify_skill`); подтверждено пере-прогоном M0 - `/graphify` собрал граф (AST-only, 24k узлов) |
+| M0-5 | `graphify-out/` (graph.json ~30 МБ) не заигнорирован - торчит в `git status` и может уехать в коммит; кит ставит `make sdd-index`, но не исключает его артефакт | средний | **исправлено**: install.sh (шаг 8c) и `--refresh` пишут `graphify-out/` в `.git/info/exclude` |
 
 ## Шаг 3 (test-author) - фрикция
 

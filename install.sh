@@ -439,6 +439,14 @@ EOF
     say "created: $PRE_COMMIT (hygiene checks + make sdd-check before every commit)"
   fi
 
+  # ------------------- 8c. local git exclude for machine-local artifacts
+  # graphify-out/ (the code graph, ~30MB json) must never land in a commit;
+  # .git/info/exclude keeps the tracked .gitignore untouched.
+  if ! grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
+    echo "graphify-out/" >> .git/info/exclude
+    say "created: .git/info/exclude entry graphify-out/ (machine-local, never committed)"
+  fi
+
   # ------------------------------------- 9. project MCP servers (.mcp.json)
   local MCP_LIST
   if [ -e .mcp.json ]; then
@@ -567,6 +575,12 @@ EOF
 
   refresh_pre_commit
   refresh_settings_hooks
+
+  # same as install step 8c: keep machine-local graph out of commits
+  if ! grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
+    echo "graphify-out/" >> .git/info/exclude
+    say "added:   .git/info/exclude entry graphify-out/"
+  fi
 
   if [ "$REFRESHED" = 0 ]; then
     say "refresh done: 0 files refreshed (everything already matches the kit)"
