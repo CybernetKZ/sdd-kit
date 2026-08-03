@@ -193,11 +193,13 @@ print(' '.join(sorted(servers - allowed)))
   [ -e CLAUDE.local.md ] && note audit.claude-local "CLAUDE.local.md present (personal file, fine — must stay untracked)"
 
   # 3. Skills: only the openspec-* set + the kit's flows are expected.
+  #    tz/tz-review/tz-implement come from a profile payload (ADR-0019 phase 4,
+  #    conversation_flow) — known, not junk, so do not tell anyone to delete them.
   if [ -d .claude/skills ]; then
     for s in .claude/skills/*/; do
       [ -d "$s" ] || continue
       name=$(basename "$s")
-      case "$name" in openspec-*|feature-flow|incident-flow) ;;
+      case "$name" in openspec-*|feature-flow|incident-flow|tz|tz-review|tz-implement) ;;
         *) warn audit.skill-extra "unexpected skill: .claude/skills/$name" "delete if unused: rm -r .claude/skills/$name" ;;
       esac
     done

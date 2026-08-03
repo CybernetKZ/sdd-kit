@@ -56,6 +56,17 @@ jobs:
           make sdd-doctor || true   # advisory: warns on a bare runner, never blocks
           test -x .git/hooks/pre-commit
           grep -q "sdd-check" .git/hooks/pre-commit
+      - name: PROFILE_OPENSPEC_SEED_REF restores openspec/ from a git ref instead of init
+        run: |
+          R=/tmp/seed-repo/conversation_flow   # basename picks profiles/conversation_flow.env
+          git init -q -b main $R && cd $R
+          git config user.email t@t && git config user.name t
+          echo x > README.md && git add -A && git commit -qm init
+          git checkout -q -b test-sdd-kit      # the ref that profile points at
+          mkdir -p openspec/specs/asr && echo '# asr' > openspec/specs/asr/spec.md
+          git add -A && git commit -qm specs && git checkout -q main
+          SDD_KIT_ASSUME_YES=1 $GITHUB_WORKSPACE/install.sh --repo-only $R
+          grep -qx '# asr' openspec/specs/asr/spec.md   # seeded content, not a fresh skeleton
       - name: install is idempotent (second run changes nothing)
         run: |
           cd /tmp/smoke-repo

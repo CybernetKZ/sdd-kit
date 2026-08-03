@@ -342,8 +342,17 @@ repo_section() {
     if [ -n "$SEED_REF" ]; then
       git checkout "$SEED_REF" -- openspec
       say "restored: openspec/ from $SEED_REF ($(find openspec -type f | wc -l | tr -d ' ') files, staged — review and commit)"
+    elif [ -n "$PROFILE_OPENSPEC_SEED_REF" ]; then
+      # A profile that names a seed ref HAS specs to restore. Falling through to an
+      # empty init here swaps hundreds of Requirements for a skeleton that passes
+      # `openspec validate` trivially — the failure has to be loud, not a warning.
+      # Happens for real when the seed branch is merged+deleted, or on a shallow
+      # single-branch CI clone that never fetched it.
+      warn "shallow CI clone? try: git fetch origin '$PROFILE_OPENSPEC_SEED_REF'"
+      warn "ref gone for good? point PROFILE_OPENSPEC_SEED_REF at the branch that carries"
+      warn "openspec/, or drop it from the profile to scaffold an empty skeleton on purpose."
+      fail "openspec seed ref '$PROFILE_OPENSPEC_SEED_REF' not found (or has no openspec/)"
     else
-      [ -z "$PROFILE_OPENSPEC_SEED_REF" ] || warn "openspec seed ref '$PROFILE_OPENSPEC_SEED_REF' not found or has no openspec/ — falling back to init"
       say "initializing OpenSpec (--tools claude)..."
       $OPENSPEC init --tools claude
     fi
