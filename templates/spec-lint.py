@@ -182,6 +182,8 @@ def main() -> int:
     )
     parser.add_argument("--root", default=None, help="repository root (default: git root or cwd)")
     parser.add_argument("--strict", action="store_true", help="same as SPEC_LINT_STRICT=1")
+    parser.add_argument("--json", action="store_true",
+                        help="dump the full JSON payload to stdout (default: human report only)")
     args = parser.parse_args()
 
     strict = args.strict or os.environ.get("SPEC_LINT_STRICT") == "1"
@@ -194,7 +196,8 @@ def main() -> int:
     specs = sorted((root / "openspec" / "specs").glob("*/spec.md"))
     specs += sorted(p for p in (root / "openspec" / "specs").glob("*/*/spec.md"))
     if not specs:
-        print(json.dumps({"specs": [], "totals": {}, "note": "no specs found"}))
+        if args.json:
+            print(json.dumps({"specs": [], "totals": {}, "note": "no specs found"}))
         print(f"spec-lint: no specs under {root}/openspec/specs - nothing to check", file=sys.stderr)
         return 0
 
@@ -218,9 +221,10 @@ def main() -> int:
     totals = {status: sum(1 for r in results if r["status"] == status)
               for status in ("FRESH", "STALE", "UNVERIFIED", "MISSING")}
     violations = sum(len(r["violations"]) for r in results)
-    payload = {"root": str(root), "strict": strict, "specs": results,
-               "totals": {**totals, "specs": len(results), "metadata_violations": violations}}
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.json:
+        payload = {"root": str(root), "strict": strict, "specs": results,
+                   "totals": {**totals, "specs": len(results), "metadata_violations": violations}}
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
 
     mode = "STRICT" if strict else "WARN-ONLY"
     out = sys.stderr
