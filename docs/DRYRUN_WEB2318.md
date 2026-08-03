@@ -64,6 +64,17 @@
 | M0-4 | `/graphify` - Unknown command в свежей сессии: скилл лежит в `~/.agents/skills/graphify/`, симлинка в `~/.claude/skills/` нет, а install.sh проверял только CLI (`command -v graphify`) и рапортовал "ok". Все подсказки кита ("run /graphify") были невыполнимы буквально (класс P1/G2) | высокий | **исправлено**: симлинк создан + install.sh чинит/создаёт его сам (`link_graphify_skill`); подтверждено пере-прогоном M0 - `/graphify` собрал граф (AST-only, 24k узлов) |
 | M0-5 | `graphify-out/` (graph.json ~30 МБ) не заигнорирован - торчит в `git status` и может уехать в коммит; кит ставит `make sdd-index`, но не исключает его артефакт | средний | **исправлено**: install.sh (шаг 8c) и `--refresh` пишут `graphify-out/` в `.git/info/exclude` |
 
+## M1. Хуки в живой сессии - проверяется 2026-08-03
+
+M1.1+M1.2 пройдены одним заходом: spec-guard заблокировал Edit guard-файла (exit 2),
+агент создал change `cleanup-agent-wb-model-dead-comment` (через Skill
+openspec-propose - путь P1 работает), повторная правка прошла, change валиден.
+
+| # | Проблема | Приоритет | Статус |
+|---|---|---|---|
+| M1-1 | Сообщение spec-guard двусмысленно: "Create a change (/opsx:propose) **or** mark it skip_specs: true" читается как альтернатива change'у, хотя `skip_specs` живёт в метаданных уже созданной change и машинно никем не читается (только конвенция AGENTS.md). Агент истолковал верно, но случайно | низкий | **исправлено**: формулировка "Create a change first...; refactor/tooling work needs one too - add skip_specs: true to its .openspec.yaml" (проверена на живом хуке) |
+| M1-2 | Любая активная change открывает **все** guard-пути (хук не сверяет файл с change) - осознанная простота из докстринга хука ("no AST/glob until it actually hurts"), advisory-first | инфо | принято, не чиним |
+
 ## Шаг 3 (test-author) - фрикция
 
 _(заполняется по итогам прогона)_
