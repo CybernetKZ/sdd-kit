@@ -24,7 +24,8 @@ inlined in the two skills, so neither needs them present in this repo.
   clone it and fill its `.env` per its README). Read it BEFORE forming a theory.
 - Searching by symptom: grep the logs for the failing symbol/handler name, then
   probe the graph by that SYMBOL, never by prose (`graphify explain "<sym>"`,
-  then `affected "<sym>"` for blast radius) - navigation only, ADR-0004, and
+  then `query "<sym>"` for a fan-out ≈ blast radius; precise reverse deps -
+  grep/ast-grep) - navigation only, ADR-0004, and
   `[INFERRED]` edges are guesses: verify in code either way.
 
 ## New step: root-cause document, before any plan

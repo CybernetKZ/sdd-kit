@@ -27,7 +27,8 @@ inlined here, so this skill stands alone without them (never copy ADRs in).
   (navigation only - ADR-0004). Probe by SYMBOL, never by prose - a free-form
   question makes BFS start from its capitalized words and returns noise:
   `graphify explain "<sym>"` (file:line + typed edges) first, then
-  `affected "<sym>"` (what breaks if it changes), `path "A" "B"`,
+  `query "<sym>"` (BFS fan-out ≈ blast radius; for precise reverse deps use
+  grep/ast-grep - the graph keeps one node per file), `path "A" "B"`,
   `query "<sym1> <sym2>"`. `[EXTRACTED]` edges come from the AST, `[INFERRED]`
   ones are guesses - verify both in code. No `graphify-out/graph.json` and the
   repo is large? Build one first: `make sdd-index` (on a Claude subscription the

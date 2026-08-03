@@ -41,7 +41,8 @@ OpenSpec change and uncommitted work from before the last context compaction.
   confirm with grep/read; no index yet - go straight to grep/read.
 - Probe by SYMBOL, never by prose (a free-form question makes BFS start from its
   capitalized words and returns noise): `graphify explain "<sym>"` (file:line +
-  typed edges) first, then `affected "<sym>"` (what breaks if it changes),
+  typed edges) first, then `query "<sym>"` (fan-out ≈ blast radius; precise
+  reverse deps - grep/ast-grep),
   `path "A" "B"`, `query "<sym1> <sym2>"`.
 - Build/update the index: `make sdd-index` (manual, run before a big intake).
 - The graph is navigation/context only (ADR-0004): `[EXTRACTED]` edges come from
