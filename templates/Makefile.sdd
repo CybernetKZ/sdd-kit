@@ -34,6 +34,8 @@ sdd-check:
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
 	@if [ -d openspec ]; then \
+		command -v node >/dev/null || { echo "FAIL: node not found in PATH"; echo "next: install Node >= 20 (nvm install 20) — openspec validate runs via npx"; exit 1; }; \
+		node -e 'process.exit(parseInt(process.versions.node) >= 20 ? 0 : 1)' || { echo "FAIL: openspec needs Node >= 20, found $$(node -v) at $$(command -v node)"; echo "next: use Node >= 20 in THIS environment (nvm use 20); if the commit came from an IDE, fix the IDE's PATH/terminal and restart it"; exit 1; }; \
 		npx -y @fission-ai/openspec@1.7.0 validate --all --strict || { echo "next: fix the specs listed above, then re-run make sdd-check"; exit 1; }; \
 	else \
 		echo "FAIL: openspec/ directory is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; \

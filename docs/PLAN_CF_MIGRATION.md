@@ -96,6 +96,11 @@ B1–B4 ✅; `repo-auditor` → `templates/agents/` + kit_manifest ✅; кэши
 Для каждой capability: `mine-section` → `verify-section` (полная сверка с кодом) → `id:`/`enforced:` метаданные (ADR-0017) → `openspec validate --strict` + `spec-lint` чистый. Расхождения — в `DEFECTS_CF.md` (тикет-материал, поведение не «чинится» молча).
 Порядок волн (по нормативности): 1) `flow-schema`, `flow-execution`; 2) `public-api-v1`, `webhooks`, `persistence-versioning`; 3) голосовой слой (§8 → 8 capabilities); 4) остальное.
 Параллельно: `patch2change` по всем 83 патчам → `changes/archive/`.
+
+**Прогресс (2026-08-03):**
+- ✅ Волна 1: `flow-schema` 34 Req/37 Sc (верификация: 28 CONFIRMED, 0 MISMATCH кода, 5 пробелов полноты закрыты fixup'ом), `flow-execution` 23 Req/37 Sc (верификация opus: 3 MISMATCH кода + 2 завышения спеки + 8 пропусков — всё исправлено fixup'ом, дефекты E1–E5 в DEFECTS_CF.md). Оба гейта (`validate --all --strict`, spec-lint strict) зелёные. Конвейер: майнер(sonnet) → верификатор(скептик) → fixup(sonnet) — работает, верификатор обязателен: оба майнера заявляли «расхождений нет».
+- ✅ Архив: все 83 патча + 4 безномерных → 87 `openspec/changes/archive/tz-*` (proposal.md + tasks.md, оригиналы не тронуты). Аномалии в отчётах партий (у ТЗ №45/46 тестов нет вовсе).
+- 🔄 Волна 2 запущена: майнеры `public-api-v1` (со сверкой против store-контракта), `webhooks`, `persistence-versioning`.
 По завершении: слепок `openspec/**` копируется в `profiles/conversation_flow/` (решение 2); в DOCUMENTATION.md шапку — строка «канон поведения — openspec/specs/, документ ведётся параллельно (ADR-0019)»; `docs/patches/README.md` — «архив закрыт на №84, новые ТЗ — openspec/changes/».
 
 ### Фаза 4 — cutover процесса и пилот
