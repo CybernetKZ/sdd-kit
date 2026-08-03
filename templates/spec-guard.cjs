@@ -47,7 +47,7 @@ process.stdin.on('end', () => {
   if (active.length === 0) {
     console.error(
       `BLOCKED: editing code (${rel}) without an active change in openspec/changes/. ` +
-      `Create a change first (/opsx:propose or 'openspec new change'); ` +
+      `Create a change first (/openspec-propose or 'openspec new change'); ` +
       `refactor/tooling work needs one too — just add skip_specs: true to its .openspec.yaml.`
     );
     process.exit(2);
