@@ -40,7 +40,8 @@ rm -rf /home/octrow/dev/web-backend-new
 git clone -b dev https://github.com/CybernetKZ/web-backend-new.git /home/octrow/dev/web-backend-new
 cd /home/octrow/dev/web-backend-new
 tar xzf /tmp/wbn-env-backup.tgz            # разложит 22 .env по своим директориям
-git status -s | head                        # ожидание: пусто (все .env в .gitignore)
+git status -s | head   # ожидание: только ?? .env.capture и ?? extra_scripts/ —
+                       # эти пути не покрыты .gitignore WBN (не дефект кита)
 ```
 
 Установить кит с нуля — **интерактивно, отвечая Enter на дефолты** (это и есть тест
@@ -51,11 +52,11 @@ git status -s | head                        # ожидание: пусто (вс
 ```
 
 Что смотреть по ходу: вопросы понятны? дефолты разумные? не просит ли лишнего?
-В конце — список ручных шагов (там должен быть п. 4b про `make sdd-index`).
+В конце — список ручных шагов (там должен быть пункт про `make sdd-index`).
 
-**Замечание про ruff**: у донора есть свои `.ruff.toml` (корень и `backend/`), они
-не в git. В чистом клоне их не будет, и кит положит свой `ruff.toml` — это штатный
-путь для нового репо, оставляем как есть (заметим, если помешает `make sdd-test`).
+**Замечание про ruff**: конфиг ruff у WBN живёт в `backend/pyproject.toml`
+(`[tool.ruff]`, в git) — инсталлер обязан сказать «ruff config (repo's own — left
+alone)» и не класть свой `ruff.toml`.
 
 ---
 

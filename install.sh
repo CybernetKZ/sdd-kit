@@ -330,7 +330,7 @@ repo_section() {
     fi
     say "created: AGENTS.md (renamed from CLAUDE.md)"
   fi
-  put AGENTS.md AGENTS.md
+  if [ ! -e AGENTS.md ]; then put AGENTS.md AGENTS.md; fi  # profile payload may have provided it already — avoid a second "exists" line
   if [ ! -e CLAUDE.md ]; then ln -s AGENTS.md CLAUDE.md; say "created: CLAUDE.md -> AGENTS.md"; fi
 
   # ----------------------------------------------------------------- 4. OpenSpec
@@ -467,13 +467,14 @@ EOF
   # ------------------------------------------------------------- 11. wrap up
   say "repo done. Remaining manual steps:"
   say "  1) fill in the TODOs in AGENTS.md (module map, rules)"
-  say "  2) make sdd-gate a required check in branch protection settings"
-  say "  3) enable branch protection on dev (no direct pushes)"
-  say "  4) seed the specs: run the spec-miner agent one capability at a time"
-  say "  4b) build the code graph for intake: 'make sdd-index' (needs an LLM API"
+  say "  2) enforcement stays advisory by default (ADR-0015): CI gates report but"
+  say "     don't block. Turning them on later is one owner decision — sdd-gate"
+  say "     as a required check + branch protection on dev. Not a setup step."
+  say "  3) seed the specs: run the spec-miner agent one capability at a time"
+  say "  3b) build the code graph for intake: 'make sdd-index' (needs an LLM API"
   say "      key for the first build; on a Claude subscription run the interactive"
   say "      '/graphify' command in Claude Code instead — later updates need no key)"
-  say "  5) AI review runs locally: 'make sdd-review' (your own subscription login;"
+  say "  4) AI review runs locally: 'make sdd-review' (your own subscription login;"
   say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
   say "     (autoreview.yml) skips in seconds without one)"
 }
@@ -616,13 +617,23 @@ machine_section() {
   # -------------------------------------------------------------- 3. Graphify
   # Repo-to-knowledge-graph: faster code analysis at lower token cost
   # (graph query instead of grep-and-read). Navigation/context aid, never a CI gate.
+  # CLI alone is not enough: /graphify in Claude Code needs the skill under
+  # ~/.claude/skills (graphify installs it into ~/.agents/skills)
+  link_graphify_skill() {
+    if [ ! -e "$HOME/.claude/skills/graphify" ] && [ -d "$HOME/.agents/skills/graphify" ]; then
+      mkdir -p "$HOME/.claude/skills"
+      ln -s "$HOME/.agents/skills/graphify" "$HOME/.claude/skills/graphify"
+      say "linked:  ~/.claude/skills/graphify -> ~/.agents/skills/graphify (/graphify now visible)"
+    fi
+  }
   if command -v graphify >/dev/null 2>&1; then
+    link_graphify_skill
     say "ok:      graphify already installed"
   elif ask_install "Install Graphify? (codebase knowledge graph; PyPI package is 'graphifyy')" y \
        "uv tool install 'graphifyy[postgres,sql]' && graphify install --platform claude"; then
     uv tool install "graphifyy[postgres,sql]" \
       && graphify install --platform claude \
-      && { DONE=$((DONE+1)); say "installed: graphify CLI + claude skill"; } \
+      && { link_graphify_skill; DONE=$((DONE+1)); say "installed: graphify CLI + claude skill"; } \
       || say "graphify install failed — see https://github.com/safishamsi/graphify"
   else SKIPPED=$((SKIPPED+1)); fi
 
