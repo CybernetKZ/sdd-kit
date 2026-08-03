@@ -74,6 +74,15 @@ cross-service one earns the full grill.
 | standard | this skill as written |
 | deep | + architecture research before planning (compare options, record the comparison in the change's `design.md` — ADRs are kit-level and live in sdd-kit; target repos have no `docs/ADR/`) + the grill is mandatory |
 
+The tier fixes the pipeline and the models (ADR-0021; models are static in
+each agent's frontmatter - no runtime model picking):
+
+| Tier | Pipeline | Models |
+|---|---|---|
+| light | intake -> change (no planner/griller) -> test-author -> executor | test-author/executor sonnet |
+| standard | + planner, grill (agent or inline WITH provenance header) | planner/plan-griller opus, executor sonnet |
+| deep | + design research; grill by the `plan-griller` AGENT only | same |
+
 - Tier set in the ticket -> use it as the default.
 - The developer may ALWAYS override the tier.
 - Nothing set -> decide yourself from the signals: RAISE category, number of
@@ -112,6 +121,10 @@ cross-service one earns the full grill.
   developer answers; anything he cannot answer becomes a question to the ticket
   author. Fix the plan, not the code later. Record it as a `## Grill` section in
   proposal.md, one line per decision, so the "why option B" history survives.
+  The section MUST open with a provenance header (ADR-0021): who grilled
+  (`plan-griller agent` / `session inline` - be honest), how many questions,
+  what changed in the plan. Inline is legal on standard; deep requires the
+  agent, and the header is what shows it actually ran.
 
 ## 3. Tests from the spec delta - before implementation
 
@@ -143,11 +156,20 @@ through the test step before any implementation code:
 - Branches live ≤2 days; CI warns at 2 and fails at 5 (label `long-lived-ok`
   + a `Why long-lived:` line in the PR body for a deliberate exception).
 - Code and spec deltas move together - the spec is part of the change.
-- Commit normally: the pre-commit hook runs ruff, hygiene checks, `make sdd-check`.
-- The tests already exist - run them locally while implementing; fix the
-  implementation until green. Never edit the tests: they are not yours. A test
-  that looks wrong goes back to the test step with the Scenario it traces to
-  (dispute it, ADR-0012).
+- The implementation runs as the `executor` subagent on sonnet (ADR-0021):
+  hand it the change id once the plan is grilled and the tests are RED. It
+  walks tasks.md strictly, never edits tests, never commits, and STOPS with a
+  report on any deviation - disputes with `test-author` and "change the plan?"
+  calls stay with you, on the session model. Sections of tasks.md run
+  sequentially today; parallel executors are a later step, after the
+  sequential one survives a real ticket.
+- Commit normally after review: the pre-commit hook runs ruff, hygiene
+  checks, `make sdd-check`. Committing is the developer's call, not the
+  executor's.
+- The tests already exist - the executor runs them while implementing and
+  fixes the implementation until green. Never edit the tests: they are not
+  yours. A test that looks wrong goes back to the test step with the Scenario
+  it traces to (dispute it, ADR-0012).
 
 ## 4b. Feature flags and contract migrations (ADR-0007, ADR-0011, ADR-0015)
 

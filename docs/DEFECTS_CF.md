@@ -55,6 +55,13 @@
 | G5 | Справочник голосов TTS — CRUD/lifecycle (§8.14 §2): сид+trilateral merge, custom-запись/архив, массовая замена source→target (`drafts_only\|republish`), `api/tts_voices.py`, привилегированные `/v1/tts-voices/*` | `storage/tts_voice_presets.py`, `api/tts_voices.py` | верификатор tts (в flow-schema только форма поля) |
 | G6 | Лог TTS-чанков звонка (§8.12 §1): `VoicePublisher.tts_chunks` (потолок 500), персист в `sessions.meta.tts_chunks`, отдача в `GET /api/sessions/{id}`, раскладка по репликам в транскрипте | `livekit_agent/publisher.py`, `api/voice.py`, `api/main.py` | верификатор tts |
 | G7 | UI-слои: `AsrModelPicker/AsrModelsPage` (asr), `VoicesPage/VoicePicker` (tts) — не Requirement и не в исключениях | `editor/src/` | верификаторы asr, tts |
+| G8 | **Сквозной пробел между двумя спеками**: §10.6 UI предложений Copilot (diff-рендер, счётчик 1/N, ✓/✗, Undo) — `editor-ui/spec.md:14` отдаёт Copilot отдельной capability, а `copilot/spec.md` UI не берёт. Плюс §10.4: эндпоинт фидбека `POST .../feedback` (`api/copilot.py:372-377`) и шаринг `?copilot=<id>`; §10.5: контракт TestCase/asserts (типы ассертов, `max_turns` 12 с потолком `MAX_TURNS_HARD=40`, `simulate.py:25,124` — клэмп не специфицирован и не тестируется) | `editor/src/copilot/`, `api/copilot.py`, `copilot/simulate.py` | верификатор copilot |
+
+### Расхождения в самой LIVING SPEC (не в спеках openspec)
+
+| # | Где | Суть |
+|---|---|---|
+| L1 | DOCUMENTATION.md §10.4 | «переписки персистентны (`data/copilot/`)» — устаревшая формулировка: фактически БД-таблицы `copilot_conversations`/`messages`/`proposals`. Найдено верификатором copilot; правится при следующем обновлении документа |
 
 ## Фаза 3 — верификация capability-спек (дополняется)
 

@@ -19,6 +19,13 @@ Process:
 1. Read the change (proposal, spec deltas, tasks) and the specs/code it
    touches. Ground every question in what is actually there - no generic
    checklists. Cite the file:line or Scenario that makes each question real.
+   Verify the plan's claims with tools, don't trust its prose (ADR-0021):
+   `graphify explain/query "<symbol>"` for what the touched code actually
+   connects to (if `graphify-out/` exists); `openspec show <spec> --type spec
+   --store <id>` for every store contract the plan names; the ponytail lens -
+   which tasks can be deleted because stdlib/an existing helper/the platform
+   already covers them; external API claims get checked against real docs
+   (context7 in the main session - flag the claim as UNVERIFIED if you cannot).
 2. Produce 5-12 numbered questions, ordered by how much damage a wrong
    answer causes. Each question is exactly three lines:
    ```
@@ -38,9 +45,12 @@ Process:
    `ASSUMABLE` (proceed on the recommended answer, marked as an assumption -
    ADR-0012).
 4. Emit a ready-to-paste `## Grill` markdown block: one line per question,
-   `- [BLOCKING|ASSUMABLE] <question> -> <recommended answer>`. The main
-   session appends the answered version to proposal.md verbatim, so it
-   archives with the change.
+   `- [BLOCKING|ASSUMABLE] <question> -> <recommended answer>`. Open the block
+   with the provenance header (ADR-0021):
+   `Grilled by: plan-griller agent | questions: N | plan changes: <one line or "none">`.
+   The main session appends the answered version to proposal.md verbatim, so it
+   archives with the change (an inline grill writes the same header with
+   `session inline` - honesty over ceremony).
 5. End with exactly one verdict line: `PLAN HOLDS` or
    `FIX THE PLAN: <short list>`.
 

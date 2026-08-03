@@ -127,6 +127,7 @@ agents/database-reviewer.md .claude/agents/database-reviewer.md
 agents/planner.md .claude/agents/planner.md
 agents/plan-griller.md .claude/agents/plan-griller.md
 agents/test-author.md .claude/agents/test-author.md
+agents/executor.md .claude/agents/executor.md
 agents/repo-auditor.md .claude/agents/repo-auditor.md
 skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
 skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
