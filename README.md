@@ -84,7 +84,7 @@ clean: `git status` shows the repo exactly as before install.
 | `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
 | `.claude/agents/` | `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step + `planner` and `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013) + `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/`), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
-| `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1` |
+| `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec-miner metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol after the colon. Only the path is resolved; an anchor that resolves to no file makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by both `make sdd-review` and `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
@@ -200,6 +200,14 @@ context - advisory by nature, the model can ignore them. Hooks
 ignored. Enforcement therefore lives only in hooks + CI gates, and every
 installed piece must be verifiable (a gate, a log line, a measured
 artifact) - the `sdd-doctor` audit section names what never runs.
+
+Spec anchors are paths, not symbols. `spec-lint` used to resolve a bare
+`ClassName.method()` by building a CamelCase->file index and falling back to
+`git grep`; in a monorepo that over-matched same-named classes across services
+and made `enforced_files` counts fiction. The resolver was dropped: write the
+path in the spec (`path/to/file.py:ClassName.method`), and the symbol after the
+colon stays there for humans and code-explorer. `spec-miner` emits that format;
+older specs mined with bare symbols report MISSING until rewritten.
 
 And today even the CI half is advisory on purpose (ADR-0015): branch
 protection is off and no check is required, so the only pieces that actually

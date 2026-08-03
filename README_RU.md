@@ -82,7 +82,7 @@ cd /путь/к/репозиторию && /путь/к/sdd-kit/install.sh --refr
 | `.github/workflows/autoreview.yml` | Автоматическое ревью PR: ИИ-ревью через headless `claude -p` с общим промптом `.claude/scripts/review-prompt.md`, которому подаётся отчёт статических анализаторов (radon, complexipy, vulture, semgrep security patterns), и он обязан его проверить перед публикацией; без секрета `CLAUDE_CODE_OAUTH_TOKEN` job завершается за секунды |
 | `.claude/agents/` | `backend-reviewer` (Python/FastAPI) и `database-reviewer` (PostgreSQL/SQLAlchemy) для шага ИИ-ревью + `planner` и `plan-griller` (план и гриль фазы 2 на opus через `model` frontmatter, ADR-0013) + `test-author` (падающие тесты фазы 3 по спек-дельте, sonnet, ADR-0016) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (блокирует правки кода без активной `openspec/changes/<id>/`), блокировщик `git commit --no-verify` и пакет выживания при PreCompact (`.claude/last-session-state.md` - активное изменение + незакоммиченная работа, чтобы агенты продолжали работу после компакции; идея из ProjectStore, ADR-0008) |
-| `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1` |
+| `.claude/scripts/spec-lint.py` | Свежесть спецификаций (`Last verified` против `git diff` по якорям `enforced:`) + проверка метаданных spec-miner; выполняется внутри `sdd-check`, только предупреждает, пока не включён `SPEC_LINT_STRICT=1`. Формат якоря: `<!-- enforced: path/to/file.py:ClassName.method -->` — сначала путь от корня репозитория, после двоеточия символ. Резолвится только путь; якорь, который не указывает на существующий файл, делает спеку MISSING (голые якоря вида `ClassName.method()` больше не резолвятся — см. «Заметки о дизайне») |
 | `.git/hooks/pre-commit` | Защита от коммитов в защищённые ветки (main/master/prod/stage блокируются, dev предупреждает; `SDD_ALLOW_PROTECTED=1` обходит), автофикс+форматирование ruff для застейдженного Python, проверки гигиены (маркеры слияния, файлы >5 МБ, `breakpoint()`, паттерны секретов/токенов, новые сабмодули, битый JSON/TOML/YAML) + `make sdd-check` (если хук уже есть, сливается вручную) |
 | `.claude/scripts/review-prompt.md` | Единственный канонический промпт ИИ-ревью: его читают и `make sdd-review`, и `autoreview.yml` |
 | `.claude/scripts/sdd-doctor.sh` | Доктор окружения (`make sdd-doctor`): нужные утилиты (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI и авторизация, регистрация в сторе, токен youtrack, наличие хуков/pre-commit, и (по профилю) наличие файлов `.env` для каждого сервиса, нужных свежему клону - только пути, никогда не значения секретов; запускается в конце bootstrap; находки в формате `{level, group, code, message, next}` с точной командой-исправлением, `--json` для машин (ADR-0008) |
@@ -190,6 +190,14 @@ uvx - от прошлой пробы остался мусор `.serena/`, ко�
 (pre-commit, PreToolUse/PreCompact) - это детерминированный код, и его игнорировать нельзя. Поэтому всё
 принудительное живёт только в хуках и CI-проверках, и каждая установленная часть должна быть проверяемой
 (проверка, строка в логе, измеримый артефакт) - секция audit в `sdd-doctor` показывает всё, что никогда не запускается.
+
+Якоря в спеках - это пути, а не символы. Раньше `spec-lint` резолвил голый
+`ClassName.method()` через индекс CamelCase->файл и `git grep` в качестве запасного
+варианта; в монорепозитории это цепляло одноимённые классы из соседних сервисов, и
+счётчик `enforced_files` превращался в выдумку. Резолвер убрали: пишите путь прямо в
+спеке (`path/to/file.py:ClassName.method`), а символ после двоеточия остаётся для людей
+и code-explorer. `spec-miner` выдаёт именно этот формат; старые спеки с голыми символами
+будут показывать MISSING, пока их не перепишут.
 
 И сегодня даже половина с CI - консультативная, осознанно (ADR-0015): branch protection выключена,
 required check не назначен, поэтому реально блокируют только локальные вещи (spec-guard, блокировщик

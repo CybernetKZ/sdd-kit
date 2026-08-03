@@ -29,6 +29,11 @@ OpenSpec change and uncommitted work from before the last context compaction.
   for refactoring/tooling use `skip_specs: true` in the change metadata).
 - Cross-service contracts live in the central store repository,
   wired in via `references:` in `openspec/config.yaml`.
+- A Requirement points at its code with
+  `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path
+  first, symbol after the colon. Grep these anchors by path to find the spec
+  covering a file; write them the same way in new Requirements (spec-lint
+  resolves the path and reports MISSING without one).
 
 ## Codebase search
 

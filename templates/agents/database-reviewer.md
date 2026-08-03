@@ -87,7 +87,7 @@ psql -c "SELECT indexrelname, idx_scan, idx_tup_read FROM pg_stat_user_indexes O
 
 When the repository contains `openspec/specs/`, verify the diff against the specs:
 
-1. Find relevant specs: match `<!-- enforced: ... -->` anchors against the changed files and symbols in the diff.
+1. Find relevant specs: `<!-- enforced: path/to/file.py:ClassName.method -->` anchors carry the repo-relative path, so grep the specs for the diff's changed file paths directly, then narrow by the symbol after the colon.
 2. Invariants: any change that can violate an invariant of a matched spec is a finding.
 3. Scenarios: changed behavior must still satisfy the WHEN/THEN scenarios. An intentional behavior change is only acceptable together with an active change under `openspec/changes/<change-id>/` that updates the spec.
 4. Severity: a spec violation, or a behavior change without a matching spec delta, is HIGH.
