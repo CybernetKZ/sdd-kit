@@ -28,7 +28,9 @@
 
 | # | Уровень | Суть |
 |---|---|---|
-| ~~R1~~ | **ОТОЗВАН 2026-08-03** | ❌ Ложноположительный. Проверено лично: `KnowledgeSearchSettings._threshold_range` (0..1) и `._limit_range` (1..100) в `engine/schema.py:697-709` **энфорсят** границы (ValueError при выходе), существуют с исходного коммита ТЗ №42 (`29e0a64d`). Найден майнером `rag` при сверке, подтверждён чтением кода. **Требуется правка store-дельты** `add-cf-rag-contract` — пункт «(a)» её секции Mismatches неверен |
+| ~~R1~~ | **ОТОЗВАН 2026-08-03, дельта исправлена** | ❌ Ложноположительный. `KnowledgeSearchSettings._threshold_range` (0..1) и `._limit_range` (1..100) в `engine/schema.py:697-709` **энфорсят** границы (ValueError при выходе), существуют с исходного коммита ТЗ №42 (`29e0a64d` — проверено `git show`). Найден майнером `rag` при перекрёстной сверке, подтверждён мной лично, пункт удалён из store-дельты; требование про форму `POST /search` переписано (границы зеркалятся и энфорсятся на стороне CF при сохранении флоу, остаточный риск — они не пинятся контрактом, нужна ручная сверка, если CybernetRAG изменит свои) |
+
+Прим.: остальные 12 пунктов дельты перепроверены построчно по коду и OpenAPI — **все подтверждены**, ни один не выдуман; в самой дельте они перелитерованы a–l после удаления ложного.
 | R2 | HIGH | Мягкая деградация ловит только `RagError`; парсинг ответа внутри — изменение схемы `SearchResponse` продюсером роняет тёрн `ValidationError`'ом |
 | R3 | MEDIUM | Method-agnostic retry-цикл ретраит оба POST без объявленной идемпотентности |
 | R4 | MEDIUM | `GET /knowledge-bases/{id}` пагинирует вложенные `files` по 10, CF не шлёт параметров — безопасно случайно |
@@ -93,6 +95,25 @@
 | V4 | MEDIUM | код | `expand-contract`: сужающая смена типа (`alter_column(type_=…)`) линтером НЕ детектится, хотя требование объявляет её заблокированной; маркер `allow-destructive` файловый, не по-операционный |
 
 Пробелы тестов, обнажившие V1–V3: нет тестов на cross-org для deliveries/copilot/component+observer usage; нет теста «на Postgres `_upgrade_to_*` — no-op» (поэтому V2 и не замечали); нет теста «discard/restore сохраняет черновик символическим».
+
+### Волна 4: tenancy-auth (верификация 2026-08-03, opus) — 2 MISMATCH, 8 новых дефектов
+
+Капабилити безопасности; проверялось адресно: подделка контекста, обходы поддерева, fail-open в матрице ролей.
+
+| # | Уровень | Тип | Суть |
+|---|---|---|---|
+| TA1 | **CRITICAL** | код (захват аккаунта между тенантами) | `UserRepository.create` (`storage/repos/accounts.py:427-438`) ищет архивную строку по email **глобально**, не проверяя, что её `organization_id` в поддереве вызывающего админа (`api/users.py:97-104`; route-guard `_require_org_in_subtree` проверяет только ЦЕЛЕВУЮ организацию). Любой админ любой организации «реинкарнирует» архивную учётку чужого тенанта в свою орг, **сохранив `keycloak_id`** — при следующем входе владелец этой Keycloak-идентичности резолвится по `sub` в организацию атакующего с назначенной им ролью |
+| TA2 | MEDIUM (security) | код | `verify_token` (`api/auth.py:164-174`): `verify_aud` включается только при непустом `settings.audience` (дефолт пуст), `azp` не проверяется нигде — хотя `AuthSettings` (`:63-67`) заявляет, что `client_id` «ожидается в aud/azp». Любой RS256-токен того же realm, выпущенный ДРУГОМУ клиенту (включая ID-token и токены `admin-cli`/`account`), принимается как access-token кабинета |
+| TA3 | MEDIUM | код (расширение V1b) | `DELETE /api/copilot/conversations/{id}` (`api/copilot.py:169` → `storage/repos/copilot.py:248`) удаляет переписку ЛЮБОЙ организации — V1b не только утечка, но и межорганизационное разрушающее действие. Плюс `CopilotRepository.list()` без `flow_name` (`:205-212`) отдаёт переписки всех организаций через `GET /api/copilot/conversations` |
+| TA4 | LOW (security) | код | Email уникален глобально (`accounts.py:427-429`) → `POST /api/users` с чужим email отдаёт 400 «уже существует»: оракул перечисления email между организациями |
+| TA5 | LOW (security) | код | `_internal_token_valid` (`api/auth.py:246-249`) сравнивает сервисный токен обычным `==`, не `secrets.compare_digest`. Токен даёт полный root-admin без scope — нужно constant-time |
+| TA6 | LOW | док/спека (мёртвый код) | `api/auth.py:293-294` — ветка «организация не найдена» для архивной цели недостижима: `is_in_subtree` отваливает раньше (`list_all` фильтрует архивные). Fail-closed, вреда нет; сценарий спеки описывал несуществующее поведение |
+| TA7 | LOW | спека | Спека утверждала, что `organization_id` меняется через `PATCH /api/users/{id}` — в коде `UserUpdate` (`api/users.py:65-67`) такого поля нет, `UserRepository.update` (`accounts.py:451-464`) правит только `display_name`/`role`. Перевод между организациями возможен только реинкарнацией (см. TA1) |
+| TA8 | INFO | уточнение V1c | Утечка ограничена СПИСКОМ ССЫЛОК: сама сущность гейтится `_visible_row`/`_org_visible` (`components.py:140`, `observers.py:119`), но `ComponentRefRow`/`ObserverReactionRow` выбираются без scope (`components.py:143-148`, `observers.py:122-128`) — для shared-компонента каталога видны `flow_name` + `organization_id` чужих орг. Формулировку V1c уточнить |
+
+Подтверждено чистым: подпись RS256 по JWKS realm, `exp`, fail-closed при неизвестной роли, `is_in_subtree` не пускает вверх/вбок (`home` берётся из БД, не из заголовка), формат и хеширование API-ключей, `temp_password` не логируется. V1a подтверждён и оказался хуже описания: у `WebhookDeliveryRow` вообще нет `organization_id`, а payload доставки содержит ПД звонка.
+
+Значимый пропуск майнинга (закрывается fixup'ом): весь realm/dev-auth слой — `sslRequired: none` в dev vs `external` в бою, `make dev-auth` с direct grant, **exempt-пути периметра** (`_EXEMPT_PATHS = {/api/auth/config}`, `_PUBLIC_RECORDING = /api/recordings/rec-[0-9a-f]+` — GET без входа), `_MEMBER_DENIED_EXPORT`, `sha256Fallback` для insecure context, запрет архивации собственной организации.
 
 ### Волна 3: voice-pipeline (верификация 2026-08-03, opus) — 4 MISMATCH, 25 req
 
