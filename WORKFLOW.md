@@ -112,7 +112,7 @@ flowchart TD
     %% ============ SHIP ============
     subgraph SHIP["6 · Ship & handoff (feature-flow 7, 8 · incident-flow 5, 6)"]
         PR["Open PR to dev<br/>[feature/WEB-XXXX] title, test plan in body.<br/>Signals: branch age (2d warn / 5d red),<br/>PR size (xl-ok label needs 'Why XL')"]
-        CI["All CI checks are ADVISORY today (ADR-0015):<br/>no branch protection, no required check.<br/>sdd-gate, tests (make test), tbd-gates,<br/>autoreview; traceability + QA quality gates (planned)"]
+        CI["All CI checks are ADVISORY today (ADR-0015):<br/>no branch protection, no required check.<br/>sdd-gate, tests (make sdd-test), tbd-gates,<br/>autoreview; traceability + QA quality gates (planned)"]
         CIOK{"Gates green?"}
         MERGE["Merge to dev"]
         HANDOFF["Ticket -> status: ready_to_test<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check, flag name + FLAG_NAME=1 if any"]
@@ -318,7 +318,7 @@ Last verified: 2026-08-01. Update this table when a planned piece goes live.
 | **feature flags** | **dormant / on demand** (ADR-0015): the registry + `make sdd-flags` ship and work, but no process step requires a flag. Open question: who sets `FLAG_X=1` on stage/prod and where |
 | central store (cybernet-specs) | live - consumer is the **agent** reading cross-service specs at intake/planning, not a machine gate (ADR-0015) |
 | RAISE intake (form, RICE, board) | company process being introduced (ADR-0009) |
-| `make test` single CI entry point (ADR-0003) | **есть, advisory** (ADR-0015): `make test` (ruff + pytest, graceful skip) runs locally and as the `tests` CI job - green/red, not required |
+| `make sdd-test` single CI entry point (ADR-0003) | **есть, advisory** (ADR-0015): `make sdd-test` (ruff + pytest, graceful skip) runs locally and as the `tests` CI job - green/red, not required |
 | human QA owning phase 3 (writes tests before code) | **target state** (ADR-0016) - today `test-author` writes, human QA validates |
 | traceability gate (Scenario ⇄ test) in CI | **planned** - no implementation yet |
 | QA quality gate in CI | **planned** |

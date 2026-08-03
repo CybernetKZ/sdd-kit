@@ -25,8 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - name: make test (advisory)
-        run: make test
+      - name: make sdd-test (advisory)
+        run: make sdd-test
 
   # TBD disciplines (ADR-0006): branch age + PR size.
   # Escape hatch: labels `long-lived-ok` / `xl-ok` - anyone may set them, but the

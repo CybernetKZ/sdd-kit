@@ -9,7 +9,7 @@ TODO: 2-4 sentences - why this repository exists and who consumes it.
 
 ## Commands
 
-- Tests and all checks: `make test`
+- Tests and all checks: `make sdd-test` (kit) or the repo's own test entry point
 - SDD checks only (specs, context): `make sdd-check`
 - Run locally: TODO
 

@@ -29,7 +29,7 @@
 # without a TTY (or with SDD_KIT_ASSUME_YES=1) they print the command instead.
 #
 # Basis: openspec in every repo, AGENTS.md <= 500 lines,
-# make test/sdd-check in CI + PreToolUse hooks.
+# make sdd-test/sdd-check in CI + PreToolUse hooks.
 set -euo pipefail
 
 KIT="$(cd "$(dirname "$0")" && pwd)"
@@ -470,6 +470,9 @@ EOF
   say "  2) make sdd-gate a required check in branch protection settings"
   say "  3) enable branch protection on dev (no direct pushes)"
   say "  4) seed the specs: run the spec-miner agent one capability at a time"
+  say "  4b) build the code graph for intake: 'make sdd-index' (needs an LLM API"
+  say "      key for the first build; on a Claude subscription run the interactive"
+  say "      '/graphify' command in Claude Code instead — later updates need no key)"
   say "  5) AI review runs locally: 'make sdd-review' (your own subscription login;"
   say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
   say "     (autoreview.yml) skips in seconds without one)"
