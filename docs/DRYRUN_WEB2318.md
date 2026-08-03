@@ -156,3 +156,27 @@ M4.3 чист: `make sdd-index` при существующем графе - и�
 |---|---|---|---|
 | M4-1 | **`graphify affected` не существует** - ни в CLI (path/explain/diagnose/query/...), ни в скилле graphify. G3-фикс вписал выдуманную команду в 3 файла кита (feature-flow, incident-flow, AGENTS.md-шаблон), нарушив правило "каждую команду сначала выполни" | высокий | **исправлено**: заменено на `query "<sym>"` (BFS fan-out ≈ blast radius, проверено: 85 узлов от AgentWB) + честная оговорка "точные reverse deps - grep/ast-grep, граф держит узел на файл" |
 | M4-2 | `graphify explain` работает (файл:строка, typed edges), но Depends()-инъекции FastAPI не попадают в рёбра AST - degree узла это покрытие экстракции, не реальное использование; симвл дублируется по файлам (13 узлов AgentWB) | инфо | ограничение graphify, оговорка про INFERRED/verify-in-code в ките уже есть |
+
+## M5. Make-цели и store - проверяется 2026-08-03
+
+M5.1 чист: doctor 0 fail; WARN про gitignored AGENTS.md - это работающий фикс M2-1.
+M5.3 чист: validate 2 passed, spec-lint advisory, JSON-шума нет (фикс M2-2 виден).
+
+| # | Проблема | Приоритет | Статус |
+|---|---|---|---|
+| M5-1 | doctor флажил `repo-auditor` (штатный агент манифеста) как "extra agent" - список известных агентов не обновлён при добавлении агента (рецидив E1) | низкий | **исправлено**: repo-auditor в списке известных (проверено на полигоне: info исчез) |
+| M5-2 | **`make sdd-test` врёт в монорепо**: "no ruff config" при живом `backend/pyproject.toml [tool.ruff]` и "no tests found" при 827 тестах в `backend/tests` - детекция смотрит только в корень | средний | **исправлено**: `SDD_TEST_CMD` override (задаётся в корневом Makefile до `-include Makefile.sdd` или в env; проверены все 3 ветки: skip/delegate/fail) + честные сообщения "at the repo root ... set SDD_TEST_CMD" |
+
+M5.2: `warning: overriding recipe` отсутствует (фикс E2 подтверждён).
+M5.4 чист: `make sdd-review` на подписке - "LGTM - no CRITICAL/HIGH issues".
+M5.5 чист: store list (1 стор) -> list --specs (все 8 спек) -> show
+external-webapi-authorization (363 строки) из свежего клона. **Блок M5 закрыт**:
+2 находки (M5-1 repo-auditor "extra", M5-2 sdd-test в монорепо), обе закрыты.
+
+## Итог прогона M0-M5 (2026-08-03)
+
+Все 5 блоков пройдены. Новых находок за прогон: 13 (M0: 5, M1: 3, M2: 3, M3: 3,
+M4: 2, M5: 2, минус инфо-строки), из них высоких - 3 (M0-4 /graphify unknown,
+M2-1 AGENTS.md в .gitignore, M4-1 выдуманный `graphify affected`). Все закрыты в
+ките и раскатаны по 6 боевым репо + полигон. Открытым остаётся только решение
+владельца по .gitignore WBN (M2-1) и бэклог kit-flow(1-3).

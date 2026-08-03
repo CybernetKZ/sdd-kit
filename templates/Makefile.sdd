@@ -54,7 +54,14 @@ sdd-check:
 # collides with a repo's own test target. Each half no-ops with a clear echo
 # when the repo has nothing of that kind to run; a real run that fails exits
 # non-zero (this target is meant to go red when it should).
+# Monorepos (configs/tests per service, not at the root): set SDD_TEST_CMD in
+# the root Makefile above the `-include Makefile.sdd` line (or in env) and
+# sdd-test delegates to it wholesale.
 sdd-test:
+ifneq ($(strip $(SDD_TEST_CMD)),)
+	@echo "make sdd-test: delegating to SDD_TEST_CMD: $(SDD_TEST_CMD)"
+	@$(SDD_TEST_CMD)
+else
 	@FAILED=0; \
 	if [ -f ruff.toml ] || [ -f .ruff.toml ] || { [ -f pyproject.toml ] && grep -q '^\[tool\.ruff\]' pyproject.toml; }; then \
 		echo "make sdd-test: ruff config found — running ruff check ."; \
@@ -63,7 +70,7 @@ sdd-test:
 		else echo "FAIL: ruff config found but neither ruff nor uvx is installed"; FAILED=1; RUFF=""; fi; \
 		[ -n "$$RUFF" ] && { $$RUFF check . || FAILED=1; }; \
 	else \
-		echo "make sdd-test: no ruff config (ruff.toml/.ruff.toml/[tool.ruff]) — lint skipped"; \
+		echo "make sdd-test: no ruff config at the repo root — lint skipped (per-service configs? set SDD_TEST_CMD)"; \
 	fi; \
 	if [ -d tests ] || [ -f pytest.ini ] || { [ -f pyproject.toml ] && grep -q '^\[tool\.pytest' pyproject.toml; }; then \
 		echo "make sdd-test: tests found — running pytest -q"; \
@@ -73,9 +80,10 @@ sdd-test:
 		else echo "FAIL: tests found but neither pytest, uv, nor uvx is installed"; FAILED=1; PYTEST=""; fi; \
 		[ -n "$$PYTEST" ] && { $$PYTEST -q || FAILED=1; }; \
 	else \
-		echo "make sdd-test: no tests found — skipped"; \
+		echo "make sdd-test: no tests at the repo root — skipped (per-service tests? set SDD_TEST_CMD)"; \
 	fi; \
 	exit "$$FAILED"
+endif
 
 # Codebase knowledge graph (graphify), builds/updates graphify-out/graph.json
 # over source code + openspec/ + docs/. Manual invocation only — run it

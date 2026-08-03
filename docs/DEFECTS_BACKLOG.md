@@ -173,7 +173,7 @@ state the code truth. Remaining work is doc fixes by the doc owners:
 |---|---|---|---|
 | kit-flag(1) | HIGH | Механизм включения флага в среде не определён: неизвестно, где физически ставится `FLAG_X=1` на stage и prod (helm values? `.env` сервиса? переменные CI/CD?) и у кого туда доступ. Пока ответа нет, handoff-комментарий "включи `FLAG_X=1`" адресован в пустоту. Закрыть ДО первого боевого флага | ADR-0015 п.2 |
 | kit-frontend(1) | LOW | Фронтового профиля нет: `web-frontend-new` ставится обычной установкой - ревьюверы бэкенд-ориентированные (`backend-reviewer`/`database-reviewer`), `feature_flags.py` на Python там фактически no-op. Нужен `frontend-reviewer` и TS-вариант реестра флагов. Низкий приоритет: бэкенд первого класса | ADR-0015 п.5 |
-- **make test в WBN**: pytest без окружения репо падает на collection (30 errors) - тесты WBN живут в Docker. Advisory-job будет красным. Вариант: переменная-override `SDD_TEST_CMD` в Makefile.sdd или repo-специфичная цель test. (2026-08-02)
+- ~~**make test в WBN**: pytest без окружения репо падает на collection (30 errors) - тесты WBN живут в Docker. Advisory-job будет красным. Вариант: переменная-override `SDD_TEST_CMD` в Makefile.sdd или repo-специфичная цель test. (2026-08-02)~~ **FIXED 2026-08-03** (M5-2): `SDD_TEST_CMD` override в Makefile.sdd; без него - честный skip "at the repo root".
 
 ## Additions 2026-08-03 (ручной прогон M3, пожелания владельца)
 

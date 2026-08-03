@@ -208,7 +208,7 @@ print(' '.join(sorted(servers - allowed)))
     for a in .claude/agents/*.md; do
       [ -f "$a" ] || continue
       name=$(basename "$a" .md)
-      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller|test-author) ;;
+      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor) ;;
         *) note audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
       esac
     done
