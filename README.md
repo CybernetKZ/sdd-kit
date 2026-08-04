@@ -45,12 +45,11 @@ cd /path/to/repo && /path/to/sdd-kit/install.sh --refresh
 `--refresh` re-copies only the **kit-owned manifest** (the list lives in
 `install.sh`, function `kit_manifest`): `.claude/hooks/*.cjs`,
 `.claude/agents/*.md`, `.claude/skills/*/` (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling),
-`.claude/scripts/{spec-lint.py,sdd-doctor.sh,review-prompt.md}`, `Makefile.sdd`
-and `.git/hooks/pre-commit`
-(re-assembled with the LIVING SPEC fragment where the profile asks for it).
+`.claude/scripts/{spec-lint.py,sdd-doctor.sh,review-prompt.md}`, `scripts/sdd/*.sh`
+and `.git/hooks/pre-commit`.
 Each changed file is reported as `refreshed: <path> (+X/-Y lines)`; a second run
 reports zero. Repo-owned files are never touched: `AGENTS.md`, `CLAUDE.md`,
-`.spec-guard-paths`, `feature_flags.py`, `.claude/expected-env`, `ruff.toml`,
+`.spec-guard-paths`, `.claude/expected-env`, `ruff.toml`,
 `openspec/**`, `.mcp.json`. `.claude/settings.json` is compared, never written:
 if its `hooks` block drifted from the template you get a WARN and merge by hand
 (the repo may have added its own hooks). Review the result with `git diff`
@@ -77,15 +76,14 @@ clean: `git status` shows the repo exactly as before install.
 | Artifact | Purpose |
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
-| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `Makefile.sdd` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
-| `Makefile.sdd` (+ `-include` in Makefile) | 6 targets: `sdd-check` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `sdd-flags`, `sdd-doctor`, `sdd-test` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `sdd-review` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `sdd-index` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
-| `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - not installed by default** (ADR-0015): copy `templates/feature_flags.py` by hand when the team takes its first flag. Flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails locally. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
+| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `scripts/sdd/check.sh` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
+| `scripts/sdd/*.sh` | 5 scripts (the Makefile is gone, ADR-0026 §3): `check.sh` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `doctor.sh`, `test.sh` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `review.sh` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `index.sh` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol (or line/range) after the colon. **Both halves are checked**: a missing file or a symbol that does not appear in it makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
-| `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `make sdd-check` (merged by hand if a hook already exists) |
-| `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by `make sdd-review` |
-| `.claude/scripts/sdd-doctor.sh` | environment doctor (`make sdd-doctor`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
+| `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `scripts/sdd/check.sh` (merged by hand if a hook already exists) |
+| `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by `scripts/sdd/review.sh` |
+| `.claude/scripts/sdd-doctor.sh` | environment doctor (`scripts/sdd/doctor.sh`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
 | `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> validate the spec delta, then the `test-author` agent writes the tests BEFORE code (QA-SDD-PROCESS.md, ADR-0016; the implementer never writes them, human QA ownership is the target) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
 | `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by the `test-author` agent from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
@@ -149,11 +147,11 @@ repo.
    and `docs/archive/STORE_VERIFICATION.md`. Anchor format is
    `<!-- enforced: path/to/file.py:ClassName.method -->` and `spec-lint.py`
    validates **both** halves - a fabricated symbol makes the spec MISSING.
-4. Run `make sdd-doctor` and clear the FAILs. WARNs are advisory clutter
+4. Run `scripts/sdd/doctor.sh` and clear the FAILs. WARNs are advisory clutter
    reports, not blockers.
 5. AI review auth (subscription, no API key): tokens are PER-DEVELOPER,
    machine-level - no shared GitHub secret. Run reviews locally with
-   `make sdd-review`; the CI AI-step skips (in seconds) when no secret exists.
+   `scripts/sdd/review.sh`; there is no CI AI-step (ADR-0023/0026).
 
 GitHub branch protection and required checks are intentionally **not** part of
 setup: enforcement stays local and advisory today (ADR-0015). Turning the
@@ -196,16 +194,15 @@ each carries the relevant protocol inline.
 
 | Util | Blocks? | What it does |
 |---|---|---|
-| `make sdd-check` | yes (pre-commit + CI job) | AGENTS.md present/≤500 lines, `openspec validate --all --strict`, `sdd-flags`; spec-lint advisory |
+| `scripts/sdd/check.sh` | yes (pre-commit) | AGENTS.md present/≤500 lines, `openspec validate --all --strict`; spec-lint advisory |
 | `.claude/scripts/spec-lint.py` | only with `SPEC_LINT_STRICT=1` | spec freshness (`> Last verified: <date> (commit <hash>)` vs `git diff` over `enforced:` anchors) + metadata (`id`+`enforced` on every Requirement, ids unique, whitelisted keys only, no `#### Scenario:` under `## Invariants`) |
 | `.git/hooks/pre-commit` | yes | protected branches, hygiene, secrets, ruff autofix, then `sdd-check` when spec-related files are staged |
 | `.claude/hooks/spec-guard.cjs` | yes, once `.spec-guard-paths` is filled | no code edits without an active change |
 | `.claude/hooks/block-no-verify.cjs` | yes | no `--no-verify` / `commit -n` |
-| `make sdd-doctor` | no | environment + repo + clutter audit, `--json` for machines |
-| `make sdd-test` | no | ruff + pytest, advisory (ADR-0015); `SDD_TEST_CMD` overrides for monorepos |
-| `make sdd-review` | no | local AI review of `git diff $(SDD_REVIEW_BASE)...HEAD` |
-| `make sdd-index` | no | graphify graph for navigation only (ADR-0004) |
-| `make sdd-flags` | yes | expired feature flags: WARN for 7 days, then FAIL |
+| `scripts/sdd/doctor.sh` | no | environment + repo + clutter audit, `--json` for machines |
+| `scripts/sdd/test.sh` | no | ruff + pytest, advisory (ADR-0015); `SDD_TEST_CMD` overrides for monorepos |
+| `scripts/sdd/review.sh` | no | local AI review of `git diff $SDD_REVIEW_BASE...HEAD` |
+| `scripts/sdd/index.sh` | no | graphify graph for navigation only (ADR-0004) |
 
 Are they wired to OpenSpec correctly? Yes, with two things to know. The CLI is
 pinned to `1.7.0` in four places (`# openspec-pin`) - bump them together or
@@ -213,7 +210,7 @@ pinned to `1.7.0` in four places (`# openspec-pin`) - bump them together or
 --strict` checks *structure* (a Requirement needs at least one Scenario, a
 change needs its deltas), while `spec-lint.py` checks *truthfulness* (do the
 `enforced:` anchors point at symbols that exist, is the spec still fresh). Both
-run inside `make sdd-check`; neither replaces the other.
+run inside `scripts/sdd/check.sh`; neither replaces the other.
 
 ## Working a new task
 
@@ -252,7 +249,7 @@ Concretely, for "we have a new task":
    never writes its own tests.
 6. **`executor` implements** against `tasks.md` until the tests go green. It
    stops and reports rather than improvising past the plan.
-7. **`make sdd-test`, `make sdd-check`, `make sdd-review`**, then the reviewer
+7. **`scripts/sdd/test.sh`, `scripts/sdd/check.sh`, `scripts/sdd/review.sh`**, then the reviewer
    agents on the diff.
 8. **PR -> merge -> archive the change** (`/openspec-archive-change`), which
    folds the deltas into `openspec/specs/`. If the task touched a cross-repo
@@ -285,10 +282,10 @@ sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 **Graphify** (repo knowledge graph - faster/cheaper code analysis; PyPI name
 `graphifyy`, installed as `graphifyy[postgres,sql]`), **ast-grep** (AST codemods
 for bulk mechanical refactors), **ruff** (linter/formatter behind the pre-commit
-hook and `make sdd-test`), and the **static review tools** radon / complexipy /
-vulture / semgrep (leads for `make sdd-review` via `/tmp/tools.txt`; each is
+hook and `scripts/sdd/test.sh`), and the **static review tools** radon / complexipy /
+vulture / semgrep (leads for `scripts/sdd/review.sh` via `/tmp/tools.txt`; each is
 optional - a missing one just means fewer leads).
-`make sdd-doctor` warns when a core tool is missing.
+`scripts/sdd/doctor.sh` warns when a core tool is missing.
 
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
 (agent-ergonomic CLI wrappers, ~/.claude/skills), **serena** (semantic
@@ -309,8 +306,8 @@ prompt-cache prefix, measured +45..62% cost - see
 - `YOUTRACK_MCP_DIR` - where youtrack-mcp lives (default search: ~/dev, ~/cybernet).
 - `SDD_KIT_ASSUME_YES=1` - auto-confirm installs in non-TTY runs (never the token).
 - `SPEC_LINT_STRICT=1` - make spec freshness/metadata violations blocking.
-- `SDD_TEST_CMD` - replace the `make sdd-test` command (monorepos, non-pytest stacks).
-- `SDD_REVIEW_BASE` - diff base for `make sdd-review` (default `origin/HEAD`, fallback `dev`).
+- `SDD_TEST_CMD` - replace the `scripts/sdd/test.sh` command (monorepos, non-pytest stacks).
+- `SDD_REVIEW_BASE` - diff base for `scripts/sdd/review.sh` (default `origin/HEAD`, fallback `dev`).
 - `SDD_ALLOW_PROTECTED=1` - one-off bypass of the protected-branch commit guard.
 - `SDD_STORE_ID` / `SDD_STORE_DIR` / `SDD_STORE_GIT` - central spec store id,
   local checkout path, and clone URL (defaults: cybernet-specs,

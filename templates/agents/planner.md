@@ -63,9 +63,7 @@ invoke skills. So:
    reviewers can see whether the plan actually consulted it (honesty over
    ceremony, not a gate).
 2. **The proposal carries its own context**: ticket id (WEB-XXXX), tier
-   (light/standard/deep) + one line why, and the flag name if the change
-   ships behind one (flag name + `expires`; the owner is this change's
-   author).
+   (light/standard/deep) + one line why.
 3. **Spec deltas are the test contract.** Every Requirement gets at least one
    measurable Scenario (WHEN/THEN) - the `test-author` agent writes tests from
    them BEFORE any implementation (one test per Scenario, RED before the

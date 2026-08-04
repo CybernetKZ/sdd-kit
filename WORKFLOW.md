@@ -77,7 +77,7 @@ flowchart TD
 
     %% ============ IMPLEMENT ============
     subgraph IMPL["4 · Implement (feature-flow 4, 4b · incident-flow 4)"]
-        CODE["Branch feature/WEB-XXXX off dev.<br/>executor agent (sonnet) walks tasks.md;<br/>code + spec deltas move together.<br/>The tests already exist - it runs them<br/>while implementing, and stops-and-reports<br/>on any deviation from the plan.<br/>Epic: several small PRs; a feature flag only<br/>if it must ship dark (optional, ADR-0015)"]
+        CODE["Branch feature/WEB-XXXX off dev.<br/>executor agent (sonnet) walks tasks.md;<br/>code + spec deltas move together.<br/>The tests already exist - it runs them<br/>while implementing, and stops-and-reports<br/>on any deviation from the plan.<br/>Epic: several small PRs; wiring-in lands with<br/>the LAST task (no flags, ADR-0026)"]
         RUN1["Run the tests"]
         T1{"Green?"}
         FIX["Fix implementation<br/>(never the tests - not the implementer's)"]
@@ -90,7 +90,7 @@ flowchart TD
     %% ============ VERIFY ============
     subgraph VERIFY["5 · Verify & review (feature-flow 5, 6 · incident-flow 5)"]
         MANUAL["Manual testing: walk the QA Scenarios<br/>on local/stage; incident: re-run the<br/>incident scenario, record before/after"]
-        SDDCHECK["make sdd-check green<br/>(AGENTS.md + openspec validate + spec-lint)"]
+        SDDCHECK["scripts/sdd/check.sh green<br/>(AGENTS.md + openspec validate + spec-lint)"]
         REVIEW["Review: reviewer agents on the diff<br/>(backend-reviewer + database-reviewer,<br/>ECC-derived, ours now)"]
         SCOPE{"Findings in scope<br/>of the ticket?"}
         APPLY["Implement suggestions"]
@@ -106,12 +106,12 @@ flowchart TD
 
     %% ============ SHIP ============
     subgraph SHIP["6 · Ship & handoff (feature-flow 7, 8 · incident-flow 5, 6)"]
-        PR["Open PR to dev<br/>[feature/WEB-XXXX] title, test plan in body.<br/>Branch age (~2d) / PR size (~1500 lines) are<br/>process rules the dev watches, no label, no check"]
-        LOCALGATES["No server CI (ADR-0023): local gates only,<br/>run before opening the PR - spec-guard +<br/>pre-commit's make sdd-check, plus<br/>make sdd-test / sdd-review on demand"]
+        PR["Open PR to dev<br/>[feature/WEB-XXXX] title, test plan in body.<br/>The developer opens it; the agent runs gh pr create<br/>ONLY on an explicit command (ADR-0026).<br/>Branch age (~2d) / PR size (~1500 lines) are<br/>process rules the dev watches, no label, no check"]
+        LOCALGATES["No server CI (ADR-0023): local gates only,<br/>run before opening the PR - spec-guard +<br/>pre-commit's scripts/sdd/check.sh, plus<br/>scripts/sdd/test.sh / review.sh on demand"]
         GATESOK{"Local gates green?"}
         MERGE["Merge to dev"]
-        HANDOFF["Ticket -> status: ready_to_test<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check, flag name + FLAG_NAME=1 if any"]
-        QA["QA verifies on stage; if there IS a flag,<br/>it is enabled with FLAG_NAME=1 per the handoff<br/>comment, then the flag owner enables it in prod<br/>(same owner deletes it at expires, ADR-0013);<br/>change archived"]
+        HANDOFF["Ticket -> status: ready_to_test<br/>(dev by default, agent on explicit command)<br/>+ comment for QA ≤ 1 paragraph:<br/>what & how to check"]
+        QA["QA verifies on stage;<br/>change archived"]
         PR --> LOCALGATES --> GATESOK
         GATESOK -- "no" --> APPLY
         GATESOK -- "yes" --> MERGE --> HANDOFF --> QA
@@ -148,14 +148,12 @@ flowchart LR
     ASTG(["ast-grep<br/>bulk mechanical refactors"]) -.-> P4
     CDA(["chrome-devtools-axi<br/>frontend debug/test loop"]) -.-> P4
     CDA -.-> P5
-    FLAGS(["feature_flags.py + make sdd-flags<br/>name -> expires registry (ADR-0007);<br/>on demand, not every change (ADR-0015)"]) -.-> P4
-    FLAGS -.-> P6
     AGENTS(["reviewer agents + static report<br/>(ruff, radon, complexipy, vulture, semgrep)"]) -.-> P5
     AGENTS -.-> P6
     GHA(["gh-axi<br/>PR ops from the agent (no server CI to drive, ADR-0023)"]) -.-> P6
 
     classDef tool fill:#e8f4e8,stroke:#4a8,stroke-dasharray: 4 3
-    class YTMCP,STORE,GRAPH,C7,OS,GWD,ASTG,CDA,GHA,AGENTS,FLAGS tool
+    class YTMCP,STORE,GRAPH,C7,OS,GWD,ASTG,CDA,GHA,AGENTS tool
 ```
 
 ## Procedure lives in the skills, not here
@@ -192,7 +190,7 @@ single-sourced; this is the one-line summary plus where to read them:
 | `test-author` agent | phase 3 on sonnet (ADR-0016): one failing test per Scenario from the spec delta, tracer `# spec: ...`, RED confirmed; writes test files only, never implementation |
 | `executor` agent | phase 4 on sonnet (ADR-0021): walks `tasks.md` of a grilled change with RED tests, ticking tasks as it goes; never edits tests, never commits, stops-and-reports on any deviation from the plan instead of improvising - disputes and "change the plan?" calls go back to the orchestrator |
 | `spec-miner` agent | repo onboarding only (seed specs one capability at a time), NOT in the per-task loop; OpenSpec has no built-in equivalent |
-| reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, run locally only (`make sdd-review`) - no server CI autoreview anymore (ADR-0023) |
+| reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, run locally only (`scripts/sdd/review.sh`) - no server CI autoreview anymore (ADR-0023) |
 
 ## No magic: prompts vs hooks (what actually enforces)
 
@@ -213,7 +211,7 @@ Consequences:
   (`sdd-ci.yml`, `autoreview.yml`) are archived, not installed, so there is
   nothing to make required or optional server-side. The only things that
   actually block anyone are local - spec-guard, the `--no-verify` blocker,
-  and the pre-commit hook running `make sdd-check`. Branch age and PR size
+  and the pre-commit hook running `scripts/sdd/check.sh`. Branch age and PR size
   (ADR-0006) are process rules a developer watches themselves, with no
   automated signal at all. Bringing server CI back is one deliberate
   decision away - the templates wait in `docs/archive/`.
@@ -241,7 +239,7 @@ Installed per developer machine by `install.sh --machine-only` (core stack, defa
 | **rtk** | compresses shell output in every Bash call (global hook) |
 | **ponytail** | minimal working solutions; less code, fewer tokens (plugin) |
 | **ast-grep** | structural codemods for bulk mechanical refactors |
-| **spec-guard + pre-commit hooks** | block code edits without an active OpenSpec change (not in conversation_flow - LIVING SPEC exception); ruff, hygiene, `make sdd-check` on commit |
+| **spec-guard + pre-commit hooks** | block code edits without an active OpenSpec change (not in conversation_flow - LIVING SPEC exception); ruff, hygiene, `scripts/sdd/check.sh` on commit |
 
 Opt-in (y/N): **gh-axi**, **chrome-devtools-axi**, **serena** (earlier trial
 left `.serena/` litter; the sdd-doctor audit section flags it). **caveman** is not installed -
@@ -256,28 +254,26 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | Правило (одной фразой) | ADR |
 |---|---|
 | Enforcement живёт только в детерминированном коде (хуки; серверных CI-гейтов больше нет, ADR-0023); промпты - совет | ADR-0003, уточнено ADR-0023 |
-| `make sdd-test` - единая точка входа тестов, по требованию (не CI job, ADR-0023) | ADR-0003, уточнено ADR-0023 |
+| `scripts/sdd/test.sh` - единая точка входа тестов, по требованию (не CI job, ADR-0023; скрипт вместо make-таргета, ADR-0026) | ADR-0003, уточнено ADR-0023/0026 |
 | Граф repo - только навигация/контекст, никогда гейт; `[INFERRED]` рёбра проверять в коде | ADR-0004 |
 | Ветка ≤2 дней, размер PR ограничен; сигналы >1500 строк / >2 дней - процесс-правило без автоматики, CI не предупреждает и не блокирует (ADR-0023) | ADR-0006, уточнено ADR-0023 |
-| Реестр фича-флагов: имя -> `expires`, доступ через `is_enabled()`, OFF по умолчанию, `make sdd-flags` красит локально (не CI, ADR-0023) через 7 дней после `expires` | ADR-0007, уточнено ADR-0023 |
-| Крупная замена - branch by abstraction, абстракция удаляется после cutover | ADR-0007 §5 |
+| Фича-флаги выпилены подчистую: ни реестра, ни lifecycle; переключатель при нужде - обычный конфиг без процесса | ADR-0026 (supersedes ADR-0007) |
+| Крупная замена - branch by abstraction, абстракция удаляется после cutover | ADR-0007 §5, сохранено ADR-0026 |
 | AGENTS.md - канон контекста агента, `CLAUDE.md` - симлинк на него, лимит 500 строк и минимум содержимого (гейт sdd-check) | ADR-0002 |
 | Задачи приходят через RAISE: форма запроса + RICE; баг-репорт сразу, без RICE; urgent ускоряет ПРИОРИТИЗАЦИЮ, не разработку | ADR-0009 |
 | Тиры (light/standard/deep) масштабируют глубину подготовки, гейты не меняют; тир + обоснование пишутся в change | ADR-0010 |
-| Один OpenSpec change на весь эпик; архивирование - когда флаг включён в prod (или, без флага, после мержа последней задачи); handoff-шов SDD↔TBD | ADR-0011 |
-| Имя флага + `FLAG_<NAME>=1` в handoff-комментарии для QA | ADR-0011 §2 |
+| Один OpenSpec change на весь эпик; архивирование - после мержа и проверки последней задачи; handoff-шов SDD↔TBD | ADR-0011, уточнено ADR-0026 |
 | Grill плана: разработчик отвечает, неотвеченное уходит автору тикета; правим план, не код потом | ADR-0012 |
 | Спорный тест: три выхода (код неверен / тест противоречит Scenario / Scenario неоднозначен); реализующий тест не правит | ADR-0012 |
 | Traceability-гейт (Scenario ⇄ тест) и QA-гейт - дисциплина ревью, автоматики (в CI или иначе) для них нет | ADR-0012 п.8 |
 | 1 задача YouTrack = 1 PR; эпик разбивается в трекере; тесты эпика пишутся один раз на весь change | ADR-0013 |
-| `ready_to_test` держит релиз до человеческого QA-вердикта; владелец флага удаляет его по `expires` | ADR-0013 |
+| `ready_to_test` держит релиз до человеческого QA-вердикта | ADR-0013, уточнено ADR-0026 |
 | Модели зафиксированы во frontmatter агентов (planner/plan-griller opus) - не выбираются на бегу | ADR-0013 |
 | Изначально: все CI-проверки advisory (нет branch protection, нет required check) - с ADR-0023 серверная часть удалена целиком, остались только локальные гейты | ADR-0015, уточнено ADR-0023 |
-| Флаги - по требованию, не шаг процесса; открытый вопрос: кто и где ставит `FLAG_<NAME>=1` на stage/prod | ADR-0015 |
 | Store - потребитель агент, читающий кросс-сервисные спеки, не машинный гейт | ADR-0015 |
 | Store - гибрид «клон в фикс-пути»: `install.sh --machine-only` клонирует `cybernet-specs` в `~/cybernet/cybernet-specs` и регистрирует его (`openspec store register`); реестр машинный - один путь на id | ADR-0023 |
 | Graphify-граф (`graphify-out/graph.json`) коммитится в git - командный артефакт; planner пишет `Graph probes: <символы>` (или `graph absent: <почему>`) в proposal.md, plan-griller это читает | ADR-0023 |
-| Серверного CI нет вовсе: `sdd-ci.yml`/`autoreview.yml` в архиве, не устанавливаются; единственные гейты - локальные (spec-guard, pre-commit `make sdd-check`, `make sdd-test`/`sdd-review` по требованию) | ADR-0023 |
+| Серверного CI нет вовсе и без исключений: `sdd-ci.yml`/`autoreview.yml` в архиве, `store-ci.yml` выпилен (store валидируется pre-commit'ом клона); единственные гейты - локальные (spec-guard, pre-commit `scripts/sdd/check.sh`, `scripts/sdd/test.sh`/`review.sh` по требованию) | ADR-0023, уточнено ADR-0026 |
 | TBD-дисциплины (возраст ветки ≤2 дней, размер PR) - процесс-правила без автоматики и без эскейп-лейблов (`long-lived-ok`, `xl-ok` не существуют) | ADR-0023 |
 | Тесты пишутся из spec delta ДО реализации, агентом `test-author` (один тест или явный skip на Scenario, tracer `# spec:`), RED до кода; adversarial-проверка отдельным агентом; человеческий QA - целевое состояние, в PR это указывается | ADR-0016 |
 | Spec-метаданные: в дельте для repo-спек каждый Requirement несёт `<!-- id: ... -->` и `<!-- enforced: <file>:<symbol> -->` (проверяет spec-lint); дельта против store-спеки - без них, store - прозой с `file.py:line`-якорями | ADR-0017 |
@@ -291,7 +287,10 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | SKILL.md workflow-скилла - оркестрация ≤60 строк; справочник - `references/*.md`, доменные правила репо - AGENTS.md; агент-промпты самодостаточны | ADR-0024 |
 | Grill-практика ставится китом: `grilling`/`domain-modeling` вендорены из mattpocock/skills и не редактируются, house-rules - в обёртках `grill-me`/`grill-with-docs` | ADR-0024 |
 | Гриль открывается механическим pre-pass (validate/spec-lint/якоря/MODIFIED побуквенно); жёсткие фейлы - в вердикт, не в вопросы | ADR-0025 |
-| Ревью-leads собирает сам `make sdd-review` (/tmp/tools.txt: radon/complexipy/vulture/semgrep, каждая тулза опциональна) | ADR-0025 |
+| Ревью-leads собирает сам `scripts/sdd/review.sh` (/tmp/tools.txt: radon/complexipy/vulture/semgrep, каждая тулза опциональна) | ADR-0025 |
+| Makefile.sdd выпилен: командная поверхность - `scripts/sdd/*.sh` (check/test/review/index/doctor) | ADR-0026 |
+| PR и смена статуса в YouTrack - действия разработчика; агент делает их сам ТОЛЬКО по явной команде | ADR-0026 |
+| living-spec-check выпилен: дрейф доков CF против main проверяется по требованию `tools/cf/main-drift.sh` | ADR-0026 |
 
 Без ADR (правило живёт только в текстах - кандидат на фиксацию отдельным
 решением): deep-тир пишет сравнение архитектурных опций в `design.md` самого
@@ -305,17 +304,17 @@ Last verified: 2026-08-04 (ADR-0023 wave B text revision - server CI removed fro
 
 | Component | Status |
 |---|---|
-| bootstrap assets: `make sdd-check`, spec-guard, pre-commit hooks, spec-lint, sdd-doctor (incl. audit, store and graph checks) | shipped by sdd-kit - live in a repo once bootstrapped |
-| `sdd-ci.yml`, `autoreview.yml` | **removed from install** (ADR-0023) - templates moved to `docs/archive/`; not copied by `install.sh`, not present in a bootstrapped repo |
-| **enforcement model** | **local-only, by design** (ADR-0023): no server CI exists to be advisory or required. Only the local hooks (spec-guard, `--no-verify` blocker, pre-commit running `make sdd-check`) block anything |
+| bootstrap assets: `scripts/sdd/*.sh`, spec-guard, pre-commit hooks, spec-lint, sdd-doctor (incl. audit, store and graph checks) | shipped by sdd-kit - live in a repo once bootstrapped |
+| `sdd-ci.yml`, `autoreview.yml`, `store-ci.yml` | **removed from install** (ADR-0023, ADR-0026 §5 - no CI, no exceptions); not copied by `install.sh`, not present in a bootstrapped repo |
+| **enforcement model** | **local-only, by design** (ADR-0023): no server CI exists to be advisory or required. Only the local hooks (spec-guard, `--no-verify` blocker, pre-commit running `scripts/sdd/check.sh`) block anything |
 | `feature-flow` / `incident-flow` skills | shipped (`templates/skills/`) |
 | `planner` / `plan-griller` agents (model binding for plan/grill; `Graph probes:` provenance line) | shipped (`templates/agents/`, ADR-0013, ADR-0023) |
 | `test-author` agent (tests before code) | shipped (`templates/agents/`, ADR-0016) |
-| **feature flags** | **dormant / on demand** (ADR-0015): `make sdd-flags` works, the registry is copied by hand from `templates/feature_flags.py` when a team takes its first flag (not installed by default); run locally, not by a CI job. Open question: who sets `FLAG_X=1` on stage/prod and where |
+| **feature flags** | **cut entirely** (ADR-0026 §2): no registry, no lifecycle, no gate; a migration switch, when truly needed, is a plain config value |
 | central store (cybernet-specs) | live - `install.sh --machine-only` clones it to a fixed machine path and registers it; consumer is the **agent** reading cross-service specs at intake/planning, not a machine gate (ADR-0015, ADR-0023) |
 | repo knowledge graph (graphify) | committed to git as a team artifact (`graphify-out/graph.json`, ADR-0023); sdd-doctor warns if stale vs HEAD; navigation/context only, never a gate (ADR-0004) |
 | RAISE intake (form, RICE, board) | company process being introduced (ADR-0009) |
-| `make sdd-test` single entry point for tests | shipped, run on demand only (`make sdd-test`) - no CI job runs it anymore (ADR-0023) |
+| `scripts/sdd/test.sh` single entry point for tests | shipped, run on demand only - no CI job runs it anymore (ADR-0023) |
 | human QA owning phase 3 (writes tests before code) | **target state** (ADR-0016) - today `test-author` writes, human QA validates |
 | traceability gate (Scenario ⇄ test) and QA quality gate | **review discipline, no automation plan** - there is no CI to add them to (ADR-0023); enforced by reviewers reading the change, not tooling |
 | branch age (≤2 days) / PR size (≤1500 lines) | **process rules, no automated signal** (ADR-0023) - no CI warning/fail, no `long-lived-ok`/`xl-ok` labels; the developer self-polices and explains deliberate exceptions in the PR body |

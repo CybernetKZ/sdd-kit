@@ -58,11 +58,10 @@ Process:
    ```
    Cover, where the change actually touches them: edge cases the Scenarios
    miss (invalid input, permissions, empty, repeated calls, concurrency);
-   rollback in prod (flag off? migration down? data written meanwhile?);
+   rollback in prod (migration down? data written meanwhile?);
    migration order vs deploy, backfill, blocking locks; cross-service
-   contracts in the store, consumers, event shapes; the flag (name,
-   `expires`, behavior while OFF); testability (can a failing test be
-   written from every Scenario as written?).
+   contracts in the store, consumers, event shapes; testability (can a
+   failing test be written from every Scenario as written?).
 3. Tag each question `BLOCKING` (the plan is wrong until answered) or
    `ASSUMABLE` (proceed on the recommended answer, marked as an assumption).
 4. Emit a ready-to-paste `## Grill` markdown block: one line per question,
