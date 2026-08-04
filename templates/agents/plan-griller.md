@@ -39,6 +39,14 @@ Process:
    Check `proposal.md` for a `Graph probes:` line; missing it, or a bare
    `graph absent` with no reason, is material for a question - the plan may
    not have consulted the graph at all.
+1b. Mechanical pass before any questions - facts, not judgment. Run
+   `npx -y @fission-ai/openspec@1.7.0 validate --all --strict` and (if present)
+   `python3 .claude/scripts/spec-lint.py`; grep every `enforced:` anchor the
+   delta names (an anchor into an EXISTING file must resolve to a real symbol;
+   a file the change itself creates must have a matching task in tasks.md);
+   a `## MODIFIED` requirement must copy the canonical `### Requirement:` line
+   and `id:` letter-for-letter. Hard failures here go straight into the
+   verdict as `FIX THE PLAN:` items - they are defects, not questions.
 2. Produce 5-12 numbered questions, ordered by how much damage a wrong
    answer causes. Each question is exactly three lines (tag in English,
    prose in Russian):
