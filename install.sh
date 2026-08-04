@@ -958,6 +958,14 @@ EOF
   else
     say "refresh done: $REFRESHED file(s) refreshed — review with git diff before committing"
   fi
+
+  # Keep the committed graph fresh on the same command (ADR-0025 §1): an
+  # existing graph updates incrementally via AST, no key needed. Advisory.
+  if command -v graphify >/dev/null 2>&1 && [ -f graphify-out/graph.json ]; then
+    if ask "Update the code graph (graphify-out/, AST-only, no key)?" y; then
+      make -f Makefile.sdd sdd-index || true
+    fi
+  fi
 }
 
 # =========================================================== MACHINE SECTION ==

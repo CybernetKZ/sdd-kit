@@ -290,6 +290,8 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | В промптах нет `ADR-XXXX`; вывод человеку - по-русски, машинные форматы/теги - английские | ADR-0022 |
 | SKILL.md workflow-скилла - оркестрация ≤60 строк; справочник - `references/*.md`, доменные правила репо - AGENTS.md; агент-промпты самодостаточны | ADR-0024 |
 | Grill-практика ставится китом: `grilling`/`domain-modeling` вендорены из mattpocock/skills и не редактируются, house-rules - в обёртках `grill-me`/`grill-with-docs` | ADR-0024 |
+| Гриль открывается механическим pre-pass (validate/spec-lint/якоря/MODIFIED побуквенно); жёсткие фейлы - в вердикт, не в вопросы | ADR-0025 |
+| Ревью-leads собирает сам `make sdd-review` (/tmp/tools.txt: radon/complexipy/vulture/semgrep, каждая тулза опциональна) | ADR-0025 |
 
 Без ADR (правило живёт только в текстах - кандидат на фиксацию отдельным
 решением): deep-тир пишет сравнение архитектурных опций в `design.md` самого
