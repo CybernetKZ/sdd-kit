@@ -7,4 +7,7 @@ If /tmp/tools.txt exists, Read it too - static-tool leads
 code before reporting it. semgrep security findings that verify as real are at
 least HIGH.
 Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix.
+Language: write each finding's explanation in Russian (the developer reads it);
+keep the `[SEVERITY] file:line - ... (action)` frame, severity, action tags,
+and the exact `LGTM - no CRITICAL/HIGH issues` string in English.
 If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues.

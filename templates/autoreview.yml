@@ -1,4 +1,4 @@
-# Auto-review on pull requests (see docs/archive/autoreviewer.md verdict).
+# Auto-review on pull requests (rationale/design notes: docs/archive/autoreviewer.md).
 # Logic layer: repo reviewer agents (.claude/agents/) via headless `claude -p`,
 # fed a static-tool report it must verify before reporting.
 # Deterministic lint lives in pre-commit (ruff --fix) - not duplicated here.
@@ -71,7 +71,7 @@ jobs:
           if [ -f .claude/scripts/review-prompt.md ]; then
             PROMPT="$(cat .claude/scripts/review-prompt.md)"
           else
-            PROMPT="Read /tmp/sdd-review.diff and /tmp/tools.txt. Review following .claude/agents/backend-reviewer.md and .claude/agents/database-reviewer.md (read them first). Repo context: AGENTS.md. Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix. If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues."
+            PROMPT="Read /tmp/sdd-review.diff and /tmp/tools.txt. Review following .claude/agents/backend-reviewer.md and .claude/agents/database-reviewer.md (read them first). Repo context: AGENTS.md. Report ONLY CRITICAL and HIGH issues, each with file:line and a one-line fix; write each finding's explanation in Russian, keep severity/action tags and the exact LGTM string in English. If there are none, reply exactly: LGTM - no CRITICAL/HIGH issues."
           fi
           claude -p "$PROMPT" --allowedTools "Read,Grep,Glob" > /tmp/review.md || true
           {

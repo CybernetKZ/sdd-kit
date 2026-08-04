@@ -28,7 +28,12 @@ OpenSpec change and uncommitted work from before the last context compaction.
 - Changes go through `openspec/changes/<id>/` (rule: no code without a spec;
   for refactoring/tooling use `skip_specs: true` in the change metadata).
 - Cross-service contracts live in the central store repository,
-  wired in via `references:` in `openspec/config.yaml`.
+  wired in via `references:` in `openspec/config.yaml`. Read them in order:
+  `openspec store list` (which stores are wired in) -> `openspec list --specs
+  --store <name>` (which specs exist) -> `openspec show <spec> --type spec
+  --store <name>` (the spec text). `openspec view` only renders the local
+  dashboard - it never reads the store, so it cannot substitute for this
+  sequence.
 - A Requirement points at its code with
   `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path
   first, symbol after the colon. Grep these anchors by path to find the spec
@@ -45,8 +50,9 @@ OpenSpec change and uncommitted work from before the last context compaction.
   reverse deps - grep/ast-grep),
   `path "A" "B"`, `query "<sym1> <sym2>"`.
 - Build/update the index: `make sdd-index` (manual, run before a big intake).
-- The graph is navigation/context only (ADR-0004): `[EXTRACTED]` edges come from
-  the AST, `[INFERRED]` ones are guesses - confirm both in the actual code.
+- The graph is navigation/context only, never a CI gate: `[EXTRACTED]` edges
+  come from the AST, `[INFERRED]` ones are guesses - confirm both in the
+  actual code.
 
 ## Do not edit by hand
 

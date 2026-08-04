@@ -205,7 +205,7 @@ through the test step before any implementation code:
 5. Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
    The change MUST carry an expand/contract plan (new fields optional -> both
    sides read -> flag flips the producer -> old fields removed before `expires`);
-   cross-repo flags share one `expires` date, written in the contract spec (§3).
+   cross-repo flags share one `expires` date, written in the contract spec.
 6. Large replacement (HubTalk, Asterisk removal): branch by abstraction, deleted
    after cutover.
 
