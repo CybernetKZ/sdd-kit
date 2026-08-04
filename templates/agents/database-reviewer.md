@@ -75,16 +75,9 @@ psql -c "SELECT indexrelname, idx_scan, idx_tup_read FROM pg_stat_user_indexes O
 <!-- shared block: edit in sync with backend-reviewer.md -->
 ## Review discipline (keeps noise out)
 
-- Do NOT report styling, formatting, linting, or type-checking issues - ruff
-  and the static-tool report own those; re-deriving them wastes the review.
-- Tag every finding with an action: `auto-fix` (mechanical, does not change
-  the author's intent), `ask-user` (touches a deliberate decision - the
-  default when in doubt), or `no-op` (informational). Never silently expand
-  an unlabeled finding into a fix.
-- Durable fix vs. authorized containment: before recommending a redesign,
-  reconstruct the concrete failing sequence and the violated invariant.
-  Do not infer a systemic flaw from code shape, duplication, or
-  architectural preference alone.
+- Do NOT report styling, formatting, linting, or type-checking issues - ruff and the static-tool report own those.
+- Tag every finding with an action: `auto-fix` (mechanical, no intent change), `ask-user` (touches a deliberate decision - default when in doubt), or `no-op` (informational). Never silently expand an unlabeled finding into a fix.
+- Durable fix vs. authorized containment: before recommending a redesign, reconstruct the concrete failing sequence and the violated invariant - do not infer a systemic flaw from code shape or preference alone.
 
 <!-- shared block: edit in sync with backend-reviewer.md -->
 ## Spec Compliance (OpenSpec)
@@ -134,12 +127,6 @@ Language: write each finding's explanation in Russian - the developer reads it. 
 Verdict: WARNING - 2 HIGH issues to resolve before merge.
 Tests checked: commands run, or why they were skipped.
 Residual risk: anything important that could not be verified.
-```
-
-## Finding example
-
-```text
-[HIGH] app/repo/orders.py:88 - у orders.customer_id нет индекса, эндпоинт списка seq-scan'ит 2M строк - добавить индекс на (customer_id, created_at) (ask-user)
 ```
 
 <!-- shared block: edit in sync with backend-reviewer.md -->

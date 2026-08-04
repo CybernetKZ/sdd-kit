@@ -288,6 +288,8 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | Тир фиксирует пайплайн (light без planner/griller; deep - grill только агентом) | ADR-0021 |
 | `## Grill` открывается provenance-заголовком: кто грилил, сколько вопросов, что изменилось | ADR-0021 |
 | В промптах нет `ADR-XXXX`; вывод человеку - по-русски, машинные форматы/теги - английские | ADR-0022 |
+| SKILL.md workflow-скилла - оркестрация ≤60 строк; справочник - `references/*.md`, доменные правила репо - AGENTS.md; агент-промпты самодостаточны | ADR-0024 |
+| Grill-практика ставится китом: `grilling`/`domain-modeling` вендорены из mattpocock/skills и не редактируются, house-rules - в обёртках `grill-me`/`grill-with-docs` | ADR-0024 |
 
 Без ADR (правило живёт только в текстах - кандидат на фиксацию отдельным
 решением): deep-тир пишет сравнение архитектурных опций в `design.md` самого

@@ -313,6 +313,7 @@ agents/test-author.md .claude/agents/test-author.md
 agents/executor.md .claude/agents/executor.md
 agents/repo-auditor.md .claude/agents/repo-auditor.md
 skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
+skills/feature-flow/references/details.md .claude/skills/feature-flow/references/details.md
 skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
 skills/grilling/SKILL.md .claude/skills/grilling/SKILL.md
 skills/grill-me/SKILL.md .claude/skills/grill-me/SKILL.md

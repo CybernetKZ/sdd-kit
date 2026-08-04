@@ -120,6 +120,7 @@ for a in backend-reviewer database-reviewer planner plan-griller test-author exe
   rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
 done
 rm_ours "$KIT/templates/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md
+rm_ours "$KIT/templates/skills/feature-flow/references/details.md" .claude/skills/feature-flow/references/details.md
 rm_ours "$KIT/templates/skills/incident-flow/SKILL.md" .claude/skills/incident-flow/SKILL.md
 rm_ours "$KIT/templates/skills/grilling/SKILL.md" .claude/skills/grilling/SKILL.md
 rm_ours "$KIT/templates/skills/grill-me/SKILL.md" .claude/skills/grill-me/SKILL.md
@@ -231,7 +232,8 @@ if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
 fi
 
 # -------------------------------------------------------------- 8. empty dirs
-for d in .claude/hooks .claude/scripts .claude/agents .claude/skills/feature-flow \
+for d in .claude/hooks .claude/scripts .claude/agents \
+         .claude/skills/feature-flow/references .claude/skills/feature-flow \
          .claude/skills/incident-flow .claude/skills/grilling .claude/skills/grill-me \
          .claude/skills/grill-with-docs .claude/skills/domain-modeling \
          .claude/skills .claude .github/workflows .github; do
