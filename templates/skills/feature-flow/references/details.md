@@ -1,7 +1,7 @@
 # Feature flow - details
 
 Read this when you hit one of these: epic mechanics, a disputed test, the QA
-fallback, the feature-flag lifecycle, contract migrations, intake/store command
+fallback, contract migrations, intake/store command
 sequences, PR body and handoff wording, or the light-tier specifics.
 
 ## 1. Task intake - the long version
@@ -20,7 +20,7 @@ sequences, PR body and handoff wording, or the light-tier specifics.
    guesses to confirm in code. Probe by SYMBOL, never by prose: a free-form
    question makes BFS start from its capitalized words and returns noise. The
    exact command sequence (`graphify explain` -> `query` -> `path`, plus
-   `make sdd-index`) is in AGENTS.md, "Codebase search"; no
+   `scripts/sdd/index.sh`) is in AGENTS.md, "Codebase search"; no
    `graphify-out/graph.json` in a large repo means build the index first (on a
    Claude subscription the first build runs through the interactive `/graphify`
    command, no API key - later updates need none). Then check:
@@ -30,7 +30,7 @@ sequences, PR body and handoff wording, or the light-tier specifics.
      `spec-miner` agent for that capability first,
    - cross-service contracts in the store: `openspec store list` ->
      `openspec list --specs --store cybernet-specs` -> `openspec show <spec>
-     --type spec --store cybernet-specs` (details and flag placement in
+     --type spec --store cybernet-specs` (details in
      AGENTS.md, "Specs and contracts"; `openspec view` only prints the local
      dashboard and never reads the store),
    - store freshness: it is a local clone - `git -C <store path> log -1`, pull if
@@ -79,13 +79,14 @@ tier, not discovered in step 2.
    automated check). Bigger is an epic: the unit of work is fixed at 1 YouTrack
    task = 1 PR, so split the epic into YouTrack tasks (declared in the tracker at
    intake, not invented in tasks.md) under ONE change; each task's PR moves its
-   slice of code and runs the tests that already exist. A flag only if the
-   half-built epic must stay invisible in prod (see "Feature flags" below).
-   Archive the change when the flag is on in prod by default, or - flagless -
+   slice of code and runs the tests that already exist. Half-built state that
+   must stay unreachable in prod: keep the wiring-in (route/handler/caller)
+   for the LAST task instead of hiding merged code behind a flag (flags are
+   cut, ADR-0026 §2). Archive the change
    when the last task is merged and verified.
 5. Epic tests are written ONCE for the whole change (all Scenarios, before the
-   first PR); Scenarios not yet implemented stay as explicit skips (or, with a
-   flag, run behind it while OFF). Intermediate merges do NOT ping QA - the
+   first PR); Scenarios not yet implemented stay as explicit skips.
+   Intermediate merges do NOT ping QA - the
    single `ready_to_test` handoff happens when the whole change is done on stage.
 6. Touching a cross-repo contract? The spec edit itself is a separate change + PR in
    `cybernet-specs` (its README, "How to add or change a contract"); this change keeps
@@ -115,7 +116,7 @@ tier, not discovered in step 2.
    A test that unexpectedly passes is a finding (the behavior may already
    exist), not something to force red.
 4. Human QA ownership of this step is the TARGET state: today the agent writes,
-   a human validates before prod (flagless: before the release, `ready_to_test`
+   a human validates before prod (before the release, `ready_to_test`
    holds it - the release checklist verifies in YouTrack that no shipped ticket
    is still in `ready_to_test` without a human QA verdict). Say in the PR that
    the tests were agent-generated without human QA validation.
@@ -137,7 +138,7 @@ tier, not discovered in step 2.
    sequentially today; parallel executors are a later step, after the
    sequential one survives a real ticket.
 5. Commit normally after review: the pre-commit hook runs ruff, hygiene
-   checks, `make sdd-check`. Committing is the developer's call, not the
+   checks, `scripts/sdd/check.sh`. Committing is the developer's call, not the
    executor's.
 6. The tests already exist - the executor runs them while implementing and
    fixes the implementation until green. A red test means one of three things,
@@ -147,33 +148,24 @@ tier, not discovered in step 2.
    (they are not yours; the arbiter is the Scenario text); the Scenario itself
    is ambiguous -> the spec delta goes back to its author.
 
-## 4b. Feature flags and contract migrations
+## 4b. Contract migrations
 
-1. Flags are **on demand, not a process step**. Reach for one only when
-   the work must ship dark - a contract migration, a branch-by-abstraction
-   replacement, or an epic whose half-built state must not be reachable in prod.
-2. Open question, still unsettled: who sets `FLAG_<NAME>=1` on stage/prod and
-   where (helm values? service `.env`? CI/CD vars?) - settle it before your
-   first flag.
-3. When you take one: `feature_flags.py` maps flag name -> `expires` date, access
-   only via `is_enabled("name")`, enable with `FLAG_<NAME>=1`, OFF everywhere by
-   default; flag name + `FLAG_<NAME>=1` go in the QA handoff comment (step 8).
-   Full lifecycle: the module docstring.
-4. `make sdd-flags` (run locally, e.g. via pre-commit) fails 7 days past
-   `expires`; "delete the flag" is a task in the same change's tasks.md,
-   owned by the change's author.
-5. Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
+There is no flag registry or lifecycle anymore (cut entirely, ADR-0026 §2);
+a switch, when a migration truly needs one, is a plain config value with no
+process around it.
+
+1. Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
    The change MUST carry an expand/contract plan (new fields optional -> both
-   sides read -> flag flips the producer -> old fields removed before `expires`);
-   cross-repo flags share one `expires` date, written in the contract spec.
-6. Large replacement (HubTalk, Asterisk removal): branch by abstraction, deleted
+   sides read -> producer switches -> old fields removed); the removal step is
+   a task in the same change's tasks.md, owned by the change's author.
+2. Large replacement (HubTalk, Asterisk removal): branch by abstraction, deleted
    after cutover.
 
 ## 6. Review - scope discipline
 
-1. `make sdd-check` green, then run the reviewer agents on the diff
+1. `scripts/sdd/check.sh` green, then run the reviewer agents on the diff
    (`backend-reviewer`, plus `database-reviewer` when the diff touches SQL, the
-   ORM or migrations) with `make sdd-review` - locally, before opening the
+   ORM or migrations) with `scripts/sdd/review.sh` - locally, before opening the
    PR; there is no server-side review step.
 2. Fix CRITICAL/HIGH that are in scope of the ticket. Out-of-scope findings:
    add `TODO`/`NOTE` with the ticket id, do not silently expand scope.
@@ -182,10 +174,14 @@ tier, not discovered in step 2.
 ## 7. Pull request conventions
 
 1. Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
+   Opening the PR is the developer's action by default; ONLY on their explicit
+   command the agent runs `gh pr create` itself (ADR-0026 §1) - never
+   unprompted.
 2. Body: what changed, why, test plan (link the tests/Scenarios). Say if the
    tests were agent-generated without human QA validation.
 3. There is no server CI - what actually blocks you is local: spec-guard, the
-   pre-commit hook (runs `make sdd-check`), and `make sdd-test` / `sdd-review`
+   pre-commit hook (runs `scripts/sdd/check.sh`), and `scripts/sdd/test.sh` /
+   `scripts/sdd/review.sh`
    run before opening the PR, not after. Branch age (≤2 days) and PR size
    (≤1500 lines) are process rules the developer watches themselves - no
    automated check enforces them, and there are no escape labels for them
@@ -195,11 +191,8 @@ tier, not discovered in step 2.
 ## 8. Handoff wording
 
 1. After the PR is merged to dev, move the ticket to `status: ready_to_test`
-   (youtrack MCP).
+   (youtrack MCP). Same rule as the PR: the developer's action by default,
+   the agent does it only on their explicit command (ADR-0026 §1).
 2. Leave a comment for the tester **in Russian**: what to check and how -
-   crystal clear, ONE paragraph max. Include the feature-flag name and how to
-   enable it (`FLAG_<NAME>=1`) if there is one, and a link to the QA
+   crystal clear, ONE paragraph max, with a link to the QA
    Scenarios/tests (standard/deep).
-3. QA enables the flag on stage per that comment (`FLAG_<NAME>=1`). Enabling
-   the flag in prod happens after QA - then archive the change and schedule the
-   flag-removal PR by its `expires`.

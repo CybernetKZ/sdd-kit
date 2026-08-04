@@ -21,14 +21,14 @@ YouTrack ticket -> merged PR. Business writes tickets loosely (one line, or LLM-
 | 4 | Implement on `feature/WEB-XXXX` (or `bugfix/`) off dev, walking tasks.md; code and spec deltas move together | `executor` agent |
 | 5 | Manual testing: walk the QA Scenarios yourself on local/stage | you |
 | 6 | Review the diff via `make sdd-review`; fix in-scope CRITICAL/HIGH, re-run tests | `backend-reviewer` + `database-reviewer` on SQL/ORM/migrations |
-| 7+8 | PR to dev titled `[feature/WEB-XXXX] <summary>`; after merge, ticket to `status: ready_to_test` + a Russian tester comment | you |
+| 7+8 | PR to dev titled `[feature/WEB-XXXX] <summary>`; after merge, ticket to `status: ready_to_test` + a Russian tester comment | you (agent only on your explicit command) |
 
 ## Gates and stops
 
 - A spec (OpenSpec change) on every tier; no spec-guard bypass, urgent included.
 - Tests before code, RED before implementation; the implementer never writes or edits tests.
 - Fixed order: grill the plan (2g) before implementing, reviewer agents (6) after - never swapped.
-- `make sdd-check` green before review, and again at commit via the pre-commit hook (ruff, hygiene, sdd-check); `make sdd-flags` for flag expiry.
+- `scripts/sdd/check.sh` green before review, and again at commit via the pre-commit hook (ruff, hygiene, sdd-check).
 - No automated check, so you watch them: branch ≤2 days, PR ≤1500 lines, each Scenario ⇄ exactly one test.
 - STOP on a serious business fork (pricing, client commitments, data deletion) and ask.
 - Blocking question open -> nothing merges; prototyping on the recommended answer, marked as a prototype, is fine.
@@ -53,4 +53,4 @@ Tiers scale preparation depth only; gates never change. The tier fixes the pipel
 
 Tier in the ticket -> the default; the developer may ALWAYS override it; nothing set -> decide from the signals (RAISE category, services touched, migrations, new/changed contracts): typo / config value / isolated bug -> light, a regular feature inside one service -> standard, cross-service change, data migration, new architecture or unknown territory -> deep. Size is independent of the tier: an epic is decided here, not discovered in step 2. Write the tier AND its justification into proposal.md so the reviewer can challenge it.
 
-Epic mechanics, disputed test, QA fallback, flag lifecycle and contract migrations, intake and store command sequences, PR body and handoff wording: read `references/details.md`.
+Epic mechanics, disputed test, QA fallback, contract migrations, intake and store command sequences, PR body and handoff wording: read `references/details.md`.
