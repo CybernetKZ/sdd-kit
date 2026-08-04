@@ -809,6 +809,23 @@ EOF
     say "removed: stale .git/info/exclude entry graphify-out/ (the graph is committed now, ADR-0023)"
   fi
 
+  # ----------------- 8d. build/update the code graph (consent, default yes)
+  # One command installs everything: if graphify is on the machine, build the
+  # graph now (AST path needs no key) or incrementally update a stale one.
+  # A first-time SEMANTIC build (docs) still needs an LLM key or an interactive
+  # /graphify session — 'make sdd-index' prints that guidance itself. Advisory.
+  if command -v graphify >/dev/null 2>&1; then
+    if [ -f graphify-out/graph.json ]; then
+      if ask "Update the code graph (graphify-out/, AST-only, no key)?" y; then
+        make -f Makefile.sdd sdd-index || true
+      fi
+    elif ask "Build the code graph now (graphify-out/ is missing)?" y; then
+      make -f Makefile.sdd sdd-index || true
+    fi
+  else
+    say "skipped: code graph (graphify not installed — run install.sh --machine-only)"
+  fi
+
   # ------------------------------------- 9. project MCP servers (.mcp.json)
   local MCP_LIST
   if [ -e .mcp.json ]; then
@@ -1021,6 +1038,21 @@ machine_section() {
     uv tool install ast-grep-cli \
       && { DONE=$((DONE+1)); say "installed: ast-grep (binary: ast-grep / sg)"; } \
       || say "ast-grep install failed — see https://github.com/ast-grep/ast-grep"
+  else SKIPPED=$((SKIPPED+1)); fi
+
+  # ----------------------------------------- 4b. static review tools (leads)
+  # radon/complexipy/vulture/semgrep feed 'make sdd-review' with static leads
+  # (/tmp/tools.txt); the reviewer verifies each lead in code before reporting.
+  if command -v radon >/dev/null 2>&1 && command -v complexipy >/dev/null 2>&1 \
+     && command -v vulture >/dev/null 2>&1 && command -v semgrep >/dev/null 2>&1; then
+    say "ok:      static review tools already installed (radon, complexipy, vulture, semgrep)"
+  elif ask_install "Install static review tools? (radon, complexipy, vulture, semgrep — leads for make sdd-review)" y \
+       "uv tool install radon && uv tool install complexipy && uv tool install vulture && uv tool install semgrep"; then
+    for t in radon complexipy vulture semgrep; do
+      command -v "$t" >/dev/null 2>&1 || uv tool install "$t" \
+        || say "$t install failed — sdd-review works without it (fewer leads)"
+    done
+    DONE=$((DONE+1)); say "installed: static review tools"
   else SKIPPED=$((SKIPPED+1)); fi
 
   # ---------------------------------------------------------------- 5. gh-axi
