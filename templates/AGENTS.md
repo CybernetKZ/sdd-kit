@@ -53,7 +53,8 @@ OpenSpec change and uncommitted work from before the last context compaction.
   typed edges) first, then `query "<sym>"` (fan-out ≈ blast radius; precise
   reverse deps - grep/ast-grep),
   `path "A" "B"`, `query "<sym1> <sym2>"`.
-- Build/update the index: `make sdd-index` (manual, run before a big intake).
+- Build/update the index: `make sdd-index` (install/refresh also offers it;
+  run before a big intake if the graph lags HEAD).
 - The graph is navigation/context only, never a CI gate: `[EXTRACTED]` edges
   come from the AST, `[INFERRED]` ones are guesses - confirm both in the
   actual code.

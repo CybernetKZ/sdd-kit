@@ -78,7 +78,7 @@ clean: `git status` shows the repo exactly as before install.
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `Makefile.sdd` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
-| `Makefile.sdd` (+ `-include` in Makefile) | 6 targets: `sdd-check` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `sdd-flags`, `sdd-doctor`, `sdd-test` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `sdd-review` (local AI review of the diff), `sdd-index` (graphify graph, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
+| `Makefile.sdd` (+ `-include` in Makefile) | 6 targets: `sdd-check` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `sdd-flags`, `sdd-doctor`, `sdd-test` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `sdd-review` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `sdd-index` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
 | `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - not installed by default** (ADR-0015): copy `templates/feature_flags.py` by hand when the team takes its first flag. Flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails locally. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
@@ -283,7 +283,11 @@ sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 **ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook),
 **Graphify** (repo knowledge graph - faster/cheaper code analysis; PyPI name
-`graphifyy`, installed as `graphifyy[postgres,sql]`), **ast-grep** (AST codemods for bulk mechanical refactors).
+`graphifyy`, installed as `graphifyy[postgres,sql]`), **ast-grep** (AST codemods
+for bulk mechanical refactors), **ruff** (linter/formatter behind the pre-commit
+hook and `make sdd-test`), and the **static review tools** radon / complexipy /
+vulture / semgrep (leads for `make sdd-review` via `/tmp/tools.txt`; each is
+optional - a missing one just means fewer leads).
 `make sdd-doctor` warns when a core tool is missing.
 
 **Optional (opt-in y/N):** **gh-axi** and **chrome-devtools-axi**
@@ -291,9 +295,10 @@ sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 code-navigation MCP via uvx - an earlier trial left `.serena/` litter that
 the sdd-doctor audit section flags, so it stays opt-in).
 
-Not offered: **caveman** (only a benchmark arm inside the ponytail repo, not a
-standalone tool - ponytail covers it), **grill-with-docs** (team practice, not
-a self-contained install), **Playwright** (chrome-devtools-axi covers the
+Not offered here: **caveman** (only a benchmark arm inside the ponytail repo, not a
+standalone tool - ponytail covers it; the grill practice itself is installed
+per-repo: `grilling`/`grill-me`/`grill-with-docs`/`domain-modeling` are in the
+repo manifest), **Playwright** (chrome-devtools-axi covers the
 browser loop), **Headroom** (dropped 2026-07-31: compresses ~0-2%, breaks the
 prompt-cache prefix, measured +45..62% cost - see
 [ADR-0014](docs/ADR/ADR-0014-drop-headroom.md)).

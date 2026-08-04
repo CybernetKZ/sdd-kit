@@ -858,9 +858,10 @@ EOF
   say "     the pre-commit hook runs 'make sdd-check'; run 'make sdd-test' and"
   say "     'make sdd-review' yourself before opening a PR"
   say "  3) seed the specs: run the spec-miner agent one capability at a time"
-  say "  3b) build the code graph for intake: 'make sdd-index' (needs an LLM API"
-  say "      key for the first build; on a Claude subscription run the interactive"
-  say "      '/graphify' command in Claude Code instead — later updates need no key)"
+  say "  3b) code graph: the install step above builds/updates it when it can;"
+  say "      a FIRST build over docs needs semantic extraction — on a Claude"
+  say "      subscription run the interactive '/graphify' command once, then"
+  say "      install/refresh keeps it updated with no key (AST-only)"
   say "  4) AI review runs locally: 'make sdd-review' (your own subscription login;"
   say "     tokens are per-developer — nothing to configure server-side)"
 }
@@ -1046,6 +1047,18 @@ machine_section() {
     uv tool install ast-grep-cli \
       && { DONE=$((DONE+1)); say "installed: ast-grep (binary: ast-grep / sg)"; } \
       || say "ast-grep install failed — see https://github.com/ast-grep/ast-grep"
+  else SKIPPED=$((SKIPPED+1)); fi
+
+  # ------------------------------------------------------------------ 4a. ruff
+  # The pre-commit hook and make sdd-test lean on ruff; uvx works as a slower
+  # fallback, a native install is what the doctor recommends.
+  if command -v ruff >/dev/null 2>&1; then
+    say "ok:      ruff already installed"
+  elif ask_install "Install ruff? (linter/formatter used by the pre-commit hook and make sdd-test)" y \
+       "uv tool install ruff"; then
+    uv tool install ruff \
+      && { DONE=$((DONE+1)); say "installed: ruff"; } \
+      || say "ruff install failed — pre-commit falls back to 'uvx ruff'"
   else SKIPPED=$((SKIPPED+1)); fi
 
   # ----------------------------------------- 4b. static review tools (leads)

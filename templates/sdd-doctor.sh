@@ -86,6 +86,16 @@ else
   warn tool.gh "gh CLI missing — needed for PRs and secrets" "install gh, then: gh auth login"
 fi
 
+MISSING_STATIC=""
+for t in radon complexipy vulture semgrep; do
+  command -v "$t" >/dev/null 2>&1 || MISSING_STATIC="$MISSING_STATIC $t"
+done
+if [ -z "$MISSING_STATIC" ]; then
+  ok tool.static-review "static review tools (radon, complexipy, vulture, semgrep)"
+else
+  note tool.static-review "static review leads missing:$MISSING_STATIC — make sdd-review works, just with fewer leads" "sdd-kit/install.sh --machine-only"
+fi
+
 # ----------------------------------------------------------------- repo checks
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -n "$ROOT" ]; then
