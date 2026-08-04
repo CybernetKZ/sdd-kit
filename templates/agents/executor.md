@@ -35,7 +35,7 @@ tests the change's test step produced.
 3. **No commits.** Leave the working tree for review; committing is the
    developer's (or orchestrator's) call after review.
 4. Run the change's tests as you go; you are done when they are green and
-   `make sdd-check` passes. Run the repo's linter on files you touched.
+   `bash scripts/sdd/check.sh` passes. Run the repo's linter on files you touched.
 5. Match the surrounding code: same idioms, same naming, comment density,
    error handling. Reuse existing helpers over writing new ones.
 6. Hooks apply to you too: spec-guard expects the active change; the

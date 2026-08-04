@@ -104,10 +104,10 @@ fi
 
 # SDD gate: AGENTS.md + openspec validate + spec-lint (warn-only by default).
 # Only for commits that can actually change the outcome — the openspec CLI
-# resolve (npx) costs seconds on every unrelated commit otherwise. CI runs the
-# same gate on the whole PR regardless.
-if echo "$STAGED" | grep -qE 'openspec/|(^|/)AGENTS\.md$|(^|/)feature_flags\.py$|(^|/)Makefile\.sdd$'; then
-  make sdd-check || { echo "pre-commit: make sdd-check failed — commit blocked" >&2; exit 1; }
+# resolve (npx) costs seconds on every unrelated commit otherwise. There is no
+# server CI to catch it later (ADR-0023 §5) — this is the gate.
+if echo "$STAGED" | grep -qE 'openspec/|(^|/)AGENTS\.md$|(^|/)scripts/sdd/'; then
+  bash scripts/sdd/check.sh || { echo "pre-commit: scripts/sdd/check.sh failed — commit blocked" >&2; exit 1; }
 else
-  echo "pre-commit: make sdd-check skipped (no spec-related changes staged)"
+  echo "pre-commit: scripts/sdd/check.sh skipped (no spec-related changes staged)"
 fi

@@ -95,7 +95,7 @@ When the repository contains `openspec/specs/`, verify the diff against the spec
 Run static tools on the changed Python files only, and treat their output as leads to verify - not as ready findings:
 
 ```bash
-# same review base as `make sdd-review`: the repo's default branch, fallback dev
+# same review base as `scripts/sdd/review.sh`: the repo's default branch, fallback dev
 BASE_BRANCH=${BASE_BRANCH:-$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' | grep . || echo dev)}
 FILES=$(git diff --name-only "$BASE_BRANCH...HEAD" | grep "\.py$" || true)
 [ -n "$FILES" ] && uvx ruff check $FILES            # lint

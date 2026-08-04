@@ -1,6 +1,6 @@
 # AGENTS.md - context for AI agents
 
-<!-- Limit: 500 lines. Enforced by `make sdd-check`. -->
+<!-- Limit: 500 lines. Enforced by `scripts/sdd/check.sh`. -->
 <!-- CLAUDE.md in this repository is a symlink to this file. -->
 
 ## What this service is
@@ -9,8 +9,8 @@ TODO: 2-4 sentences - why this repository exists and who consumes it.
 
 ## Commands
 
-- Tests and all checks: `make sdd-test` (kit) or the repo's own test entry point
-- SDD checks only (specs, context): `make sdd-check`
+- Tests and all checks: `bash scripts/sdd/test.sh` (kit) or the repo's own test entry point
+- SDD checks only (specs, context): `bash scripts/sdd/check.sh`
 - Run locally: TODO
 
 ## Module map
@@ -53,7 +53,7 @@ OpenSpec change and uncommitted work from before the last context compaction.
   typed edges) first, then `query "<sym>"` (fan-out ≈ blast radius; precise
   reverse deps - grep/ast-grep),
   `path "A" "B"`, `query "<sym1> <sym2>"`.
-- Build/update the index: `make sdd-index` (install/refresh also offers it;
+- Build/update the index: `bash scripts/sdd/index.sh` (install/refresh also offers it;
   run before a big intake if the graph lags HEAD).
 - The graph is navigation/context only, never a CI gate: `[EXTRACTED]` edges
   come from the AST, `[INFERRED]` ones are guesses - confirm both in the

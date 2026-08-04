@@ -62,7 +62,7 @@ if command -v ruff >/dev/null 2>&1; then
 elif command -v uvx >/dev/null 2>&1; then
   ok tool.ruff "ruff via uvx fallback (native install is faster)" "uv tool install ruff"
 else
-  bad tool.ruff "ruff unavailable — the pre-commit hook and make sdd-test depend on it" "uv tool install ruff"
+  bad tool.ruff "ruff unavailable — the pre-commit hook and scripts/sdd/test.sh depend on it" "uv tool install ruff"
 fi
 
 if command -v openspec >/dev/null 2>&1; then
@@ -93,7 +93,7 @@ done
 if [ -z "$MISSING_STATIC" ]; then
   ok tool.static-review "static review tools (radon, complexipy, vulture, semgrep)"
 else
-  note tool.static-review "static review leads missing:$MISSING_STATIC — make sdd-review works, just with fewer leads" "sdd-kit/install.sh --machine-only"
+  note tool.static-review "static review leads missing:$MISSING_STATIC — scripts/sdd/review.sh works, just with fewer leads" "sdd-kit/install.sh --machine-only"
 fi
 
 # ----------------------------------------------------------------- repo checks
@@ -224,13 +224,13 @@ print(' '.join(missing))
   if [ -f graphify-out/graph.json ]; then
     if find graphify-out/graph.json -mtime +30 -print 2>/dev/null | grep -q .; then
       warn repo.graph "code graph graphify-out/graph.json is older than 30 days — intake answers will miss recent code" \
-        "make sdd-index (AST-only refresh, no API key needed)"
+        "scripts/sdd/index.sh (AST-only refresh, no API key needed)"
     else
       ok repo.graph "code graph present and recent (graphify-out/graph.json)"
     fi
   else
     note repo.graph "no code graph (graphify-out/graph.json) — intake and planning fall back to grep" \
-      "make sdd-index, or run the interactive '/graphify' command in Claude Code for the first build"
+      "scripts/sdd/index.sh, or run the interactive '/graphify' command in Claude Code for the first build"
   fi
 
   if [ -f .git/hooks/pre-commit ] && grep -q sdd-check .git/hooks/pre-commit 2>/dev/null; then
@@ -425,7 +425,7 @@ else
   if [ "$FAIL" -eq 0 ] && [ "$WARN" -eq 0 ]; then
     echo "[sdd-doctor] 0 issues found"
   elif [ "$FAIL" -gt 0 ]; then
-    echo "next: run the 'next:' commands on the FAIL items above, then re-run make sdd-doctor"
+    echo "next: run the 'next:' commands on the FAIL items above, then re-run scripts/sdd/doctor.sh"
   else
     echo "next: review the WARN items above (advisory — nothing blocks)"
   fi
