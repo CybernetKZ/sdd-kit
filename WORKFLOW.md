@@ -261,6 +261,7 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | Ветка ≤2 дней, размер PR ограничен; сигналы >1500 строк / >2 дней - процесс-правило без автоматики, CI не предупреждает и не блокирует (ADR-0023) | ADR-0006, уточнено ADR-0023 |
 | Реестр фича-флагов: имя -> `expires`, доступ через `is_enabled()`, OFF по умолчанию, `make sdd-flags` красит локально (не CI, ADR-0023) через 7 дней после `expires` | ADR-0007, уточнено ADR-0023 |
 | Крупная замена - branch by abstraction, абстракция удаляется после cutover | ADR-0007 §5 |
+| AGENTS.md - канон контекста агента, `CLAUDE.md` - симлинк на него, лимит 500 строк и минимум содержимого (гейт sdd-check) | ADR-0002 |
 | Задачи приходят через RAISE: форма запроса + RICE; баг-репорт сразу, без RICE; urgent ускоряет ПРИОРИТИЗАЦИЮ, не разработку | ADR-0009 |
 | Тиры (light/standard/deep) масштабируют глубину подготовки, гейты не меняют; тир + обоснование пишутся в change | ADR-0010 |
 | Один OpenSpec change на весь эпик; архивирование - когда флаг включён в prod (или, без флага, после мержа последней задачи); handoff-шов SDD↔TBD | ADR-0011 |
@@ -281,6 +282,8 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | Тесты пишутся из spec delta ДО реализации, агентом `test-author` (один тест или явный skip на Scenario, tracer `# spec:`), RED до кода; adversarial-проверка отдельным агентом; человеческий QA - целевое состояние, в PR это указывается | ADR-0016 |
 | Spec-метаданные: в дельте для repo-спек каждый Requirement несёт `<!-- id: ... -->` и `<!-- enforced: <file>:<symbol> -->` (проверяет spec-lint); дельта против store-спеки - без них, store - прозой с `file.py:line`-якорями | ADR-0017 |
 | Правка кросс-repo контракта - отдельный change + PR в `cybernet-specs`; в своём change остаётся обоснование и задача с id того change; не архивируется, пока store-PR открыт | ADR-0018 |
+| CF-миграция: полная конвертация docs/ в openspec, LIVING SPEC ведётся параллельно (канон - openspec), tz-нумерация продолжает счёт патчей, патч-архив заморожен | ADR-0019 |
+| CF-цепочка: `/tz` -> `/tz-review` (механическое ревью, первым) -> `plan-griller` (гриль, после) - не дубли; openspec-* скиллы только по явному вызову (`disable-model-invocation: true`) | ADR-0020 |
 | Реализация - субагент `executor` на sonnet: строго по tasks.md, не правит тесты, не коммитит, стоп-и-отчёт при отклонении; секции tasks.md пока последовательны | ADR-0021 |
 | Тир фиксирует пайплайн (light без planner/griller; deep - grill только агентом) | ADR-0021 |
 | `## Grill` открывается provenance-заголовком: кто грилил, сколько вопросов, что изменилось | ADR-0021 |
