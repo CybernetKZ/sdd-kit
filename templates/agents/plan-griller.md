@@ -36,6 +36,9 @@ Process:
    which tasks can be deleted because stdlib/an existing helper/the platform
    already covers them; external API claims get checked against real docs
    (context7 in the main session - flag the claim as UNVERIFIED if you cannot).
+   Check `proposal.md` for a `Graph probes:` line; missing it, or a bare
+   `graph absent` with no reason, is material for a question - the plan may
+   not have consulted the graph at all.
 2. Produce 5-12 numbered questions, ordered by how much damage a wrong
    answer causes. Each question is exactly three lines (tag in English,
    prose in Russian):

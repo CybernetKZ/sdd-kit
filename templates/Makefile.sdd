@@ -17,9 +17,10 @@ sdd-flags:
 	done; fi
 
 # AI review of your current branch vs dev, on YOUR machine with YOUR
-# subscription login (no shared tokens; CI AI-step stays optional).
-# The prompt itself lives in .claude/scripts/review-prompt.md — one canonical
-# text shared with .github/workflows/autoreview.yml.
+# subscription login (no shared tokens; there is no server CI — this is the
+# only review step, run before opening the PR).
+# The prompt itself lives in .claude/scripts/review-prompt.md, used only by
+# this target (the old .github/workflows/autoreview.yml is archived, ADR-0023).
 # default review base = the repo's actual default branch (origin/HEAD), fallback dev (B3, ADR-0019)
 SDD_REVIEW_BASE ?= $(shell git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' | grep . || echo dev)
 sdd-review:
@@ -34,7 +35,8 @@ sdd-doctor:
 
 # openspec-pin: the npx call below pins the openspec version. This pin is
 # independent of install.sh's on purpose — this file runs standalone inside the
-# target repo (pre-commit, CI), with no sdd-kit checkout around. Bump both.
+# target repo (pre-commit and manual runs, no server CI — ADR-0023), with no
+# sdd-kit checkout around. Bump both.
 sdd-check:
 	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
@@ -62,14 +64,15 @@ sdd-check:
 	fi
 	@# spec-lint is ADVISORY here: it exits 0 unless SPEC_LINT_STRICT=1, so its
 	@# output is a report, not a gate. Its findings are printed, never swallowed.
-	@# TODO: set SPEC_LINT_STRICT=1 in CI (sdd-ci.yml) once the specs stabilize —
-	@# then this becomes a real gate and the summary line below must say so.
+	@# TODO: set SPEC_LINT_STRICT=1 locally (there is no server CI to flip this
+	@# in, ADR-0023) once the specs stabilize — then this becomes a real gate
+	@# and the summary line below must say so.
 	@if [ -f .claude/scripts/spec-lint.py ]; then python3 .claude/scripts/spec-lint.py; fi
 	@$(MAKE) --no-print-directory sdd-flags
 	@echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate, sdd-flags); agent-context symlink and spec-lint are advisory"
 
-# Advisory single-entry test gate (ADR-0015): ruff + pytest, run on demand
-# (make sdd-test) and as an advisory CI job — NOT part of sdd-check, so
+# Single-entry test gate, run on demand only (make sdd-test) — there is no
+# server CI to run it as a job (ADR-0023); NOT part of sdd-check, so
 # pre-commit / sdd-check stay fast. Named sdd-test (not test) so it never
 # collides with a repo's own test target. Each half no-ops with a clear echo
 # when the repo has nothing of that kind to run; a real run that fails exits
@@ -108,7 +111,8 @@ endif
 # Codebase knowledge graph (graphify), builds/updates graphify-out/graph.json
 # over source code + openspec/ + docs/. Manual invocation only — run it
 # yourself before a big intake (ticket/spec verification); NOT part of
-# sdd-check/pre-commit/CI, and it never spawns background processes.
+# sdd-check/pre-commit (there is no server CI, ADR-0023), and it never spawns
+# background processes.
 # ADR-0004: graphify is navigation/context ONLY, never a CI gate — its edges
 # are INFERRED (best-effort relationships), not verified facts; treat graph
 # answers as leads to check against the actual code, not ground truth.

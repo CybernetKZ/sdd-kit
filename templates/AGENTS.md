@@ -24,6 +24,10 @@ OpenSpec change and uncommitted work from before the last context compaction.
 
 ## Specs and contracts
 
+- Store setup is machine-level, done once by `install.sh --machine-only`
+  (clones `cybernet-specs` to a fixed path and runs `openspec store
+  register`); if `openspec store list` comes back empty on this machine,
+  run that install step before continuing.
 - Capability specs for this repository: `openspec/specs/`
 - Changes go through `openspec/changes/<id>/` (rule: no code without a spec;
   for refactoring/tooling use `skip_specs: true` in the change metadata).

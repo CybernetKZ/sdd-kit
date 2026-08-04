@@ -57,7 +57,11 @@ invoke skills. So:
    "Codebase search"), then confirm in code. External library/API claims:
    verify against real docs (context7 runs in the main session - if you
    cannot verify, mark the claim UNVERIFIED in the proposal, do not build
-   on it silently).
+   on it silently). Record the trail in `proposal.md`: a line
+   `Graph probes: <symbols checked>` when you queried the graph, or
+   `graph absent: <why>` when there was none to query - so the griller and
+   reviewers can see whether the plan actually consulted it (honesty over
+   ceremony, not a gate).
 2. **The proposal carries its own context**: ticket id (WEB-XXXX), tier
    (light/standard/deep) + one line why, and the flag name if the change
    ships behind one (flag name + `expires`; the owner is this change's

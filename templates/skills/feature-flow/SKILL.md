@@ -66,7 +66,7 @@ spec/Scenario text, commit and PR titles.
 ## 1b. Pick the tier
 
 Tiers scale preparation depth only. Gates never change: spec, tests before
-code, sdd-check, review, CI apply on every tier; no spec-guard bypass. Tasks
+code, sdd-check, review apply on every tier; no spec-guard bypass. Tasks
 genuinely differ - a small clear edit ships via light right away; a risky or
 cross-service one earns the full grill.
 
@@ -115,7 +115,8 @@ Picking it:
    1's `openspec/changes/<change-id>/intake.md`.
 3. Reference the ticket id in the change. Spec-guard requires this active
    change before code edits in guarded paths.
-4. Size the change for a 2-day branch (a CI warning, not a block). Bigger is an
+4. Size the change for a 2-day branch (a process rule you watch yourself, no
+   automated check). Bigger is an
    epic: the unit of work is fixed at 1 YouTrack task = 1 PR, so split the epic
    into YouTrack tasks (declared in the tracker at intake, not invented in
    tasks.md) under ONE change; each task's PR moves its slice of code and runs
@@ -167,8 +168,9 @@ through the test step before any implementation code:
 ## 4. Implement
 
 1. Branch: `feature/WEB-XXXX` (or `bugfix/WEB-XXXX`) off dev.
-2. Branches live ≤2 days; CI warns at 2 and fails at 5 (label `long-lived-ok`
-   + a `Why long-lived:` line in the PR body for a deliberate exception).
+2. Branches live ≤2 days - a process rule, not an automated check (no server
+   CI): if a branch runs long on purpose, say why in a `Why long-lived:` line
+   in the PR body.
 3. Code and spec deltas move together - the spec is part of the change.
 4. The implementation runs as the `executor` subagent on sonnet: hand it the
    change id once the plan is grilled and the tests are RED. It walks tasks.md
@@ -200,8 +202,9 @@ through the test step before any implementation code:
    only via `is_enabled("name")`, enable with `FLAG_<NAME>=1`, OFF everywhere by
    default; flag name + `FLAG_<NAME>=1` go in the QA handoff comment (step 8).
    Full lifecycle: the module docstring.
-4. `make sdd-flags` fails CI 7 days past `expires`; "delete the flag" is a task
-   in the same change's tasks.md, owned by the change's author.
+4. `make sdd-flags` (run locally, e.g. via pre-commit) fails 7 days past
+   `expires`; "delete the flag" is a task in the same change's tasks.md,
+   owned by the change's author.
 5. Touching a FIXED contract (frontend api/v1, external WebAPI, redis streams)?
    The change MUST carry an expand/contract plan (new fields optional -> both
    sides read -> flag flips the producer -> old fields removed before `expires`);
@@ -217,7 +220,8 @@ through the test step before any implementation code:
 
 1. `make sdd-check` green, then run the reviewer agents on the diff
    (`backend-reviewer`, plus `database-reviewer` when the diff touches SQL, the
-   ORM or migrations) - or open the PR and let autoreview do it.
+   ORM or migrations) with `make sdd-review` - locally, before opening the
+   PR; there is no server-side review step.
 2. Fix CRITICAL/HIGH that are in scope of the ticket. Out-of-scope findings:
    add `TODO`/`NOTE` with the ticket id, do not silently expand scope.
 3. Re-run the tests after applying review fixes.
@@ -227,12 +231,13 @@ through the test step before any implementation code:
 1. Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
 2. Body: what changed, why, test plan (link the tests/Scenarios). Say if the
    tests were agent-generated without human QA validation.
-3. CI checks on the PR: sdd-gate, the tests, the TBD gates (branch age, PR size),
-   autoreview. **All advisory today** - no branch protection, nothing
-   required; a red gate does not stop the merge, it tells you something is wrong.
-   Treat red as red anyway. What actually blocks you is local: spec-guard and the
-   pre-commit hook. The traceability gate (each Scenario ⇄ one test) and the QA
-   quality gate are review discipline until CI has them.
+3. There is no server CI - what actually blocks you is local: spec-guard, the
+   pre-commit hook (runs `make sdd-check`), and `make sdd-test` / `sdd-review`
+   run before opening the PR, not after. Branch age (≤2 days) and PR size
+   (≤1500 lines) are process rules the developer watches themselves - no
+   automated check enforces them, and there are no escape labels for them
+   anymore. The traceability gate (each Scenario ⇄ one test) and the QA
+   quality gate are review discipline, same as before.
 
 ## 8. Handoff
 

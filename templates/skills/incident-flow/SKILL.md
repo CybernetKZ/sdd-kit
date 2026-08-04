@@ -9,8 +9,8 @@ Incidents arrive as loose Telegram messages ("не было end_call со сто
 агента, посмотри почему"), often without an owner. Follow **feature-flow**
 (`.claude/skills/feature-flow/SKILL.md`) with the differences below - everything
 else is identical: its language rule, tier rules, the gates (spec, tests before
-code, sdd-check, review, CI), its step-3 test rules, no spec-guard bypass for
-urgent work.
+code, sdd-check, review - all local, no server CI), its step-3 test rules, no
+spec-guard bypass for urgent work.
 
 ## Step 1 becomes: collect the evidence
 
