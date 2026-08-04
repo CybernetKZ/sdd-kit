@@ -74,7 +74,7 @@ cross-service one earns the full grill.
 |---|---|
 | light | minimal change (why + what + a Scenario for the regression test); skip the plan grill. The test is still written before the fix, by `test-author` |
 | standard | this skill as written |
-| deep | + architecture research before planning (compare options, record the comparison in the change's `design.md` — ADRs are kit-level and live in sdd-kit; target repos have no `docs/ADR/`) + the grill is mandatory |
+| deep | + architecture research before planning (compare options, record the comparison in the change's `design.md` - ADRs are kit-level and live in sdd-kit; target repos have no `docs/ADR/`) + the grill is mandatory |
 
 The tier fixes the pipeline and the models. Models are static in each agent's
 frontmatter - never pick a model at runtime:
