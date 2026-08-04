@@ -1,6 +1,6 @@
 # Handoff: миграция conversation_flow, фаза 3 (2026-08-03)
 
-Передача состояния для продолжения после `/compact`. Канон плана - [PLAN_CF_MIGRATION.md](PLAN_CF_MIGRATION.md), решения - [ADR-0019](ADR/ADR-0019-cf-onboarding.md), [ADR-0020](ADR/ADR-0020-dedup-commands-reviewers.md), дефекты - [DEFECTS_CF.md](DEFECTS_CF.md).
+Передача состояния для продолжения после `/compact`. Канон плана - [PLAN_CF_MIGRATION.md](PLAN_CF_MIGRATION.md), решения - [ADR-0019](../ADR/ADR-0019-cf-onboarding.md), [ADR-0020](../ADR/ADR-0020-dedup-commands-reviewers.md), дефекты - [DEFECTS_CF.md](../DEFECTS_CF.md).
 
 ## Что сделано
 

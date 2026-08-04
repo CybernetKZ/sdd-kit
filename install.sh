@@ -733,8 +733,11 @@ EOF
     printf -- "-include Makefile.sdd\n" > Makefile; say "created: Makefile (include only)"
   fi
 
-  # --------------------------- 5b. flag registry (makes sdd-flags a real gate)
-  put feature_flags.py feature_flags.py
+  # 5b. flag registry: NOT installed by default — flags are a tool on request
+  # (dormant, ADR-0015). When a team takes its first flag, copy it by hand:
+  #   cp "$KIT/templates/feature_flags.py" feature_flags.py
+  # `make sdd-flags` passes with no registry and becomes a real gate once
+  # the file exists and is committed.
 
   # --------------------------------- 6b. ruff config (only when none exists)
   if [ "$PROFILE_SKIP_PY" = 1 ]; then

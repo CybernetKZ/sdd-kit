@@ -6,7 +6,7 @@ adds what is missing.
 
 **Where to start:**
 
-- New to the team or to SDD -> `docs/ONBOARDING.md`.
+- New to the team or to SDD -> `WORKFLOW.md`, then `docs/GLOSSARY.md`.
 - How the process works (signal -> merged PR) -> `WORKFLOW.md`.
 - Installing the kit into a repo -> keep reading this file.
 - Installed already, "what do I actually use, and how do I start a task?" ->
@@ -31,9 +31,6 @@ Re-running is safe. Every question has a default and plain Enter accepts it
 defaults without asking; in that mode nothing that downloads and runs remote
 code is executed - the command to run yourself is printed instead. The YouTrack
 token is only ever read from an interactive prompt.
-
-`bootstrap.sh` and `setup-dev.sh` still work as deprecated shims for
-`--repo-only` / `--machine-only` and will be removed after one release.
 
 ## Updating the kit in a repo: `install.sh --refresh`
 
@@ -82,7 +79,7 @@ clean: `git status` shows the repo exactly as before install.
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `Makefile.sdd` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
 | `Makefile.sdd` (+ `-include` in Makefile) | 6 targets: `sdd-check` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict` + `sdd-flags`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `sdd-flags`, `sdd-doctor`, `sdd-test` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `sdd-review` (local AI review of the diff), `sdd-index` (graphify graph, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
-| `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - no process step requires a flag** (ADR-0015): flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails CI. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
+| `feature_flags.py` | minimal flag registry (ADR-0007), **on demand - not installed by default** (ADR-0015): copy `templates/feature_flags.py` by hand when the team takes its first flag. Flag name -> `expires` date, `FLAG_<NAME>=1` to enable, `is_enabled()` to read; `make sdd-flags` warns 7 days past expiry, then fails locally. Lifecycle is documented in the module docstring; `git add` it so the gate sees it |
 | `.github/workflows/sdd-ci.yml` | the SDD gate on every pull request - **advisory today**: no branch protection, no required check (ADR-0015); + `tbd-gates` job (ADR-0006): branch age (warn >2 days, red >5) and PR size (fail >1500 changed lines; edit `PR_XL_LINES` in the workflow if a repo needs another limit) - escape labels `long-lived-ok`/`xl-ok` require a `Why ...:` reason in the PR body |
 | `.github/workflows/autoreview.yml` | PR auto-review: AI review via headless `claude -p` using the shared prompt `.claude/scripts/review-prompt.md`, fed a static-tool report (radon, complexipy, vulture, semgrep security patterns) it must verify before reporting; the whole job exits in seconds when `CLAUDE_CODE_OAUTH_TOKEN` is absent |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
@@ -149,8 +146,8 @@ repo.
 3. Seed `openspec/specs/` one capability at a time. The kit does **not** ship a
    spec-miner agent - use the `openspec-explore` / `openspec-sync-specs` skills,
    or a machine-level miner agent of your own; the conversation_flow run that
-   produced the current convention is written up in `docs/SPEC_MINER_PILOT.md`
-   and `docs/STORE_VERIFICATION.md`. Anchor format is
+   produced the current convention is written up in `docs/archive/SPEC_MINER_PILOT.md`
+   and `docs/archive/STORE_VERIFICATION.md`. Anchor format is
    `<!-- enforced: path/to/file.py:ClassName.method -->` and `spec-lint.py`
    validates **both** halves - a fabricated symbol makes the spec MISSING.
 4. Run `make sdd-doctor` and clear the FAILs. WARNs are advisory clutter
@@ -268,7 +265,7 @@ project-local `/tz -> /tz-review -> plan-griller -> test-author -> /tz-implement
 trilogy instead of `feature-flow`, keeps `docs/DOCUMENTATION.md` as a LIVING
 SPEC in parallel with `openspec/specs/` forever, and keeps `.spec-guard-paths`
 empty on purpose while the conversion runs (ADR-0019,
-`docs/PLAN_CF_MIGRATION.md`). There, `feature-flow` is installed but used only
+`docs/archive/PLAN_CF_MIGRATION.md`). There, `feature-flow` is installed but used only
 as the source of the tier table. Always read the target repo's `AGENTS.md`
 before assuming the kit's default flow applies - the repo's own lints and guards
 outrank the kit's.
@@ -372,8 +369,6 @@ The reviewer agents are adapted from
 ```
 install.sh            installer: --repo-only (repo assets) / --machine-only (dev tools)
 uninstall.sh          per-repo uninstaller (reverses install.sh, keeps team edits)
-bootstrap.sh          deprecated shim -> install.sh --repo-only
-setup-dev.sh          deprecated shim -> install.sh --machine-only
 WORKFLOW.md           end-to-end team flow + a live "what runs today vs planned" table
 QA-SDD-PROCESS.md     the QA half: tests before code, from the spec delta
 profiles/             per-repo overrides: spec-guard paths, store wiring, py/no-py
@@ -384,8 +379,8 @@ templates/            everything installed into repos (English-only)
   skills/             team skills (feature-flow, incident-flow)
 tools/cf/             conversation_flow migration instructions - run by hand,
                       NOT installed (mine-section, verify-section, patch2change, ...)
-docs/                 ADR/ (the decision registry), GLOSSARY.md, ONBOARDING.md,
-                      SDD_KIT_LAYERS.md, PLAN_CF_MIGRATION.md, DEFECTS_CF.md, ...
+docs/                 ADR/ (the decision registry), GLOSSARY.md, DEFECTS_CF.md,
+                      archive/ (finished plans, dry-runs, handoffs), ...
 ```
 
 ## Benchmarks

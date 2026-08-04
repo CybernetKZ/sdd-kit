@@ -1,6 +1,6 @@
 # План миграции conversation_flow на sdd-kit + OpenSpec
 
-Дата: 2026-08-03. Статус: **прошёл грилл** (grill-with-docs, решения зафиксированы в [ADR-0019](ADR/ADR-0019-cf-onboarding.md)).
+Дата: 2026-08-03. Статус: **прошёл грилл** (grill-with-docs, решения зафиксированы в [ADR-0019](../ADR/ADR-0019-cf-onboarding.md)).
 Источники: `~/cybernet/docs/sdd-kit-vs-conversation_flow.md`, `~/cybernet/docs/sdd-kit-vs-code-conventions.md`, глубокий аудит conversation_flow от 2026-08-03 (LIVING SPEC 9470 строк / v1.81.0, 83 ТЗ в `docs/patches/`, 41 405 строк тестов).
 conversation_flow входит в scope sdd-kit (частично отменяет ADR-0015); спец-код под conversation_flow разрешён внутри sdd-kit.
 
@@ -134,7 +134,7 @@ merge-base `4653f63f`: 8 ТЗ (№92-99, требования на исправ�
 код не написан), 1.89.0 -> 1.89.1, 5 изменённых файлов, ни один не заякорен.
 
 Порядок работ и развилка "реализовано -> `changes/archive/`, не реализовано ->
-активный `changes/`" - в [tools/cf/sync-main.md](../tools/cf/sync-main.md).
+активный `changes/`" - в [tools/cf/sync-main.md](../../tools/cf/sync-main.md).
 Там же зафиксированы две ловушки: `spec-lint` сравнивает `Last verified`-коммит
 с HEAD **своей** ветки и поэтому изменений на `main` не видит до мержа (значит
 ре-верификация и обновление маркеров - только после мержа, а мерж делает
@@ -178,7 +178,7 @@ merge-base `4653f63f`: 8 ТЗ (№92-99, требования на исправ�
 
 ## 7. Открытые вопросы (вне этого плана)
 
-1. ~~Грилл №2 - дедупликация команд~~ - **проведён 2026-08-03, решения в [ADR-0020](ADR/ADR-0020-dedup-commands-reviewers.md)** (tz-review добавлен в payload §2.3; C2/C3 закрыты в §5; фиксы planner/plan-griller/openspec-1.7.0 - по списку PROMPT_AUDIT_SDD_KIT.md P0).
+1. ~~Грилл №2 - дедупликация команд~~ - **проведён 2026-08-03, решения в [ADR-0020](../ADR/ADR-0020-dedup-commands-reviewers.md)** (tz-review добавлен в payload §2.3; C2/C3 закрыты в §5; фиксы planner/plan-griller/openspec-1.7.0 - по списку PROMPT_AUDIT_SDD_KIT.md P0).
 2. Владельцы-ревьюеры store-PR фазы 2 со стороны WBN/VA.
 3. Дефекты из `DEFECTS_CF.md` (появятся в фазе 3) - триаж в тикеты.
 4. Работы на стороне code-conventions (решены здесь, делаются там): пересинк database-reviewer и feature-flow с кита, бэкпорт hardening-преамбулы + вердикт-формата в python/fastapi-reviewer, HIGH=Warning в python-reviewer (ADR-0020 п. 1, 3, 5, 7).

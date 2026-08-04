@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck all shell scripts
-        run: shellcheck -S warning install.sh bootstrap.sh uninstall.sh setup-dev.sh templates/*.sh
+        run: shellcheck -S warning install.sh uninstall.sh templates/*.sh
       - name: bash syntax
         run: |
-          bash -n install.sh bootstrap.sh uninstall.sh setup-dev.sh
+          bash -n install.sh uninstall.sh
           for f in templates/pre-commit-hook.sh templates/sdd-doctor.sh; do
             bash -n "$f"
           done

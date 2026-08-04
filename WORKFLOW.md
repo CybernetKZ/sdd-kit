@@ -307,7 +307,7 @@ Last verified: 2026-08-04 (ADR-0023 wave B text revision - server CI removed fro
 | `feature-flow` / `incident-flow` skills | shipped (`templates/skills/`) |
 | `planner` / `plan-griller` agents (model binding for plan/grill; `Graph probes:` provenance line) | shipped (`templates/agents/`, ADR-0013, ADR-0023) |
 | `test-author` agent (tests before code) | shipped (`templates/agents/`, ADR-0016) |
-| **feature flags** | **dormant / on demand** (ADR-0015): the registry + `make sdd-flags` ship and work, but no process step requires a flag; run locally, not by a CI job. Open question: who sets `FLAG_X=1` on stage/prod and where |
+| **feature flags** | **dormant / on demand** (ADR-0015): `make sdd-flags` works, the registry is copied by hand from `templates/feature_flags.py` when a team takes its first flag (not installed by default); run locally, not by a CI job. Open question: who sets `FLAG_X=1` on stage/prod and where |
 | central store (cybernet-specs) | live - `install.sh --machine-only` clones it to a fixed machine path and registers it; consumer is the **agent** reading cross-service specs at intake/planning, not a machine gate (ADR-0015, ADR-0023) |
 | repo knowledge graph (graphify) | committed to git as a team artifact (`graphify-out/graph.json`, ADR-0023); sdd-doctor warns if stale vs HEAD; navigation/context only, never a gate (ADR-0004) |
 | RAISE intake (form, RICE, board) | company process being introduced (ADR-0009) |
