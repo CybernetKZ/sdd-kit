@@ -8,16 +8,11 @@ This document describes the TARGET process. What is already running vs
 still planned is tracked in the **Status** section at the end; planned
 pieces are marked *(planned)* in the text.
 
-Grounding: RAISE intake = ADR-0009; task tiers & models = ADR-0010;
-epic/flags/handoff seam = ADR-0011; grill/QA/epic clarifications =
-ADR-0012; branch & PR gates = ADR-0006; enforcement = ADR-0003, deliberately
-advisory today = ADR-0015; testing = `QA-SDD-PROCESS.md` + ADR-0016 (tests are
-written from the spec delta BEFORE implementation, and never by whoever writes
-the implementation: today the `test-author` agent writes them and a human QA
-validates; human QA owning the step is the target).
-The per-task orchestration lives in the `feature-flow`
-skill (features) and `incident-flow` skill (bugs/incidents) - this diagram
-is those skills drawn as one picture.
+This is an OVERVIEW, not the procedure. The executable canon of the per-task
+process lives in the `feature-flow` skill (features) and the `incident-flow`
+skill (bugs/incidents) - the diagram below is those skills drawn as one
+picture, and testing detail lives in `QA-SDD-PROCESS.md`. Which ADR stands
+behind which rule: the **Grounding** table at the end.
 
 ```mermaid
 flowchart TD
@@ -54,8 +49,8 @@ flowchart TD
 
     %% ============ PLAN ============
     subgraph PLANNING["2 · Plan (OpenSpec change) (feature-flow 2 · incident-flow 3)"]
-        RESEARCH["deep tier only: research architecture<br/>options, compare, write ADR"]
-        PLAN["planner agent (opus): /opsx:propose -<br/>proposal + spec deltas + tasks<br/>(ticket id, tier + why inside)"]
+        RESEARCH["deep tier only: research architecture<br/>options, compare, write the change's design.md<br/>(ADRs stay in sdd-kit)"]
+        PLAN["planner agent (opus): openspec-propose -<br/>proposal + spec deltas + tasks<br/>(ticket id, tier + why inside)"]
         GRILL["standard/deep: plan-griller agent (opus)<br/>grills the plan, the dev answers (ADR-0012) -<br/>edge cases, rollback, migrations, cross-service;<br/>unanswered -> question to the ticket author.<br/>Q&A recorded as '## Grill' section in proposal.md"]
         POK{"Plan holds?"}
         RESEARCH --> PLAN
@@ -82,7 +77,7 @@ flowchart TD
 
     %% ============ IMPLEMENT ============
     subgraph IMPL["4 · Implement (feature-flow 4, 4b · incident-flow 4)"]
-        CODE["Branch feature/WEB-XXXX off dev.<br/>Code + spec deltas move together.<br/>The tests already exist - dev runs them<br/>locally while implementing.<br/>Epic: several small PRs; a feature flag only<br/>if it must ship dark (optional, ADR-0015)"]
+        CODE["Branch feature/WEB-XXXX off dev.<br/>executor agent (sonnet) walks tasks.md;<br/>code + spec deltas move together.<br/>The tests already exist - it runs them<br/>while implementing, and stops-and-reports<br/>on any deviation from the plan.<br/>Epic: several small PRs; a feature flag only<br/>if it must ship dark (optional, ADR-0015)"]
         RUN1["Run the tests"]
         T1{"Green?"}
         FIX["Fix implementation<br/>(never the tests - not the implementer's)"]
@@ -163,83 +158,27 @@ flowchart LR
     class YTMCP,STORE,GRAPH,C7,OS,GWD,ASTG,CDA,GHA,AGENTS,FLAGS tool
 ```
 
-## Task tiers (ADR-0010)
+## Procedure lives in the skills, not here
 
-Tiers scale preparation depth only - **gates never change**: spec always
-exists (minimal for light), tests before code, sdd-check, review, CI.
-No spec-guard bypass on any tier. Tasks genuinely differ: a small clear
-edit ships via light right away; a risky or cross-service one earns the
-full spec grilling - the tier decides depth, never whether gates apply.
+Four rule sets used to be duplicated in this document. Their canon is now
+single-sourced; this is the one-line summary plus where to read them:
 
-| Tier | Adds / skips |
-|---|---|
-| light | minimal spec delta (why + what); no plan grill; the test is still written first by `test-author` - for bugs, the regression test reproducing the incident |
-| standard | the full feature-flow above, test flow per QA-SDD-PROCESS.md |
-| deep | + architecture research phase (options compared, ADR written) + mandatory plan grill |
-
-Picking the tier - the default comes from this heuristic (dev may
-override; the chosen tier + why goes into the change):
-
-| Task looks like | Default tier |
-|---|---|
-| typo / config value / isolated bug with no cross-service impact | light |
-| a regular feature inside one service | standard |
-| cross-service change, data migration, new architecture, unknown territory | deep |
-
-Model binding is pinned in agent frontmatter, not in people's memory:
-plan and grill run as the `planner` / `plan-griller` subagents
-(`.claude/agents/`, `model: opus` - installed by bootstrap, ADR-0013);
-tests run as `test-author` (`model: sonnet`, ADR-0016); implementation ->
-session model; reviewer agents -> their `model` frontmatter; mechanical
-steps -> haiku.
-
-## Epics (ADR-0011, ADR-0012, ADR-0013)
-
-The unit of work is fixed: **1 YouTrack task = 1 PR**. An epic is split
-into YouTrack tasks at intake (declared in the tracker, not invented in
-tasks.md) - the epic's breakdown and progress live in YouTrack. One OpenSpec
-change spans the whole epic (ADR-0011); each task's PR moves its slice of
-code and runs the tests that already exist. A feature flag over the epic is
-**optional** (ADR-0015) - take one when the half-built state must not be
-reachable in prod, not because it is an epic. Exception to 1:1: follow-up
-fix PRs for an already-accepted feature may ride the original task.
-
-Suspect an undeclared epic whenever the plan predicts crossing the ADR-0006
-signals - >1500 changed lines or >2 days of work for a single PR - and
-confirm the split with the ticket author before starting.
-
-Tests for an epic (ADR-0013): written ONCE for the whole change (all
-Scenarios, before the first PR); Scenarios not yet implemented stay as
-explicit skips (or, with a flag, run behind it while OFF). Intermediate
-merges do NOT ping QA - the single `ready_to_test` handoff happens when the
-whole change is done on stage.
-
-## Who writes the tests (ADR-0016, ADR-0012)
-
-Today the **`test-author` agent** writes them, in its own context, from the
-spec delta - never the person who will write the implementation. Human QA
-owning phase 3 is the TARGET state, not the current one. The adversarial
-check (a separate agent, never `test-author` on itself) stays mandatory, and
-the PR notes that tests were agent-generated without human QA validation -
-human QA catches up before the change reaches prod (with a flag: before the
-flag is enabled).
-
-For flagless changes (typical light tier) the catch-up point is the
-release: **`ready_to_test` holds the release** (ADR-0013) - before
-deploying dev to prod, the release checklist verifies in YouTrack that no
-shipped ticket is still in `ready_to_test` without a human QA verdict.
-This is a process rule (like RAISE), not a CI gate.
-
-## Disputed tests (ADR-0012)
-
-A red test means one of three things, each with its own exit:
-
-1. The implementation is wrong -> fix the implementation (the normal loop).
-2. The test contradicts its Scenario -> the dev disputes it: the test goes
-   back to phase 3 with the argument "contradicts Scenario X". The arbiter is
-   the Scenario text. The dev never edits the test.
-3. The Scenario itself is ambiguous -> the spec delta goes back to its
-   author (the existing "spec delta back to its author" path).
+- **Task tiers** (light / standard / deep) scale preparation depth only -
+  gates never change and no tier bypasses spec-guard. Table, pipelines,
+  model binding and the picking heuristic: `feature-flow` §1b.
+- **Epics**: 1 YouTrack task = 1 PR, split declared in the tracker at intake,
+  one OpenSpec change spanning the epic, tests written once for the whole
+  change. Details: `feature-flow` §2 (an undeclared epic is suspected whenever
+  a single PR would cross the >1500-lines / >2-days signals; follow-up fix PRs
+  for an already-accepted feature may ride the original task).
+- **Who writes the tests**: the `test-author` agent today, in its own context,
+  from the spec delta - never the implementer; human QA owning the step is the
+  target, and `ready_to_test` holds the release until a human verdict exists.
+  Details: `QA-SDD-PROCESS.md` + `feature-flow` §3.
+- **Disputed tests**: a red test is either wrong implementation, a test
+  contradicting its Scenario (dispute it - the dev never edits it), or an
+  ambiguous Scenario (back to the spec delta's author). Details:
+  `feature-flow` §4.
 
 ## Where the named pieces live
 
@@ -251,6 +190,7 @@ A red test means one of three things, each with its own exit:
 | `AGENTS.md` (+`CLAUDE.md` symlink) | ambient context read by the agent in every phase; existence/size gated by sdd-check |
 | `planner` / `plan-griller` agents | phase 2 on opus (`model` frontmatter, ADR-0013): planner writes the change, plan-griller interrogates it |
 | `test-author` agent | phase 3 on sonnet (ADR-0016): one failing test per Scenario from the spec delta, tracer `# spec: ...`, RED confirmed; writes test files only, never implementation |
+| `executor` agent | phase 4 on sonnet (ADR-0021): walks `tasks.md` of a grilled change with RED tests, ticking tasks as it goes; never edits tests, never commits, stops-and-reports on any deviation from the plan instead of improvising - disputes and "change the plan?" calls go back to the orchestrator |
 | `spec-miner` agent | repo onboarding only (seed specs one capability at a time), NOT in the per-task loop; OpenSpec has no built-in equivalent |
 | reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, locally (`make sdd-review`) and in CI autoreview |
 
@@ -283,11 +223,11 @@ Consequences:
 ## Prototype instead of waiting
 
 A serious business fork blocks the decision, not the hands: while the ticket
-author answers, build a prototype on the recommended answer - explicitly
-marked as a prototype, with a request to verify it. The answer either
-confirms the direction or the prototype is cheaply discarded; both beat
-idling. This never bypasses gates: the prototype lives behind the same
-OpenSpec change, and merging still requires the full flow.
+author answers, build a prototype on the recommended answer - explicitly marked
+as such, with a request to verify it. Either the answer confirms the direction
+or the prototype is cheaply discarded; both beat idling. Gates are unchanged:
+the prototype lives under the same OpenSpec change, and nothing merges while a
+blocking question is open.
 
 ## Cross-cutting tools (active in every phase)
 
@@ -303,6 +243,46 @@ Installed per developer machine by `install.sh --machine-only` (core stack, defa
 Opt-in (y/N): **gh-axi**, **chrome-devtools-axi**, **serena** (earlier trial
 left `.serena/` litter; the sdd-doctor audit section flags it). **caveman** is not installed -
 it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
+
+## Grounding: правило → ADR
+
+Промпты (`templates/skills/*`, `templates/agents/*`) несут само правило фразой,
+без `ADR-XXXX` — целевой репозиторий не имеет `docs/ADR/` (ADR-0022 п.2). Связь
+«правило → решение» живёт здесь. Меняешь правило — проверь эту таблицу.
+
+| Правило (одной фразой) | ADR |
+|---|---|
+| Enforcement живёт только в детерминированном коде (хуки + CI-гейты); промпты — совет | ADR-0003 |
+| `make sdd-test` — единая точка входа тестов для CI | ADR-0003 |
+| Граф repo — только навигация/контекст, никогда гейт; `[INFERRED]` рёбра проверять в коде | ADR-0004 |
+| Ветка ≤2 дней, размер PR ограничен; сигналы >1500 строк / >2 дней; CI предупреждает, не блокирует | ADR-0006 |
+| Реестр фича-флагов: имя → `expires`, доступ через `is_enabled()`, OFF по умолчанию, `make sdd-flags` красит CI через 7 дней после `expires` | ADR-0007 |
+| Крупная замена — branch by abstraction, абстракция удаляется после cutover | ADR-0007 §5 |
+| Задачи приходят через RAISE: форма запроса + RICE; баг-репорт сразу, без RICE; urgent ускоряет ПРИОРИТИЗАЦИЮ, не разработку | ADR-0009 |
+| Тиры (light/standard/deep) масштабируют глубину подготовки, гейты не меняют; тир + обоснование пишутся в change | ADR-0010 |
+| Один OpenSpec change на весь эпик; архивирование — когда флаг включён в prod (или, без флага, после мержа последней задачи); handoff-шов SDD↔TBD | ADR-0011 |
+| Имя флага + `FLAG_<NAME>=1` в handoff-комментарии для QA | ADR-0011 §2 |
+| Grill плана: разработчик отвечает, неотвеченное уходит автору тикета; правим план, не код потом | ADR-0012 |
+| Спорный тест: три выхода (код неверен / тест противоречит Scenario / Scenario неоднозначен); реализующий тест не правит | ADR-0012 |
+| Traceability-гейт (Scenario ⇄ тест) и QA-гейт — дисциплина ревью, пока их нет в CI | ADR-0012 п.8 |
+| 1 задача YouTrack = 1 PR; эпик разбивается в трекере; тесты эпика пишутся один раз на весь change | ADR-0013 |
+| `ready_to_test` держит релиз до человеческого QA-вердикта; владелец флага удаляет его по `expires` | ADR-0013 |
+| Модели зафиксированы во frontmatter агентов (planner/plan-griller opus) — не выбираются на бегу | ADR-0013 |
+| Все CI-проверки advisory: нет branch protection, нет required check; блокирует только локальное (spec-guard, pre-commit) | ADR-0015 |
+| Флаги — по требованию, не шаг процесса; открытый вопрос: кто и где ставит `FLAG_<NAME>=1` на stage/prod | ADR-0015 |
+| Store — потребитель агент, читающий кросс-сервисные спеки, не машинный гейт | ADR-0015 |
+| Тесты пишутся из spec delta ДО реализации, агентом `test-author` (один тест или явный skip на Scenario, tracer `# spec:`), RED до кода; adversarial-проверка отдельным агентом; человеческий QA — целевое состояние, в PR это указывается | ADR-0016 |
+| Правка кросс-repo контракта — отдельный change + PR в `cybernet-specs`; в своём change остаётся обоснование и задача с id того change; не архивируется, пока store-PR открыт | ADR-0018 |
+| Реализация — субагент `executor` на sonnet: строго по tasks.md, не правит тесты, не коммитит, стоп-и-отчёт при отклонении; секции tasks.md пока последовательны | ADR-0021 |
+| Тир фиксирует пайплайн (light без planner/griller; deep — grill только агентом) | ADR-0021 |
+| `## Grill` открывается provenance-заголовком: кто грилил, сколько вопросов, что изменилось | ADR-0021 |
+| В промптах нет `ADR-XXXX`; вывод человеку — по-русски, машинные форматы/теги — английские | ADR-0022 |
+
+Без ADR (правило живёт только в текстах — кандидат на фиксацию отдельным
+решением): deep-тир пишет сравнение архитектурных опций в `design.md` самого
+change'а, а не в ADR, потому что в целевых репозиториях нет `docs/ADR/`
+(сформулировано в `feature-flow` §1b/§2 и `planner.md` п.7, ни одним ADR не
+покрыто).
 
 ## Status: what runs today vs what is planned
 
