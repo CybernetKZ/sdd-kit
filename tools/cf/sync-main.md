@@ -7,7 +7,7 @@
 
 ## Вход
 
-- Репозиторий: `/home/octrow/cybernet/conversation_flow`
+- Репозиторий: conversation_flow; пути ниже — от его корня (путь до клона даёт задание)
 - Отчёт о дрейфе: `bash tools/cf/main-drift.sh` (из корня; `--main <ref>`,
   по умолчанию `origin/main`; exit 1 = дрейф есть). Перед прогоном `git fetch`.
 - Протоколы: [patch2change.md](patch2change.md) (архивная конвертация ТЗ),
