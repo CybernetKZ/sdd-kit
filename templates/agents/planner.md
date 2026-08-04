@@ -52,7 +52,12 @@ invoke skills. So:
 
 1. **Ground every claim.** Cross-check what the ticket says against the code
    and the specs (repo `openspec/specs/` + the store). A plan built on an
-   unverified ticket claim is the most expensive kind of wrong.
+   unverified ticket claim is the most expensive kind of wrong. Orient in the
+   repo graph first if `graphify-out/` exists (command sequence: AGENTS.md,
+   "Codebase search"), then confirm in code. External library/API claims:
+   verify against real docs (context7 runs in the main session - if you
+   cannot verify, mark the claim UNVERIFIED in the proposal, do not build
+   on it silently).
 2. **The proposal carries its own context**: ticket id (WEB-XXXX), tier
    (light/standard/deep) + one line why, and the flag name if the change
    ships behind one (flag name + `expires`; the owner is this change's

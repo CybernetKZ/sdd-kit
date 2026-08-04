@@ -142,7 +142,7 @@ flowchart LR
     OS(["OpenSpec<br/>specs + delta-changes, spec-guard hook"]) -.-> P2
     OS -.-> P4
     OS -.-> P5
-    GWD(["grill-with-docs<br/>team practice: agent interrogates the plan"]) -.-> P2
+    GWD(["grill-with-docs practice, implemented by<br/>the plan-griller agent: interrogation +<br/>decisions & glossary terms into ## Grill"]) -.-> P2
     C7(["context7 MCP<br/>library / API docs"]) -.-> P2
     C7 -.-> P4
     ASTG(["ast-grep<br/>bulk mechanical refactors"]) -.-> P4
@@ -272,6 +272,7 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | Флаги — по требованию, не шаг процесса; открытый вопрос: кто и где ставит `FLAG_<NAME>=1` на stage/prod | ADR-0015 |
 | Store — потребитель агент, читающий кросс-сервисные спеки, не машинный гейт | ADR-0015 |
 | Тесты пишутся из spec delta ДО реализации, агентом `test-author` (один тест или явный skip на Scenario, tracer `# spec:`), RED до кода; adversarial-проверка отдельным агентом; человеческий QA — целевое состояние, в PR это указывается | ADR-0016 |
+| Spec-метаданные: в дельте для repo-спек каждый Requirement несёт `<!-- id: ... -->` и `<!-- enforced: <file>:<symbol> -->` (проверяет spec-lint); дельта против store-спеки — без них, store — прозой с `file.py:line`-якорями | ADR-0017 |
 | Правка кросс-repo контракта — отдельный change + PR в `cybernet-specs`; в своём change остаётся обоснование и задача с id того change; не архивируется, пока store-PR открыт | ADR-0018 |
 | Реализация — субагент `executor` на sonnet: строго по tasks.md, не правит тесты, не коммитит, стоп-и-отчёт при отклонении; секции tasks.md пока последовательны | ADR-0021 |
 | Тир фиксирует пайплайн (light без planner/griller; deep — grill только агентом) | ADR-0021 |
@@ -286,7 +287,7 @@ change'а, а не в ADR, потому что в целевых репозит�
 
 ## Status: what runs today vs what is planned
 
-Last verified: 2026-08-01. Update this table when a planned piece goes live.
+Last verified: 2026-08-04 (text revision, ADR-0022: install --repo-only + sdd-check green on a scratch repo). Update this table when a planned piece goes live.
 
 | Component | Status |
 |---|---|

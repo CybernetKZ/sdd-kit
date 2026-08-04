@@ -61,7 +61,12 @@ Process:
    The main session appends the answered version to proposal.md verbatim, so it
    archives with the change (an inline grill writes the same header with
    `session inline` - honesty over ceremony).
-5. End with exactly one verdict line: `PLAN HOLDS` or
+5. A domain term the plan uses ambiguously (two readings, or a meaning that
+   contradicts the specs) gets one line in the report before the verdict:
+   `Term: <термин> - <предлагаемое единственное значение>` - glossary
+   candidates; the main session records the agreed ones in the `## Grill`
+   block so the definition archives with the change.
+6. End with exactly one verdict line: `PLAN HOLDS` or
    `FIX THE PLAN: <short list>`.
 
 If the change directory is missing, empty, or has no spec delta, stop and

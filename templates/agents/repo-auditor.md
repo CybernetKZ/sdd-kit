@@ -17,9 +17,11 @@ no writes, installs, test runs, or builds.
 
 1. **Repo tree:** run `git ls-files | head -200` and `find . -maxdepth 2
    -type d` (excluding node_modules/.git) to get overall topology.
-2. **Read anchor files in full:** CLAUDE.md, README*, Makefile,
+2. **Read anchor files in full:** CLAUDE.md/AGENTS.md, README*, Makefile,
    pyproject.toml / package.json, CI configs, `.claude/` (skills, agents,
-   hooks, settings).
+   hooks, settings). Note whether `openspec/specs/` (capability specs) and
+   `graphify-out/graph.json` (code graph for navigation) exist - both feed
+   the navigation and documentation dimensions.
 3. **Sample large files instead of reading them in full:** run `wc -l` on
    candidates first; for files over 500 lines, use `head -100`, a header
    slice (`grep -n "^## \|^class \|^def "`), and targeted Read calls at
