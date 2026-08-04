@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # SDD installer — one entry point for both halves of the setup:
 #
-#   1. REPO section    SDD assets in a repository: openspec, AGENTS.md, gates,
-#                      hooks, agents, skills, CI, pre-commit. Idempotent:
+#   1. REPO section    SDD assets in a repository: openspec, AGENTS.md, local
+#                      gates, hooks, agents, skills, pre-commit. Idempotent:
 #                      never overwrites existing files, only adds what is missing.
-#   2. MACHINE section per-developer tools (ponytail, rtk, graphify, ast-grep,
-#                      and the opt-in ones). Touches no repository.
+#                      No CI workflows: ADR-0023 §5 retired server-side gates.
+#   2. MACHINE section the central spec store (clone at a fixed path + register)
+#                      and per-developer tools (ponytail, rtk, graphify,
+#                      ast-grep, and the opt-in ones). Touches no repository.
 #
 # Usage:
 #   sdd-kit/install.sh [/path/to/repo]              both sections (repo first)
@@ -14,7 +16,7 @@
 #   sdd-kit/install.sh --refresh [/path/to/repo]    update the kit-owned files
 #
 # --refresh re-copies ONLY the kit-owned manifest (hooks, agents, skills,
-# scripts, Makefile.sdd, CI workflows, pre-commit) when the target drifted from
+# scripts, Makefile.sdd, pre-commit) when the target drifted from
 # the template, and reports a per-file (+added/-removed) summary. Repo-owned
 # files (AGENTS.md, .spec-guard-paths, feature_flags.py, .claude/expected-env,
 # ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched
@@ -34,10 +36,25 @@
 # without a TTY (or with SDD_KIT_ASSUME_YES=1) they print the command instead.
 #
 # Basis: openspec in every repo, AGENTS.md <= 500 lines,
-# make sdd-test/sdd-check in CI + PreToolUse hooks.
+# make sdd-check/sdd-test + pre-commit and PreToolUse hooks — all local
+# (ADR-0023 §5: there are no server-side gates).
 set -euo pipefail
 
 KIT="$(cd "$(dirname "$0")" && pwd)"
+
+# openspec CLI, single source of the pin for this script: always the pinned npx
+# version, never an unpinned global `openspec` binary (a global install can
+# drift ahead of this script's tested version and silently change generator
+# output - P0-1). The other pin lives in templates/Makefile.sdd, which runs
+# standalone inside target repos.
+# openspec-pin
+OPENSPEC="npx -y @fission-ai/openspec@1.7.0"
+
+# Central spec store (ADR-0001, ADR-0023 §1): ONE clone per machine at a fixed
+# path, registered in openspec's machine-level registry. Override per machine/org.
+STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
+STORE_DIR="${SDD_STORE_DIR:-$HOME/cybernet/cybernet-specs}"
+STORE_GIT="${SDD_STORE_GIT:-https://github.com/octrow/cybernet-specs.git}"
 
 say()  { echo "[sdd-kit] $*"; }
 warn() { echo "[sdd-kit] WARN: $*" >&2; }
@@ -59,7 +76,7 @@ while [ $# -gt 0 ]; do
     --machine-only) DO_REPO=0 ;;
     --refresh)      DO_REFRESH=1; DO_MACHINE=0 ;;  # repo section only, by definition
     -h|--help)
-      sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     -*) fail "unknown option: $1 (try --help)" ;;
     *)  REPO_ARG="$1" ;;
@@ -101,6 +118,56 @@ ask_install() {
     return 1
   fi
   ask "$1" "$2"
+}
+
+# ------------------------------------------------------- central spec store --
+# store_registered_at <path> — true when STORE_ID is registered at exactly <path>.
+store_registered_at() {
+  $OPENSPEC store list 2>/dev/null \
+    | awk -v id="$STORE_ID" -v p="$1" '$1 == id { sub(/^[^ \t]+[ \t]+/, ""); if ($0 == p) print "yes" }' \
+    | grep -q '^yes$'
+}
+
+# ensure_store — ADR-0023 §1: the store is a plain clone at a fixed machine
+# path, registered once. Not a submodule and not a per-repo copy: openspec's
+# registry maps one id to ONE path per machine, so extra checkouts are read by
+# nothing and silently drift.
+#
+# Idempotent by construction:
+#   - an existing git clone is REUSED, never re-cloned and never pulled behind
+#     the developer's back ("no sync, ever" is the store's design — freshness is
+#     a deliberate `git pull`); we only report how old its last commit is.
+#   - `openspec store register` on an already-registered id+path is a no-op that
+#     prints "Registry: already registered" and exits 0 (verified against the
+#     pinned CLI 1.7.0), and `--id` is passed explicitly so the id never gets
+#     inferred from a folder name. We still check `store list` first, so the
+#     common case prints one honest "already registered" line and costs nothing.
+ensure_store() {
+  if [ -d "$STORE_DIR/.git" ]; then
+    say "exists:  $STORE_DIR (last commit $(git -C "$STORE_DIR" log -1 --format='%cr' 2>/dev/null || echo '?') — refresh when needed: git -C $STORE_DIR pull)"
+  elif [ -e "$STORE_DIR" ]; then
+    warn "$STORE_DIR exists but is not a git clone — move it aside and re-run, or set SDD_STORE_DIR"
+    return 0
+  elif ask_install "Clone the central spec store to $STORE_DIR?" y \
+       "git clone $STORE_GIT $STORE_DIR"; then
+    mkdir -p "$(dirname "$STORE_DIR")"
+    if git clone "$STORE_GIT" "$STORE_DIR"; then
+      say "cloned:  $STORE_DIR"
+    else
+      warn "clone failed: $STORE_GIT — register the store later: $OPENSPEC store register $STORE_DIR --id $STORE_ID"
+      return 0
+    fi
+  else
+    return 0
+  fi
+
+  if store_registered_at "$STORE_DIR"; then
+    say "ok:      store '$STORE_ID' already registered at $STORE_DIR"
+  elif $OPENSPEC store register "$STORE_DIR" --id "$STORE_ID"; then
+    say "registered: store '$STORE_ID' from $STORE_DIR"
+  else
+    warn "could not register store '$STORE_ID' — do it later: $OPENSPEC store register $STORE_DIR --id $STORE_ID"
+  fi
 }
 
 put() { # put <template> <destination> — copies only when the destination is missing
@@ -225,6 +292,11 @@ strip_opsx_commands() {
 #   not a repo-owned decision; existing hook entries are never touched),
 #   store-ci.yml (store profile: handled separately, see PROFILE_IS_STORE).
 #
+# Deliberately NOT here either — ADR-0023 §5 retired server-side gates: the
+# sdd-ci.yml / autoreview.yml workflows moved to docs/archive/ and are no longer
+# installed anywhere. Every gate is local now (pre-commit, spec-guard,
+# block-no-verify, make sdd-check/sdd-test/sdd-review/sdd-flags).
+#
 # .git/hooks/pre-commit is listed but never copied verbatim: it is assembled by
 # assemble_pre_commit() (LIVING SPEC splice), so both loops special-case it.
 KIT_PRE_COMMIT_DST=".git/hooks/pre-commit"
@@ -246,8 +318,6 @@ spec-lint.py .claude/scripts/spec-lint.py
 sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 review-prompt.md .claude/scripts/review-prompt.md
 Makefile.sdd Makefile.sdd
-sdd-ci.yml .github/workflows/sdd-ci.yml
-autoreview.yml .github/workflows/autoreview.yml
 pre-commit-hook.sh .git/hooks/pre-commit
 EOF
 }
@@ -407,11 +477,6 @@ repo_section() {
   REPO_NAME="$(basename "$REPO")"
   load_profile "$REPO_NAME"
 
-  # Central spec store (ADR-0001). Override per machine/org.
-  local STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
-  local STORE_DIR="${SDD_STORE_DIR:-$HOME/cybernet/cybernet-specs}"
-  local STORE_GIT="${SDD_STORE_GIT:-https://github.com/octrow/cybernet-specs.git}"
-
   # ------------------------------------------------------------ 0. dependencies
   [ -d .git ] || fail "$REPO is not a git repository"
   command -v git >/dev/null 2>&1 || fail "git not found. Install git and re-run."
@@ -420,13 +485,6 @@ repo_section() {
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install 22"
   fi
 
-  # openspec CLI, single source of the pin for this script: always the pinned
-  # npx version, never an unpinned global `openspec` binary (a global install
-  # can drift ahead of this script's tested version and silently change
-  # generator output - P0-1). The other pin lives in templates/Makefile.sdd,
-  # which runs standalone inside target repos.
-  # openspec-pin
-  OPENSPEC="npx -y @fission-ai/openspec@1.7.0"
   say "using pinned openspec CLI: @fission-ai/openspec@1.7.0 (via npx)"
 
   # The store repo needs only itself: local registration + validate gate.
@@ -646,21 +704,9 @@ repo_section() {
   # ----------------------------------------- 4b. central spec store (PROFILE_STORE)
   local CFG
   if [ "$PROFILE_STORE" = 1 ]; then
-    if ! $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
-      if [ ! -d "$STORE_DIR" ] && ask_install "Clone the central spec store to $STORE_DIR?" y \
-           "git clone $STORE_GIT $STORE_DIR"; then
-        git clone "$STORE_GIT" "$STORE_DIR"
-        say "cloned:  $STORE_DIR"
-      fi
-      if [ -d "$STORE_DIR" ]; then
-        $OPENSPEC store register "$STORE_DIR" --id "$STORE_ID"
-        say "registered: store '$STORE_ID' from $STORE_DIR"
-      else
-        skip "store not cloned — register later: $OPENSPEC store register $STORE_DIR --id $STORE_ID"
-      fi
-    else
-      say "ok:      store '$STORE_ID' already registered"
-    fi
+    # Same clone+register step the machine section runs (ADR-0023 §1) — the repo
+    # itself only needs the `references:` line below.
+    ensure_store
     CFG=openspec/config.yaml
     if [ -f "$CFG" ] && ! grep -q '^references:' "$CFG"; then
       printf '\n# Central contract store (ADR-0001), registered via `openspec store register`\nreferences:\n  - %s\n' "$STORE_ID" >> "$CFG"
@@ -669,7 +715,7 @@ repo_section() {
   fi
 
   # ---------------------------------- 5. kit-owned files (the manifest, once)
-  # Hooks, agents, skills, scripts, Makefile.sdd, CI workflows. Same list that
+  # Hooks, agents, skills, scripts, Makefile.sdd. Same list that
   # `--refresh` re-copies later; .git/hooks/pre-commit is assembled in 8b.
   local m_src m_dst
   while read -r m_src m_dst; do
@@ -745,12 +791,12 @@ EOF
     say "created: $PRE_COMMIT (hygiene checks + make sdd-check before every commit)"
   fi
 
-  # ------------------- 8c. local git exclude for machine-local artifacts
-  # graphify-out/ (the code graph, ~30MB json) must never land in a commit;
-  # .git/info/exclude keeps the tracked .gitignore untouched.
-  if ! grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
-    echo "graphify-out/" >> .git/info/exclude
-    say "created: .git/info/exclude entry graphify-out/ (machine-local, never committed)"
+  # ------------------- 8c. graph is a committed team artifact (ADR-0023 §3)
+  # graphify-out/graph.json is built once per team and committed; drop the
+  # exclude entry older installs wrote so the graph can actually be tracked.
+  if grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
+    sed -i '\|^graphify-out/$|d' .git/info/exclude
+    say "removed: stale .git/info/exclude entry graphify-out/ (the graph is committed now, ADR-0023)"
   fi
 
   # ------------------------------------- 9. project MCP servers (.mcp.json)
@@ -781,16 +827,15 @@ EOF
   # ------------------------------------------------------------- 11. wrap up
   say "repo done. Remaining manual steps:"
   say "  1) fill in the TODOs in AGENTS.md (module map, rules)"
-  say "  2) enforcement stays advisory by default (ADR-0015): CI gates report but"
-  say "     don't block. Turning them on later is one owner decision — sdd-gate"
-  say "     as a required check + branch protection on dev. Not a setup step."
+  say "  2) every gate is local (ADR-0023 §5 — no CI workflows are installed):"
+  say "     the pre-commit hook runs 'make sdd-check'; run 'make sdd-test' and"
+  say "     'make sdd-review' yourself before opening a PR"
   say "  3) seed the specs: run the spec-miner agent one capability at a time"
   say "  3b) build the code graph for intake: 'make sdd-index' (needs an LLM API"
   say "      key for the first build; on a Claude subscription run the interactive"
   say "      '/graphify' command in Claude Code instead — later updates need no key)"
   say "  4) AI review runs locally: 'make sdd-review' (your own subscription login;"
-  say "     tokens are per-developer — no shared GitHub secret; the CI AI-step"
-  say "     (autoreview.yml) skips in seconds without one)"
+  say "     tokens are per-developer — nothing to configure server-side)"
 }
 
 # =========================================================== REFRESH SECTION ==
@@ -874,10 +919,11 @@ EOF
   # `disable-model-invocation: false`, so it is safe to run unconditionally.
   stamp_openspec_skills
 
-  # same as install step 8c: keep machine-local graph out of commits
-  if ! grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
-    echo "graphify-out/" >> .git/info/exclude
-    say "added:   .git/info/exclude entry graphify-out/"
+  # same as install step 8c: the graph is committed now (ADR-0023), drop the
+  # exclude entry older installs wrote
+  if grep -qx "graphify-out/" .git/info/exclude 2>/dev/null; then
+    sed -i '\|^graphify-out/$|d' .git/info/exclude
+    say "removed: stale .git/info/exclude entry graphify-out/ (committed artifact, ADR-0023)"
   fi
 
   if [ "$REFRESHED" = 0 ]; then
@@ -892,6 +938,12 @@ EOF
 # CORE tools (quality up, token spend down) default to yes; the rest opt-in.
 machine_section() {
   local DONE=0 SKIPPED=0
+
+  # ------------------------------------------------------ 0. central spec store
+  # ADR-0023 §1: the store registry is machine-level, so cloning+registering it
+  # belongs here, not in every repo. Runs before the tools prompt on purpose —
+  # declining the optional tooling must not skip the store the specs live in.
+  ensure_store
 
   if ! ask "Install the recommended developer tools on this machine?" y; then
     say "machine section skipped"

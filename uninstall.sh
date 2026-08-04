@@ -124,8 +124,12 @@ rm_ours "$KIT/templates/skills/incident-flow/SKILL.md" .claude/skills/incident-f
 rm -f .claude/last-session-state.md .claude/expected-env
 
 # ------------------------------------------------------------ 2. CI workflows
-rm_ours "$KIT/templates/sdd-ci.yml" .github/workflows/sdd-ci.yml
-rm_ours "$KIT/templates/autoreview.yml" .github/workflows/autoreview.yml
+# Retired by ADR-0023 §5 (no server-side gates) — install.sh no longer copies
+# these, but repos installed before that still carry them, so keep removing
+# them. The templates now live in docs/archive/, which is what rm_ours compares
+# against.
+rm_ours "$KIT/docs/archive/sdd-ci.yml" .github/workflows/sdd-ci.yml
+rm_ours "$KIT/docs/archive/autoreview.yml" .github/workflows/autoreview.yml
 
 # ------------------------------------------------- 3. Makefile.sdd + include
 rm_ours "$KIT/templates/Makefile.sdd" Makefile.sdd

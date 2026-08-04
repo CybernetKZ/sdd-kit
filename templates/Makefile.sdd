@@ -38,6 +38,9 @@ sdd-doctor:
 sdd-check:
 	@test -f AGENTS.md || { echo "FAIL: AGENTS.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
 	@[ "$$(wc -l < AGENTS.md)" -le 500 ] || { echo "FAIL: AGENTS.md is longer than 500 lines"; echo "next: move detail into openspec/specs/ or docs/, keep AGENTS.md a map"; exit 1; }
+	@# ADR-0023 §2: "exists and <=500 lines" passed a 9-byte AGENTS.md whose whole
+	@# content was the text "AGENTS.md" (a botched symlink) — agents read nothing.
+	@[ "$$(grep -cv '^[[:space:]]*$$' AGENTS.md)" -ge 10 ] || { echo "FAIL: AGENTS.md is broken/empty — restore it (a one-line file is a botched symlink)"; echo "next: git log --oneline -- AGENTS.md, then: git show <ref>:AGENTS.md > AGENTS.md"; exit 1; }
 	@grep -q TODO AGENTS.md && echo "WARN: AGENTS.md still contains TODO items" || true
 	@# ADR-0002: AGENTS.md is canonical, CLAUDE.md must be a symlink to it.
 	@# WARN, never FAIL: pre-commit runs this target (pre-commit-hook.sh:110), so a

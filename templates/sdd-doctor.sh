@@ -62,7 +62,7 @@ if command -v ruff >/dev/null 2>&1; then
 elif command -v uvx >/dev/null 2>&1; then
   ok tool.ruff "ruff via uvx fallback (native install is faster)" "uv tool install ruff"
 else
-  bad tool.ruff "ruff unavailable — pre-commit hook and autoreview depend on it" "uv tool install ruff"
+  bad tool.ruff "ruff unavailable — the pre-commit hook and make sdd-test depend on it" "uv tool install ruff"
 fi
 
 if command -v openspec >/dev/null 2>&1; then
@@ -102,6 +102,27 @@ if [ -n "$ROOT" ]; then
     fi
   else
     warn repo.agents-md "AGENTS.md missing" "run sdd-kit/install.sh --repo-only $ROOT"
+  fi
+
+  # ADR-0023 §2: "the file exists" is not enough. conversation_flow carried a
+  # 9-byte AGENTS.md containing the literal text "AGENTS.md" — a botched symlink
+  # that every check passed while every agent read an empty project context.
+  # FAIL, not warn: an empty agent context silently degrades every downstream
+  # step, and the fix is a one-liner (restore from git history or the kit).
+  if [ -f AGENTS.md ]; then
+    AGENTS_REAL_LINES=$(grep -cv '^[[:space:]]*$' AGENTS.md 2>/dev/null || echo 0)
+    if [ ! -s AGENTS.md ]; then
+      bad repo.agents-md-content "AGENTS.md is empty (0 bytes) — agents get no project context" \
+        "restore it: git show <ref>:AGENTS.md > AGENTS.md, or cp sdd-kit/templates/AGENTS.md AGENTS.md"
+    elif [ "$AGENTS_REAL_LINES" -le 1 ] && grep -qx '[[:space:]]*AGENTS\.md[[:space:]]*' AGENTS.md; then
+      bad repo.agents-md-content "AGENTS.md contains only the text 'AGENTS.md' — this is a botched symlink, not a context file" \
+        "restore the real content: git log --oneline -- AGENTS.md, then git show <ref>:AGENTS.md > AGENTS.md"
+    elif [ "$AGENTS_REAL_LINES" -lt 10 ]; then
+      bad repo.agents-md-content "AGENTS.md has only $AGENTS_REAL_LINES non-blank line(s) — too little to be a real project context" \
+        "fill it in from sdd-kit/templates/AGENTS.md (module map, rules, spec chain)"
+    else
+      ok repo.agents-md-content "AGENTS.md has real content ($AGENTS_REAL_LINES non-blank lines)"
+    fi
   fi
 
   # ADR-0002: CLAUDE.md must be a symlink to AGENTS.md. Only meaningful once
@@ -186,14 +207,20 @@ print(' '.join(missing))
     warn repo.spec-guard "no .spec-guard-paths — spec-guard hook is a no-op" "create .spec-guard-paths (code path prefixes, one per line)"
   fi
 
-  # graphify index (navigation/context only, ADR-0004 — never a gate, so this
-  # is info-level even when absent). Only reported when the CLI is installed.
-  if command -v graphify >/dev/null 2>&1; then
-    if [ -f graphify-out/graph.json ]; then
-      note repo.graphify-index "graphify index: present (graphify-out/graph.json)"
+  # Code graph (ADR-0004: navigation/context only, never a gate — so absence is
+  # info, never fail). ADR-0023 §3 makes graphify-out/graph.json a committed team
+  # artifact, so it is reported whether or not the graphify CLI is installed
+  # locally: a teammate's clone can carry the graph without the tool.
+  if [ -f graphify-out/graph.json ]; then
+    if find graphify-out/graph.json -mtime +30 -print 2>/dev/null | grep -q .; then
+      warn repo.graph "code graph graphify-out/graph.json is older than 30 days — intake answers will miss recent code" \
+        "make sdd-index (AST-only refresh, no API key needed)"
     else
-      note repo.graphify-index "graphify index: absent (optional, navigation-only)" "make sdd-index"
+      ok repo.graph "code graph present and recent (graphify-out/graph.json)"
     fi
+  else
+    note repo.graph "no code graph (graphify-out/graph.json) — intake and planning fall back to grep" \
+      "make sdd-index, or run the interactive '/graphify' command in Claude Code for the first build"
   fi
 
   if [ -f .git/hooks/pre-commit ] && grep -q sdd-check .git/hooks/pre-commit 2>/dev/null; then
@@ -202,13 +229,37 @@ print(' '.join(missing))
     warn repo.pre-commit "pre-commit hook missing or lacks sdd-check" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
 
+  # Central spec store (ADR-0001, ADR-0023 §1): registered on this machine, the
+  # registered path really exists, and the clone is not ancient. The registry is
+  # machine-level and there is no sync by design ("no sync, ever") — freshness is
+  # a deliberate `git pull`, so a stale clone is exactly what needs reporting.
   if [ -f openspec/config.yaml ] && grep -q '^references:' openspec/config.yaml; then
     STORE_ID="$(sed -n 's/^[[:space:]]*-[[:space:]]*//p' openspec/config.yaml | head -1)"
     OPENSPEC="openspec"; command -v openspec >/dev/null 2>&1 || OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
-    if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
-      ok repo.store "store '$STORE_ID' registered"
+    STORE_PATH="$($OPENSPEC store list 2>/dev/null \
+      | awk -v id="$STORE_ID" '$1 == id { sub(/^[^ \t]+[ \t]+/, ""); print; exit }')"
+    case "$STORE_PATH" in "~/"*) STORE_PATH="$HOME/${STORE_PATH#\~/}" ;; esac
+    if [ -z "$STORE_PATH" ]; then
+      warn repo.store "store '$STORE_ID' referenced by openspec/config.yaml but not registered on this machine" \
+        "run sdd-kit/install.sh --machine-only (clones to ~/cybernet/$STORE_ID and registers it)"
+    elif [ ! -d "$STORE_PATH" ]; then
+      warn repo.store "store '$STORE_ID' registered at $STORE_PATH, but that path does not exist — every spec reference resolves to nothing" \
+        "re-clone it and re-register: run sdd-kit/install.sh --machine-only"
     else
-      warn repo.store "store '$STORE_ID' referenced but not registered" "clone it, then: openspec store register <path> --id $STORE_ID"
+      ok repo.store "store '$STORE_ID' registered ($STORE_PATH)"
+      STORE_COMMIT_TS="$(git -C "$STORE_PATH" log -1 --format=%ct 2>/dev/null || true)"
+      if [ -z "$STORE_COMMIT_TS" ]; then
+        note repo.store-fresh "store $STORE_PATH is not a git clone — freshness cannot be checked" \
+          "re-clone from the store remote so 'git pull' can refresh it"
+      else
+        STORE_AGE_DAYS=$(( ( $(date +%s) - STORE_COMMIT_TS ) / 86400 ))
+        if [ "$STORE_AGE_DAYS" -gt 30 ]; then
+          warn repo.store-fresh "store clone's last commit is $STORE_AGE_DAYS days old (no auto-sync by design) — contracts may be out of date" \
+            "git -C $STORE_PATH pull"
+        else
+          ok repo.store-fresh "store clone is current (last commit $STORE_AGE_DAYS day(s) ago)"
+        fi
+      fi
     fi
   fi
 
