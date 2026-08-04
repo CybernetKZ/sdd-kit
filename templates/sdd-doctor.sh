@@ -319,7 +319,7 @@ print(' '.join(sorted(servers - allowed)))
     for s in .claude/skills/*/; do
       [ -d "$s" ] || continue
       name=$(basename "$s")
-      case "$name" in openspec-*|feature-flow|incident-flow|tz|tz-review|tz-implement) ;;
+      case "$name" in openspec-*|feature-flow|incident-flow|tz|tz-review|tz-implement|grilling|grill-me|grill-with-docs|domain-modeling) ;;
         patch|patch-review|patch-implement)
           note audit.skill-deprecated "deprecated skill kept on purpose: .claude/skills/$name (ADR-0019 §4 — retained to read the archived patch docs under docs/patches/, banner-marked DEPRECATED since 2026-08-03)" ;;
         *) warn audit.skill-extra "unexpected skill: .claude/skills/$name" "delete if unused: rm -r .claude/skills/$name" ;;
