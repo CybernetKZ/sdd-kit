@@ -314,6 +314,12 @@ agents/executor.md .claude/agents/executor.md
 agents/repo-auditor.md .claude/agents/repo-auditor.md
 skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
 skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
+skills/grilling/SKILL.md .claude/skills/grilling/SKILL.md
+skills/grill-me/SKILL.md .claude/skills/grill-me/SKILL.md
+skills/grill-with-docs/SKILL.md .claude/skills/grill-with-docs/SKILL.md
+skills/domain-modeling/SKILL.md .claude/skills/domain-modeling/SKILL.md
+skills/domain-modeling/CONTEXT-FORMAT.md .claude/skills/domain-modeling/CONTEXT-FORMAT.md
+skills/domain-modeling/ADR-FORMAT.md .claude/skills/domain-modeling/ADR-FORMAT.md
 spec-lint.py .claude/scripts/spec-lint.py
 sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 review-prompt.md .claude/scripts/review-prompt.md

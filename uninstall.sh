@@ -116,11 +116,17 @@ if [ -f .claude/scripts/repo-audit.sh ]; then
     echo "        next: rm .claude/scripts/repo-audit.sh" >&2
   fi
 fi
-for a in backend-reviewer database-reviewer planner plan-griller test-author; do
+for a in backend-reviewer database-reviewer planner plan-griller test-author executor repo-auditor; do
   rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
 done
 rm_ours "$KIT/templates/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md
 rm_ours "$KIT/templates/skills/incident-flow/SKILL.md" .claude/skills/incident-flow/SKILL.md
+rm_ours "$KIT/templates/skills/grilling/SKILL.md" .claude/skills/grilling/SKILL.md
+rm_ours "$KIT/templates/skills/grill-me/SKILL.md" .claude/skills/grill-me/SKILL.md
+rm_ours "$KIT/templates/skills/grill-with-docs/SKILL.md" .claude/skills/grill-with-docs/SKILL.md
+rm_ours "$KIT/templates/skills/domain-modeling/SKILL.md" .claude/skills/domain-modeling/SKILL.md
+rm_ours "$KIT/templates/skills/domain-modeling/CONTEXT-FORMAT.md" .claude/skills/domain-modeling/CONTEXT-FORMAT.md
+rm_ours "$KIT/templates/skills/domain-modeling/ADR-FORMAT.md" .claude/skills/domain-modeling/ADR-FORMAT.md
 rm -f .claude/last-session-state.md .claude/expected-env
 
 # ------------------------------------------------------------ 2. CI workflows
@@ -226,7 +232,9 @@ fi
 
 # -------------------------------------------------------------- 8. empty dirs
 for d in .claude/hooks .claude/scripts .claude/agents .claude/skills/feature-flow \
-         .claude/skills/incident-flow .claude/skills .claude .github/workflows .github; do
+         .claude/skills/incident-flow .claude/skills/grilling .claude/skills/grill-me \
+         .claude/skills/grill-with-docs .claude/skills/domain-modeling \
+         .claude/skills .claude .github/workflows .github; do
   [ -d "$d" ] && rmdir "$d" 2>/dev/null && say "removed: $d/ (empty)" || true
 done
 
