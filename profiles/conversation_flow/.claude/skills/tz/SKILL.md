@@ -251,16 +251,16 @@ alembic-миграция, i18n-локали, store-change по кросс-реп
 ## Шаг 6. Гейты перед сдачей
 
 ```bash
-make sdd-check                    # = AGENTS.md ≤500 + openspec validate --all --strict + spec-lint + sdd-flags
+bash scripts/sdd/check.sh         # = AGENTS.md ≤500 + openspec validate --all --strict + spec-lint
 python scripts/lint_brand.py      # или --stdin для текста из чата
 ```
 
-`make sdd-check` **сам** вызывает `npx -y @fission-ai/openspec@1.7.0 validate
+`scripts/sdd/check.sh` **сам** вызывает `npx -y @fission-ai/openspec@1.7.0 validate
 --all --strict` и `python3 .claude/scripts/spec-lint.py` - отдельно их прогоняют
 только чтобы увидеть вывод конкретного гейта. Его строка "spec-lint is advisory"
 - правда: без `SPEC_LINT_STRICT=1` spec-lint выходит с 0, находки печатаются, но
-сборку не валят; гейты (exit≠0) внутри `sdd-check` - `AGENTS.md ≤ 500 строк`,
-`openspec validate --strict` и `sdd-flags`. Дельты активных change'ов
+сборку не валят; гейты (exit≠0) внутри `sdd-check` - `AGENTS.md ≤ 500 строк`
+и `openspec validate --strict`. Дельты активных change'ов
 `spec-lint.py` читает сам (`check_deltas`, `openspec/changes/*/specs/*/spec.md`;
 `changes/archive/**` пропускается осознанно - закрытая история).
 

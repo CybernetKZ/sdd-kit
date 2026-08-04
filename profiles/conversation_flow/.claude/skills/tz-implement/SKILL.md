@@ -26,7 +26,7 @@ change.
      тесты, не код. Тест, который неожиданно зелёный, - находка (поведение уже
      есть), а не повод "сделать его красным";
    - `npx -y @fission-ai/openspec@1.7.0 validate --all --strict` и
-     `make sdd-check` зелёные на входе;
+     `bash scripts/sdd/check.sh` зелёные на входе;
    - `light`-тир: гриля нет законно; RED-тест по единственному Scenario -
      обязателен.
 3. Проверить по коду каждый фактический пункт change'а: существуют ли названные
@@ -110,7 +110,7 @@ change.
    ```bash
    PY=/opt/anaconda3/bin/python3.12 make test
    nvm use 20 && npm --prefix editor run build
-   make sdd-check          # включает openspec validate --strict и spec-lint (последний advisory)
+   bash scripts/sdd/check.sh          # включает openspec validate --strict и spec-lint (последний advisory)
    SPEC_LINT_STRICT=1 python3 .claude/scripts/spec-lint.py   # здесь - как гейт: дельта уже в каноне
    ```
    Вторая строка не дубль первой: внутри `sdd-check` spec-lint выходит с 0 и его

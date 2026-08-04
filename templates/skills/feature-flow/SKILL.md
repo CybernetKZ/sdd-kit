@@ -7,7 +7,7 @@ description: Cybernet team workflow for a YouTrack feature/bugfix task - from ta
 
 YouTrack ticket -> merged PR. Business writes tickets loosely (one line, or LLM-drafted with contract/logic mistakes), so step 1 interrogates the ticket BEFORE any code.
 
-**Language rule.** Everything you write for a human reader goes out **in Russian**: questions to the developer, ticket comments (intake questions to the ticket author), the QA handoff comment, stop/done reports. Machine-readable parts stay English: ids, branch names, tier names, flag names, tracer comments, spec/Scenario text, commit and PR titles.
+**Language rule.** Everything you write for a human reader goes out **in Russian**: questions to the developer, ticket comments (intake questions to the ticket author), the QA handoff comment, stop/done reports. Machine-readable parts stay English: ids, branch names, tier names, tracer comments, spec/Scenario text, commit and PR titles.
 
 ## Phases
 
@@ -20,7 +20,7 @@ YouTrack ticket -> merged PR. Business writes tickets loosely (one line, or LLM-
 | 3 | Validate the spec delta, then one test (or an explicit skip) per Scenario with a `# spec: <req-id> / <scenario>` tracer; green-stub check by a separate agent | `test-author` agent, never the implementer |
 | 4 | Implement on `feature/WEB-XXXX` (or `bugfix/`) off dev, walking tasks.md; code and spec deltas move together | `executor` agent |
 | 5 | Manual testing: walk the QA Scenarios yourself on local/stage | you |
-| 6 | Review the diff via `make sdd-review`; fix in-scope CRITICAL/HIGH, re-run tests | `backend-reviewer` + `database-reviewer` on SQL/ORM/migrations |
+| 6 | Review the diff via `scripts/sdd/review.sh`; fix in-scope CRITICAL/HIGH, re-run tests | `backend-reviewer` + `database-reviewer` on SQL/ORM/migrations |
 | 7+8 | PR to dev titled `[feature/WEB-XXXX] <summary>`; after merge, ticket to `status: ready_to_test` + a Russian tester comment | you (agent only on your explicit command) |
 
 ## Gates and stops

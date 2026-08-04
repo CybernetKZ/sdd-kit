@@ -117,7 +117,7 @@ python3 .claude/scripts/spec-lint.py    # блок "N change delta(s) checked, M
   `tz-NNN-<kebab-slug>` с ведущими нулями; YouTrack-id в proposal, не в имени.
 - **Гейты** прогнать самому, а не поверить на слово:
   ```bash
-  make sdd-check                          # включает openspec validate --strict и spec-lint
+  bash scripts/sdd/check.sh                          # включает openspec validate --strict и spec-lint
   python scripts/lint_brand.py            # --stdin для текста из чата
   ```
   `sdd-check` вызывает `validate --all --strict` и `spec-lint.py` сам; spec-lint
