@@ -16,9 +16,9 @@
 #   sdd-kit/install.sh --refresh [/path/to/repo]    update the kit-owned files
 #
 # --refresh re-copies ONLY the kit-owned manifest (hooks, agents, skills,
-# scripts, Makefile.sdd, pre-commit) when the target drifted from
+# scripts, scripts/sdd/*, pre-commit) when the target drifted from
 # the template, and reports a per-file (+added/-removed) summary. Repo-owned
-# files (AGENTS.md, .spec-guard-paths, feature_flags.py, .claude/expected-env,
+# files (AGENTS.md, .spec-guard-paths, .claude/expected-env,
 # ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched
 # wholesale. The one exception: .claude/settings.json's `hooks` block is
 # additively merged (merge_settings_hooks(), both on install and --refresh) —
@@ -36,7 +36,7 @@
 # without a TTY (or with SDD_KIT_ASSUME_YES=1) they print the command instead.
 #
 # Basis: openspec in every repo, AGENTS.md <= 500 lines,
-# make sdd-check/sdd-test + pre-commit and PreToolUse hooks — all local
+# scripts/sdd/{check,test}.sh + pre-commit and PreToolUse hooks — all local
 # (ADR-0023 §5: there are no server-side gates).
 set -euo pipefail
 
@@ -45,8 +45,8 @@ KIT="$(cd "$(dirname "$0")" && pwd)"
 # openspec CLI, single source of the pin for this script: always the pinned npx
 # version, never an unpinned global `openspec` binary (a global install can
 # drift ahead of this script's tested version and silently change generator
-# output - P0-1). The other pin lives in templates/Makefile.sdd, which runs
-# standalone inside target repos.
+# output - P0-1). The other pin lives in templates/scripts/sdd/check.sh, which
+# runs standalone inside target repos.
 # openspec-pin
 OPENSPEC="npx -y @fission-ai/openspec@1.7.0"
 
@@ -283,22 +283,21 @@ strip_opsx_commands() {
 # Format per line: "<path under templates/> <destination relative to the repo>".
 #
 # Deliberately NOT here — repo-owned, never overwritten by --refresh:
-#   AGENTS.md, CLAUDE.md, .spec-guard-paths, feature_flags.py,
+#   AGENTS.md, CLAUDE.md, .spec-guard-paths,
 #   .claude/expected-env, ruff.toml, openspec/**, .mcp.json,
 #   .claude/settings.json (never wholesale-rewritten; its `hooks` block is
 #   additively merged by merge_settings_hooks() — see that function for why:
 #   the kit hooks it copies into .claude/hooks/ are useless if nothing in
 #   settings.json invokes them, so wiring them in is part of installing them,
-#   not a repo-owned decision; existing hook entries are never touched),
-#   store-ci.yml (store profile: handled separately, see PROFILE_IS_STORE).
+#   not a repo-owned decision; existing hook entries are never touched).
 #
-# Deliberately NOT here either — ADR-0023 §5 retired server-side gates: the
-# sdd-ci.yml / autoreview.yml workflows moved to docs/archive/ and are no longer
+# Deliberately NOT here either — ADR-0023 §5 / ADR-0026 §5 retired server-side
+# gates: the sdd-ci.yml / autoreview.yml / store-ci.yml workflows are no longer
 # installed anywhere. Every gate is local now (pre-commit, spec-guard,
-# block-no-verify, make sdd-check/sdd-test/sdd-review/sdd-flags).
+# block-no-verify, scripts/sdd/{check,test,review}.sh).
 #
-# .git/hooks/pre-commit is listed but never copied verbatim: it is assembled by
-# assemble_pre_commit() (LIVING SPEC splice), so both loops special-case it.
+# .git/hooks/pre-commit is listed but never copied verbatim: it is written by
+# assemble_pre_commit(), so both loops special-case it.
 KIT_PRE_COMMIT_DST=".git/hooks/pre-commit"
 kit_manifest() {
   cat <<'EOF'
@@ -324,26 +323,21 @@ skills/domain-modeling/ADR-FORMAT.md .claude/skills/domain-modeling/ADR-FORMAT.m
 spec-lint.py .claude/scripts/spec-lint.py
 sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 review-prompt.md .claude/scripts/review-prompt.md
-Makefile.sdd Makefile.sdd
+scripts/sdd/check.sh scripts/sdd/check.sh
+scripts/sdd/test.sh scripts/sdd/test.sh
+scripts/sdd/review.sh scripts/sdd/review.sh
+scripts/sdd/index.sh scripts/sdd/index.sh
+scripts/sdd/doctor.sh scripts/sdd/doctor.sh
 pre-commit-hook.sh .git/hooks/pre-commit
 EOF
 }
 
-# assemble_pre_commit <destination> — writes the pre-commit hook, splicing in
-# the LIVING SPEC fragment right before the '# SDD gate:' block when the
-# profile asks for it. Used by both the install pass and --refresh.
+# assemble_pre_commit <destination> — writes the pre-commit hook. (The old
+# LIVING SPEC splice is gone, ADR-0026 §4: doc drift is checked on demand via
+# tools/cf/main-drift.sh, not warned about at commit time.)
 assemble_pre_commit() {
   local dst="$1"
-  if [ "${PROFILE_LIVING_SPEC:-0}" = 1 ]; then
-    awk -v frag="$KIT/templates/living-spec-check.sh" '
-      /^# SDD gate:/ && !ins { while ((getline line < frag) > 0) print line; ins = 1 }
-      { print }
-    ' "$KIT/templates/pre-commit-hook.sh" > "$dst"
-    grep -q "LIVING SPEC discipline" "$dst" \
-      || warn "LIVING SPEC fragment not inserted (no '# SDD gate:' anchor in the template?)"
-  else
-    cp "$KIT/templates/pre-commit-hook.sh" "$dst"
-  fi
+  cp "$KIT/templates/pre-commit-hook.sh" "$dst"
   chmod +x "$dst"
 }
 
@@ -450,12 +444,11 @@ EOF
 
 # load_profile <repo-basename> — resets the PROFILE_* globals to their defaults
 # and then sources profiles/<repo-basename>.env if it exists. Shared by the
-# install pass and --refresh (which needs PROFILE_LIVING_SPEC / PROFILE_IS_STORE).
+# install pass and --refresh (which needs PROFILE_IS_STORE).
 load_profile() {
   PROFILE_STORE=1            # 1 = wire this repo to the central spec store (default)
   PROFILE_IS_STORE=0         # 1 = this repo IS the store (minimal install)
   PROFILE_SKIP_PY=0          # 1 = not a Python repo (no ruff.toml)
-  PROFILE_LIVING_SPEC=0      # 1 = LIVING SPEC repo: pre-commit warns when code is staged without docs/DOCUMENTATION.md
   PROFILE_SPEC_GUARD_PATHS=""
   PROFILE_ENV_FILES=""       # newline-separated per-service .env paths sdd-doctor should check exist
   PROFILE_OPENSPEC_SEED_REF="" # git ref holding openspec/; restored instead of `openspec init` when openspec/ is empty
@@ -502,8 +495,18 @@ repo_section() {
     else
       say "ok:      store '$STORE_ID' already registered on this machine"
     fi
-    put store-ci.yml .github/workflows/store-ci.yml
-    say "done (store profile). Gate: openspec validate --all --strict runs on every PR."
+    # ADR-0026 §5: no CI, no exceptions — the store validates locally at commit
+    # time via a minimal pre-commit hook (was store-ci.yml on every PR).
+    if [ -e .git/hooks/pre-commit ]; then
+      grep -q "openspec" .git/hooks/pre-commit \
+        && say "exists:  .git/hooks/pre-commit (already validates specs)" \
+        || warn ".git/hooks/pre-commit exists without openspec validate — add '$OPENSPEC validate --all --strict' to it manually"
+    else
+      printf '#!/bin/sh\n# sdd-kit store pre-commit: the only gate (no CI, ADR-0026 §5)\nnpx -y @fission-ai/openspec@1.7.0 validate --all --strict\n' > .git/hooks/pre-commit
+      chmod +x .git/hooks/pre-commit
+      say "created: .git/hooks/pre-commit (openspec validate --all --strict)"
+    fi
+    say "done (store profile). Gate: openspec validate --all --strict runs at commit time."
     return 0
   fi
 
@@ -642,7 +645,7 @@ repo_section() {
     if [ -n "$SEED_REF" ]; then
       git checkout "$SEED_REF" -- openspec
       # Symmetry with the rest of the install (everything else lands
-      # untracked, Makefile shows ` M`): unstage so `git status` reads the
+      # untracked): unstage so `git status` reads the
       # same way everywhere and a stray `git commit` right after install
       # doesn't silently pick up only openspec/ while leaving the rest of
       # the install for later. Restricted to the openspec pathspec, so any
@@ -722,7 +725,7 @@ repo_section() {
   fi
 
   # ---------------------------------- 5. kit-owned files (the manifest, once)
-  # Hooks, agents, skills, scripts, Makefile.sdd. Same list that
+  # Hooks, agents, skills, scripts (incl. scripts/sdd/). Same list that
   # `--refresh` re-copies later; .git/hooks/pre-commit is assembled in 8b.
   local m_src m_dst
   while read -r m_src m_dst; do
@@ -733,18 +736,11 @@ repo_section() {
 $(kit_manifest)
 EOF
 
-  # ------------------------------------------------- 5a. Makefile: sdd-check
-  if [ -f Makefile ]; then
-    grep -q "Makefile.sdd" Makefile || { printf '\n-include Makefile.sdd\n' >> Makefile; say "appended: -include Makefile.sdd to Makefile"; }
-  else
-    printf -- "-include Makefile.sdd\n" > Makefile; say "created: Makefile (include only)"
+  # 5a. Makefile: gone (ADR-0026 §3) — the command surface is scripts/sdd/*.sh,
+  # copied by the manifest above; nothing is appended to the repo's Makefile.
+  if [ -f Makefile ] && grep -q "Makefile.sdd" Makefile; then
+    warn "Makefile still includes Makefile.sdd (retired, ADR-0026 §3) — remove the '-include Makefile.sdd' line and delete Makefile.sdd"
   fi
-
-  # 5b. flag registry: NOT installed by default — flags are a tool on request
-  # (dormant, ADR-0015). When a team takes its first flag, copy it by hand:
-  #   cp "$KIT/templates/feature_flags.py" feature_flags.py
-  # `make sdd-flags` passes with no registry and becomes a real gate once
-  # the file exists and is committed.
 
   # --------------------------------- 6b. ruff config (only when none exists)
   if [ "$PROFILE_SKIP_PY" = 1 ]; then
@@ -786,19 +782,11 @@ EOF
     if grep -q "sdd-check" "$PRE_COMMIT" 2>/dev/null; then
       say "exists:  $PRE_COMMIT (already runs sdd-check)"
     else
-      warn "$PRE_COMMIT exists without sdd-check — add 'make sdd-check' to it manually (template: $KIT/templates/pre-commit-hook.sh)"
+      warn "$PRE_COMMIT exists without sdd-check — add 'bash scripts/sdd/check.sh' to it manually (template: $KIT/templates/pre-commit-hook.sh)"
     fi
-    if [ "$PROFILE_LIVING_SPEC" = 1 ] && ! grep -q "LIVING SPEC discipline" "$PRE_COMMIT"; then
-      warn "$PRE_COMMIT has no LIVING SPEC check — insert $KIT/templates/living-spec-check.sh above its '# SDD gate:' / 'make sdd-check' block"
-    fi
-  elif [ "$PROFILE_LIVING_SPEC" = 1 ]; then
-    # LIVING SPEC repos: the fragment is concatenated in at install time,
-    # right before the '# SDD gate:' block. No post-injection into a live hook.
-    assemble_pre_commit "$PRE_COMMIT"
-    say "created: $PRE_COMMIT (hygiene checks + LIVING SPEC discipline + make sdd-check)"
   else
     assemble_pre_commit "$PRE_COMMIT"
-    say "created: $PRE_COMMIT (hygiene checks + make sdd-check before every commit)"
+    say "created: $PRE_COMMIT (hygiene checks + scripts/sdd/check.sh before every commit)"
   fi
 
   # ------------------- 8c. graph is a committed team artifact (ADR-0023 §3)
@@ -813,14 +801,14 @@ EOF
   # One command installs everything: if graphify is on the machine, build the
   # graph now (AST path needs no key) or incrementally update a stale one.
   # A first-time SEMANTIC build (docs) still needs an LLM key or an interactive
-  # /graphify session — 'make sdd-index' prints that guidance itself. Advisory.
+  # /graphify session — 'scripts/sdd/index.sh' prints that guidance itself. Advisory.
   if command -v graphify >/dev/null 2>&1; then
     if [ -f graphify-out/graph.json ]; then
       if ask "Update the code graph (graphify-out/, AST-only, no key)?" y; then
-        make -f Makefile.sdd sdd-index || true
+        bash scripts/sdd/index.sh || true
       fi
     elif ask "Build the code graph now (graphify-out/ is missing)?" y; then
-      make -f Makefile.sdd sdd-index || true
+      bash scripts/sdd/index.sh || true
     fi
   else
     say "skipped: code graph (graphify not installed — run install.sh --machine-only)"
@@ -855,14 +843,14 @@ EOF
   say "repo done. Remaining manual steps:"
   say "  1) fill in the TODOs in AGENTS.md (module map, rules)"
   say "  2) every gate is local (ADR-0023 §5 — no CI workflows are installed):"
-  say "     the pre-commit hook runs 'make sdd-check'; run 'make sdd-test' and"
-  say "     'make sdd-review' yourself before opening a PR"
+  say "     the pre-commit hook runs scripts/sdd/check.sh; run scripts/sdd/test.sh"
+  say "     and scripts/sdd/review.sh yourself before opening a PR"
   say "  3) seed the specs: run the spec-miner agent one capability at a time"
   say "  3b) code graph: the install step above builds/updates it when it can;"
   say "      a FIRST build over docs needs semantic extraction — on a Claude"
   say "      subscription run the interactive '/graphify' command once, then"
   say "      install/refresh keeps it updated with no key (AST-only)"
-  say "  4) AI review runs locally: 'make sdd-review' (your own subscription login;"
+  say "  4) AI review runs locally: 'scripts/sdd/review.sh' (your own subscription login;"
   say "     tokens are per-developer — nothing to configure server-side)"
 }
 
@@ -897,8 +885,8 @@ refresh_settings_hooks() {
   merge_settings_hooks .claude/settings.json
 }
 
-# .git/hooks/pre-commit is assembled, not copied (LIVING SPEC splice), and a
-# hand-merged hook (repo's own checks) is never overwritten.
+# .git/hooks/pre-commit: a hand-merged hook (repo's own checks) is never
+# overwritten.
 refresh_pre_commit() {
   local tmp
   if [ -e "$KIT_PRE_COMMIT_DST" ] && ! grep -q "sdd-kit git pre-commit hook" "$KIT_PRE_COMMIT_DST"; then
@@ -924,8 +912,12 @@ refresh_section() {
   load_profile "$REPO_NAME"
 
   if [ "$PROFILE_IS_STORE" = 1 ]; then
-    refresh_file "$KIT/templates/store-ci.yml" .github/workflows/store-ci.yml
-    say "refresh done (store profile): $REFRESHED file(s) updated"
+    # ADR-0026 §5: nothing kit-owned lives in the store repo anymore (the
+    # pre-commit validate hook is written once by the install pass).
+    if [ -f .github/workflows/store-ci.yml ]; then
+      warn "store-ci.yml is retired (ADR-0026 §5) — delete .github/workflows/store-ci.yml; the gate is the local pre-commit hook"
+    fi
+    say "refresh done (store profile): nothing to refresh"
     return 0
   fi
 
@@ -964,7 +956,7 @@ EOF
   # existing graph updates incrementally via AST, no key needed. Advisory.
   if command -v graphify >/dev/null 2>&1 && [ -f graphify-out/graph.json ]; then
     if ask "Update the code graph (graphify-out/, AST-only, no key)?" y; then
-      make -f Makefile.sdd sdd-index || true
+      bash scripts/sdd/index.sh || true
     fi
   fi
 }
@@ -1050,11 +1042,11 @@ machine_section() {
   else SKIPPED=$((SKIPPED+1)); fi
 
   # ------------------------------------------------------------------ 4a. ruff
-  # The pre-commit hook and make sdd-test lean on ruff; uvx works as a slower
+  # The pre-commit hook and scripts/sdd/test.sh lean on ruff; uvx works as a slower
   # fallback, a native install is what the doctor recommends.
   if command -v ruff >/dev/null 2>&1; then
     say "ok:      ruff already installed"
-  elif ask_install "Install ruff? (linter/formatter used by the pre-commit hook and make sdd-test)" y \
+  elif ask_install "Install ruff? (linter/formatter used by the pre-commit hook and scripts/sdd/test.sh)" y \
        "uv tool install ruff"; then
     uv tool install ruff \
       && { DONE=$((DONE+1)); say "installed: ruff"; } \
@@ -1062,12 +1054,12 @@ machine_section() {
   else SKIPPED=$((SKIPPED+1)); fi
 
   # ----------------------------------------- 4b. static review tools (leads)
-  # radon/complexipy/vulture/semgrep feed 'make sdd-review' with static leads
+  # radon/complexipy/vulture/semgrep feed 'scripts/sdd/review.sh' with static leads
   # (/tmp/tools.txt); the reviewer verifies each lead in code before reporting.
   if command -v radon >/dev/null 2>&1 && command -v complexipy >/dev/null 2>&1 \
      && command -v vulture >/dev/null 2>&1 && command -v semgrep >/dev/null 2>&1; then
     say "ok:      static review tools already installed (radon, complexipy, vulture, semgrep)"
-  elif ask_install "Install static review tools? (radon, complexipy, vulture, semgrep — leads for make sdd-review)" y \
+  elif ask_install "Install static review tools? (radon, complexipy, vulture, semgrep — leads for scripts/sdd/review.sh)" y \
        "uv tool install radon && uv tool install complexipy && uv tool install vulture && uv tool install semgrep"; then
     for t in radon complexipy vulture semgrep; do
       command -v "$t" >/dev/null 2>&1 || uv tool install "$t" \

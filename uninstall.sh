@@ -85,9 +85,23 @@ rm_ours() {
   fi
 }
 
+# rm_retired <dest> <why> — a kit file whose template no longer exists
+# (ADR-0026 removed it outright, no archive), so there is nothing to
+# byte-compare against: remove on --force, otherwise name the exact command.
+rm_retired() {
+  local dst="$1" why="$2"
+  [ -e "$dst" ] || return 0
+  if [ "$FORCE" = 1 ]; then
+    rm "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (retired: $why)"
+  else
+    KEPT=$((KEPT+1)); warn "kept: $dst (retired: $why)"
+    echo "        next: rm \"$dst\"" >&2
+  fi
+}
+
 # ------------------------------------------------------------------ store repo
 if [ "$PROFILE_IS_STORE" = 1 ]; then
-  rm_ours "$KIT/templates/store-ci.yml" .github/workflows/store-ci.yml
+  rm_retired .github/workflows/store-ci.yml "no CI, no exceptions — ADR-0026 §5"
   OPENSPEC="npx -y @fission-ai/openspec@1.7.0" # openspec-pin
   command -v openspec >/dev/null 2>&1 && OPENSPEC="openspec"
   if $OPENSPEC store list 2>/dev/null | grep -q "^${STORE_ID}[[:space:]]"; then
@@ -138,8 +152,13 @@ rm -f .claude/last-session-state.md .claude/expected-env
 rm_ours "$KIT/docs/archive/sdd-ci.yml" .github/workflows/sdd-ci.yml
 rm_ours "$KIT/docs/archive/autoreview.yml" .github/workflows/autoreview.yml
 
-# ------------------------------------------------- 3. Makefile.sdd + include
-rm_ours "$KIT/templates/Makefile.sdd" Makefile.sdd
+# -------------------------------------- 3. scripts/sdd + legacy Makefile.sdd
+for f in check.sh test.sh review.sh index.sh doctor.sh; do
+  rm_ours "$KIT/templates/scripts/sdd/$f" "scripts/sdd/$f"
+done
+rmdir scripts/sdd scripts 2>/dev/null || true
+# Makefile.sdd is retired (ADR-0026 §3) — repos installed before still carry it.
+rm_retired Makefile.sdd "targets moved to scripts/sdd/*.sh — ADR-0026 §3"
 if [ -f Makefile ] && grep -q "Makefile.sdd" Makefile; then
   sed -i.bak '/-include Makefile.sdd/d' Makefile && rm -f Makefile.bak
   # drop the blank line the install-time append left at EOF
@@ -160,7 +179,7 @@ if [ -f ruff.toml ] && ! cmp -s "$KIT/templates/ruff.toml" ruff.toml \
 else
   rm_ours "$KIT/templates/ruff.toml" ruff.toml
 fi
-rm_ours "$KIT/templates/feature_flags.py" feature_flags.py
+rm_retired feature_flags.py "flags cut entirely — ADR-0026 §2"
 rm -f .spec-guard-paths && say "removed: .spec-guard-paths"
 
 # .mcp.json: ours contains only context7/youtrack (+ our shape) — else keep.
