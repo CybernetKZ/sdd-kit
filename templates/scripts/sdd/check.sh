@@ -39,6 +39,8 @@ fi
 # TODO: set SPEC_LINT_STRICT=1 locally (there is no server CI to flip this
 # in, ADR-0023) once the specs stabilize — then this becomes a real gate
 # and the summary line below must say so.
-[ -f .claude/scripts/spec-lint.py ] && python3 .claude/scripts/spec-lint.py
+if [ -f .claude/scripts/spec-lint.py ]; then
+  python3 .claude/scripts/spec-lint.py || exit 1   # non-zero only with SPEC_LINT_STRICT=1
+fi
 
 echo "sdd-check: OK — gates passed (AGENTS.md, openspec validate); agent-context symlink and spec-lint are advisory"
