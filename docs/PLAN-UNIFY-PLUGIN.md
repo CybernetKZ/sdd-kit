@@ -28,7 +28,7 @@
 
 - [x] Агенты: 7 скопированы в agents/ плагина (подхват глобом agents/*.md); старых 4 ревьюеров как файлов не было — жили только в README, README поправлен.
 - [x] Скиллы: feature-flow (канон кита заменил копию плагина), incident-flow, grilling, grill-me, grill-with-docs, domain-modeling; всем `triggers: none`.
-- [x] feature-flow-spawned удалён: его смысл (изоляция дорогих стадий) покрыт субагентной схемой канона; восстановим из git-истории.
+- [x] feature-flow-spawned: сначала удалён (предпосылка «не используется»), но 2026-08-05 Георгий (godjan-cn) запушил в main его доработку (Claude+Codex) — предпосылка неверна. При merge main→dev восстановлена версия Георгия целиком (включая references/stages/). FOLLOW-UP: скилл ссылается на старые шаги feature-flow (§1b/§2, superpowers:brainstorming/writing-plans, docs/superpowers/plans/) — согласовать с Георгием пересборку поверх нового канона (planner/plan-griller).
 - [x] gherkin-spec: граница про openspec/ добавлена.
 - [x] _NO_PATHS: пройдено (incident-flow ссылался на путь скилла — заменён вызовом по имени).
 - [x] check.py ok (1 известный warning grill-me), claude plugin validate ok, тесты хуков ok; версия 1.0.0 → 1.1.0; README/EXTENDING/docs/youtrack-kb.md обновлены (в т.ч. правило каналов суждений).
