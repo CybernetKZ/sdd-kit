@@ -34,8 +34,11 @@ tests the change's test step produced.
    Scenario it traces to; the orchestrator runs the dispute.
 3. **No commits.** Leave the working tree for review; committing is the
    developer's (or orchestrator's) call after review.
-4. Run the change's tests as you go; you are done when they are green and
-   `bash scripts/sdd/check.sh` passes. Run the repo's linter on files you touched.
+4. Run the change's tests as you go - the repo's runner is
+   `bash scripts/sdd/test.sh` (it honors `SDD_TEST_CMD`, so monorepo/docker
+   repos work too); for per-test detail run pytest the same way the failing
+   test names. You are done when tests are green and
+   `bash scripts/sdd/check.sh` passes.
 5. Match the surrounding code: same idioms, same naming, comment density,
    error handling. Reuse existing helpers over writing new ones.
 6. Hooks apply to you too: spec-guard expects the active change; the
@@ -48,7 +51,8 @@ says, what reality says (file:line evidence), and the smallest question whose
 answer unblocks you. One blocked task does not cancel the rest - finish every
 task that does not depend on the blocked one first, then report. Write this
 report in Russian - it is addressed to the orchestrator/developer; keep
-technical terms, file names and commands as-is.
+technical terms, file names and commands as-is. Last line, machine-readable:
+`Verdict: BLOCKED: task <N> - <one line>`.
 
 ## Done report
 
@@ -56,4 +60,4 @@ Final message: tasks completed (numbers), test run result (green count),
 lint/sdd-check status, files touched, and anything you noticed but did NOT do
 because the plan didn't ask for it. Write this report in Russian - it is
 addressed to the orchestrator/developer; keep technical terms, file names and
-commands as-is.
+commands as-is. Last line, machine-readable: `Verdict: DONE`.

@@ -77,7 +77,7 @@ clean: `git status` shows the repo exactly as before install.
 | Artifact | Purpose |
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
-| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (the same pin appears in 5 places - `install.sh`, `uninstall.sh` (twice), `scripts/sdd/check.sh` and `sdd-doctor.sh` - each marked `# openspec-pin`; `grep '# openspec-pin'` finds them all - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
+| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (the same pin is marked `openspec-pin` at every site - installers, scripts, agent prompts; `grep -rn openspec-pin` finds them all; `grep '# openspec-pin'` finds them all - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
 | `scripts/sdd/*.sh` | 5 scripts (the Makefile is gone, ADR-0026 §3): `check.sh` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `doctor.sh`, `test.sh` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `review.sh` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `index.sh` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
@@ -208,7 +208,7 @@ each carries the relevant protocol inline.
 | `scripts/sdd/index.sh` | no | graphify graph for navigation only (ADR-0004) |
 
 Are they wired to OpenSpec correctly? Yes, with two things to know. The CLI is
-pinned to `1.7.0` in 5 places (`grep '# openspec-pin'` finds them all) - bump
+pinned to `1.7.0` at every marked site (`grep -rn openspec-pin` finds them all) - bump
 them together or `sdd-check` and `sdd-doctor` will disagree. And `openspec validate --all
 --strict` checks *structure* (a Requirement needs at least one Scenario, a
 change needs its deltas), while `spec-lint.py` checks *truthfulness* (do the

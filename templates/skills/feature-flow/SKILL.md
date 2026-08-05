@@ -1,6 +1,6 @@
 ---
 name: feature-flow
-description: Cybernet team workflow for a YouTrack feature/bugfix task - from task intake to PR. Use when starting work on a WEB-* ticket, or when the user says "possible new task", "новая таска", "сделай WEB-1234".
+description: Cybernet team workflow for a YouTrack feature/bugfix task - from task intake to PR. Use when starting work on a WEB-* ticket, or when the user says "новая задача", "новая таска", "сделай WEB-1234".
 ---
 
 # Feature flow (Cybernet)
@@ -48,9 +48,9 @@ Tiers scale preparation depth only; gates never change. The tier fixes the pipel
 | Tier | Pipeline | Models |
 |---|---|---|
 | light | intake -> change (no planner/griller) -> test-author -> executor | test-author/executor sonnet |
-| standard | + planner, grill (agent or inline WITH provenance header) | planner/plan-griller opus, executor sonnet |
-| deep | + design research; grill by the `plan-griller` AGENT only | same |
+| standard | + planner, grill (agent or inline, with a provenance header) | planner/plan-griller opus, executor sonnet |
+| deep | + design research; grill only by the `plan-griller` agent, never inline (deep risk earns the full interrogation) | same |
 
-Tier in the ticket -> the default; the developer may ALWAYS override it; nothing set -> decide from the signals (RAISE category, services touched, migrations, new/changed contracts): typo / config value / isolated bug -> light, a regular feature inside one service -> standard, cross-service change, data migration, new architecture or unknown territory -> deep. Size is independent of the tier: an epic is decided here, not discovered in step 2. Write the tier AND its justification into proposal.md so the reviewer can challenge it.
+Tier in the ticket -> the default; the developer can always override it - local context beats a stale ticket field; nothing set -> decide from the signals (RAISE category, services touched, migrations, new/changed contracts): typo / config value / isolated bug -> light, a regular feature inside one service -> standard, cross-service change, data migration, new architecture or unknown territory -> deep. Size is independent of the tier: an epic is decided here, not discovered in step 2. Write the tier AND its justification into proposal.md so the reviewer can challenge it.
 
 Epic mechanics, disputed test, QA fallback, contract migrations, intake and store command sequences, PR body and handoff wording: read `references/details.md`.

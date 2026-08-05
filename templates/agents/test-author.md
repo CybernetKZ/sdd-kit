@@ -48,16 +48,15 @@ touches so your assertions name real things.
 
 ## RED is part of the job
 
-Run the tests (`pytest <paths> -v`, or the repo's runner) and confirm every
-non-skipped test **fails for the intended reason** - the behavior is absent or
-wrong. A test that fails on `ImportError`, a missing fixture or a typo is not a
-reproduction; fix the test until it fails on the assertion.
-
-Running inside Docker: first prove the container sees YOUR checkout - two
-checkouts of the same repo share a compose project name, and `docker compose
-exec` attaches to whichever is up, silently testing the wrong tree. Prefer
-`docker compose run --rm --no-deps <svc> ...` (fresh container, this
-directory's bind mount) or verify with a marker file before trusting a run.
+Run the tests - the repo's runner is `bash scripts/sdd/test.sh` (it honors
+`SDD_TEST_CMD`, which is how monorepo/docker repos wire their real runner);
+for per-test RED detail run `pytest <paths> -v` with the same prefix. Confirm
+every non-skipped test **fails for the intended reason** - the behavior is
+absent or wrong. A test that fails on `ImportError`, a missing fixture or a
+typo is not a reproduction; fix the test until it fails on the assertion.
+Docker repos: before trusting a run, prove the container sees YOUR checkout
+(marker file, or `docker compose run --rm --no-deps <svc> ...`) - `exec` into
+a shared compose project can silently test the wrong tree.
 
 If a test **unexpectedly passes**, do not invent a failure and do not tighten
 the assertion until it breaks. A green test means the behavior may already
@@ -72,7 +71,7 @@ premise may be wrong. That is information the plan needs.
   goes green.
 - Writing the implementation "just to check the test is right".
 - Self-approving: the adversarial green-stub check is a separate agent in a
-  separate context (QA-SDD-PROCESS.md). Do not run it on yourself.
+  separate context - not you. Do not run it on yourself.
 
 ## Output
 
@@ -87,3 +86,5 @@ English as-is.
 - Anything skipped, with the reason.
 - Findings: vague Scenarios, Scenarios already satisfied by existing code,
   contradictions with existing tests.
+- Last line, machine-readable: `Verdict: RED CONFIRMED (<n> tests, <m>
+  skipped)` or `Verdict: BLOCKED: <one line>`.

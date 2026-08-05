@@ -28,10 +28,12 @@ sequences, PR body and handoff wording, or the light-tier specifics.
    - repo specs in `openspec/specs/` - empty for the touched capability in a
      brownfield repo: lean on the store + the code, and consider running the
      `spec-miner` agent for that capability first,
-   - cross-service contracts in the store: `openspec store list` ->
-     `openspec list --specs --store cybernet-specs` -> `openspec show <spec>
+   - cross-service contracts in the store, via the pinned CLI
+     (`OS="npx -y @fission-ai/openspec@1.7.0"` <!-- openspec-pin --> - never a bare/global
+     `openspec`, it may be missing or drift): `$OS store list` ->
+     `$OS list --specs --store cybernet-specs` -> `$OS show <spec>
      --type spec --store cybernet-specs` (details in
-     AGENTS.md, "Specs and contracts"; `openspec view` only prints the local
+     AGENTS.md, "Specs and contracts"; `$OS view` only prints the local
      dashboard and never reads the store),
    - store freshness: it is a local clone - `git -C <store path> log -1`, pull if
      stale; each store spec ends with `Last verified: <date> @ <sha>`, and if the
@@ -64,8 +66,8 @@ tier, not discovered in step 2.
 
 1. Deep tier first: research architecture options (context7 for library/API
    docs), compare them, record the comparison and the decision in the change's
-   `design.md` (`openspec instructions design --change <id> --json` lists its
-   sections); ADRs stay in sdd-kit for cross-cutting/process decisions. Model
+   `design.md` (`$OS instructions design --change <id> --json` lists its
+   sections; `$OS` = the pinned CLI from step 1); ADRs stay in sdd-kit for cross-cutting/process decisions. Model
    binding is automatic: plan and grill run as the `planner` / `plan-griller`
    subagents (`model: opus` in their frontmatter); the implementation runs on
    the session model; bulk mechanical steps can drop to haiku.
@@ -174,7 +176,7 @@ process around it.
 ## 7. Pull request conventions
 
 1. Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
-   Opening the PR is the developer's action by default; ONLY on their explicit
+   Opening the PR is the developer's action by default; only on their explicit
    command the agent runs `gh pr create` itself - never unprompted.
 2. Body: what changed, why, test plan (link the tests/Scenarios). Say if the
    tests were agent-generated without human QA validation.

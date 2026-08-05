@@ -30,9 +30,11 @@ if [ -n "$FILES" ]; then
   { command -v radon      >/dev/null && echo "== radon cc (complexity C+)" && echo "$FILES" | xargs radon cc -n C -s 2>/dev/null
     command -v complexipy >/dev/null && echo "== complexipy"               && echo "$FILES" | xargs complexipy -d low 2>/dev/null
     command -v vulture    >/dev/null && echo "== vulture (dead code)"      && echo "$FILES" | xargs vulture --min-confidence 80 2>/dev/null
-    command -v semgrep    >/dev/null && echo "== semgrep (security, auto)" && echo "$FILES" | xargs semgrep scan --quiet --config auto 2>/dev/null
+    command -v semgrep    >/dev/null && echo "== semgrep (security)" && echo "$FILES" | xargs semgrep scan --quiet --config p/security-audit --config p/secrets --severity WARNING 2>/dev/null
   } > /tmp/tools.txt || true
   if [ -s /tmp/tools.txt ]; then echo "sdd-review: static leads in /tmp/tools.txt"; else rm -f /tmp/tools.txt; fi
 fi
 
-claude -p "$(cat .claude/scripts/review-prompt.md)" --allowedTools "Read,Grep,Glob"
+# --model opus: the brief pins implementation review to opus; the reviewer
+# agents' frontmatter model applies only when they run as subagents, not here.
+claude -p "$(cat .claude/scripts/review-prompt.md)" --model opus --allowedTools "Read,Grep,Glob"

@@ -1,6 +1,6 @@
 ---
 name: plan-griller
-description: Interrogates an OpenSpec change before implementation and returns the sharp questions, each with a recommended answer, plus a verdict. Use in phase 2 of feature-flow, after `planner` and before any test or implementation work.
+description: Interrogates an OpenSpec change before implementation and returns the sharp questions, each with a recommended answer, plus a verdict. Runs the mechanical plan review first as a pre-pass (openspec validate --strict, spec-lint, enforced-anchor and MODIFIED-header checks - hard failures become verdict defects, not questions), so there is no separate plan-review step or agent. Use in phase 2 of feature-flow, after `planner` and before any test or implementation work.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: opus
 ---
@@ -31,16 +31,18 @@ Process:
    checklists. Cite the file:line or Scenario that makes each question real.
    Verify the plan's claims with tools, don't trust its prose:
    `graphify explain/query "<symbol>"` for what the touched code actually
-   connects to (if `graphify-out/` exists); `openspec show <spec> --type spec
-   --store <id>` for every store contract the plan names; the ponytail lens -
-   which tasks can be deleted because stdlib/an existing helper/the platform
+   connects to (if `graphify-out/` exists); `npx -y @fission-ai/openspec@1.7.0 show <spec> --type spec
+   --store <id>` for every store contract the plan names (pinned CLI, never a
+   bare/global `openspec`); the ponytail lens
+   (the discipline, not the skill - you cannot invoke skills): ask which
+   tasks can be deleted because stdlib/an existing helper/the platform
    already covers them; external API claims get checked against real docs
    (context7 in the main session - flag the claim as UNVERIFIED if you cannot).
    Check `proposal.md` for a `Graph probes:` line; missing it, or a bare
    `graph absent` with no reason, is material for a question - the plan may
    not have consulted the graph at all.
 1b. Mechanical pass before any questions - facts, not judgment. Run
-   `npx -y @fission-ai/openspec@1.7.0 validate --all --strict` and (if present)
+   `npx -y @fission-ai/openspec@1.7.0 validate --all --strict` <!-- openspec-pin --> and (if present)
    `python3 .claude/scripts/spec-lint.py`; grep every `enforced:` anchor the
    delta names (an anchor into an EXISTING file must resolve to a real symbol;
    a file the change itself creates must have a matching task in tasks.md);

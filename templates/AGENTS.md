@@ -24,18 +24,21 @@ OpenSpec change and uncommitted work from before the last context compaction.
 
 ## Specs and contracts
 
+- Always call the pinned CLI, never a bare/global `openspec` (it may be
+  missing or drift ahead of the tested version):
+  `OS="npx -y @fission-ai/openspec@1.7.0"`. <!-- openspec-pin -->
 - Store setup is machine-level, done once by `install.sh --machine-only`
-  (clones `cybernet-specs` to a fixed path and runs `openspec store
-  register`); if `openspec store list` comes back empty on this machine,
+  (clones `cybernet-specs` to a fixed path and runs `$OS store
+  register`); if `$OS store list` comes back empty on this machine,
   run that install step before continuing.
 - Capability specs for this repository: `openspec/specs/`
 - Changes go through `openspec/changes/<id>/` (rule: no code without a spec;
   for refactoring/tooling use `skip_specs: true` in the change metadata).
 - Cross-service contracts live in the central store repository,
   wired in via `references:` in `openspec/config.yaml`. Read them in order:
-  `openspec store list` (which stores are wired in) -> `openspec list --specs
-  --store <name>` (which specs exist) -> `openspec show <spec> --type spec
-  --store <name>` (the spec text). `openspec view` only renders the local
+  `$OS store list` (which stores are wired in) -> `$OS list --specs
+  --store <name>` (which specs exist) -> `$OS show <spec> --type spec
+  --store <name>` (the spec text). `$OS view` only renders the local
   dashboard - it never reads the store, so it cannot substitute for this
   sequence.
 - A Requirement points at its code with
