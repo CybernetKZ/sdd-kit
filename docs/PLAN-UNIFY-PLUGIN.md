@@ -35,21 +35,24 @@
 - [x] Риск-проверка 1: потребителей superpowers не осталось → РЕШЕНИЕ (Daniil, 2026-08-05): убрать из dependencies, оставить опцией в marketplace.json; gate_override.py остаётся; версия → 1.1.1.
 - [x] Риск-проверка 2: установленный плагин работает из кэша без marketplace; дыра — свежий clone без доступа к marketplace остаётся без агентов, фейл тихий → в фазу 2 добавлены: проверка в sdd-doctor + правило «--refresh удаляет копии только при подтверждённом плагине».
 
-## Фаза 2 — Сжатие sdd-kit
+## Фаза 2 — Сжатие sdd-kit (сделано 2026-08-05)
 
-- [ ] kit_manifest(): убрать агентов и переехавшие скиллы.
-- [ ] --refresh: шаг «удалить byte-identical копии переехавших файлов из целевого репо» (правило uninstall).
-- [ ] install.sh: прописывать marketplace + enabledPlugins (code-conventions@cybernet) в .claude/settings.json через merge-хелпер, аддитивно.
-- [ ] --machine-only: убрать установку ponytail-плагина; CLI-бинари остаются.
-- [ ] templates/skills/: удалить переехавшие скиллы (feature-flow и пр.) после подтверждения фазы 1.
-- [ ] Доки: README, WORKFLOW.md; правило каналов суждений (п.6) в оба репо.
+- [x] kit_manifest(): убрать агентов и переехавшие скиллы.
+- [x] --refresh: шаг `cleanup_migrated()` — удалить byte-identical копии переехавших файлов из целевого репо (правило uninstall: текущий шаблон в `templates/_migrated/` ИЛИ любой blob из истории кита), только когда плагин подтверждён (enabledPlugins + реально установлен на машине); иначе файлы остаются с предупреждением.
+- [x] install.sh: marketplace + enabledPlugins (code-conventions@cybernet) в `.claude/settings.json` — аддитивно, через `merge_settings()` (бывший `merge_settings_hooks()`); источник истины — `templates/settings.json`.
+- [x] --machine-only: установка ponytail-плагина убрана (только сообщение, что он приходит зависимостью плагина); CLI-бинари остаются.
+- [x] templates/skills/ + templates/agents/: переехавшие файлы перенесены в `templates/_migrated/` (не устанавливаются; нужны как эталон для byte-identical сравнения в refresh и uninstall).
+- [x] sdd-doctor: проверка `repo.plugin` (enabledPlugins + наличие плагина на машине) + аудит `audit.{skill,agent}-migrated` для локальных копий-теней.
+- [x] uninstall.sh: пути переехавших файлов переведены на `templates/_migrated/`; поведение (byte-identical, --force, kit_had по истории) не менялось.
+- [x] Доки: README (таблица «What it installs», refresh/uninstall, --machine-only, правило каналов суждений), WORKFLOW.md, GLOSSARY (test-author/executor), templates/AGENTS.md (precedence). Правило каналов суждений в code-conventions — **не сделано** (этот проход трогал только sdd-kit).
 
-## Фаза 3 — Раскатка в conversation_flow
+## Фаза 3 — Раскатка в conversation_flow — DONE 2026-08-05
 
-- [ ] --refresh на CF: включить плагин, вычистить byte-identical копии переехавших агентов/скиллов из .claude/; НЕ трогать tz/tz-review/tz-implement, хуки, openspec/.
-- [ ] AGENTS.md: фикс дрейфа Makefile.sdd → scripts/sdd/*.sh (ADR-0026).
-- [ ] Смоук: sdd-doctor, один /tz-цикл, проверить sweep_on_stop/inject_kb рядом с китовскими хуками.
-- [ ] spec-guard не трогаем.
+- [x] --refresh на CF: 7 файлов обновлено (block-no-verify.cjs, spec-guard.cjs, spec-lint.py, sdd-doctor.sh, review-prompt.md, scripts/sdd/review.sh, scripts/sdd/doctor.sh); в .claude/settings.json аддитивно добавлены `extraKnownMarketplaces.cybernet` + `enabledPlugins["code-conventions@cybernet"]`, свои hooks-записи CF (pretooluse_guard.py и др.) сохранены. Копии переехавших 7 агентов и 6 скиллов **оставлены** — плагина нет на машине, cleanup_migrated() отработал по правилу «не удалять без подтверждённого плагина» и предупредил. tz*/хуки/openspec/ не тронуты.
+- [x] AGENTS.md: секция «Команды» переписана на `scripts/sdd/{check,doctor,test,review,index}.sh` (Makefile.sdd упразднён, ADR-0026); секция оснастки кита — на ADR-0027 (агенты + общие скиллы из плагина, копии в .claude/ помечены как тени), добавлен прецеденс «AGENTS.md > YouTrack KB > скиллы». 312 строк (гейт ≤500).
+- [x] Смоук: sdd-doctor — 21 ok / 15 WARN / 0 FAIL (WARN: repo.plugin не установлен, spec-guard no-op, 13× shadow-копии); scripts/sdd/check.sh — OK (openspec validate --strict прошёл, spec-lint advisory). /tz-цикл не гоняли (интерактивный, отдельно).
+- [x] spec-guard не трогали.
+- **Осталось пользователю (интерактивно):** `claude plugin marketplace add CybernetKZ/code-conventions && claude plugin install code-conventions@cybernet`, затем повторный `sdd-kit/install.sh --refresh /home/octrow/cybernet/conversation_flow` — он снесёт byte-identical копии агентов/скиллов.
 
 ## Фаза 4 — Остальные репо (follow-up)
 

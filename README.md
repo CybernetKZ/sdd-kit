@@ -78,6 +78,12 @@ manual command. `--force` deletes the kit-installed files even when modified
 are team content and are never force-deleted. The `CLAUDE.md -> AGENTS.md`
 rename is offered back;
 `openspec/` (specs + changes) is deleted only after an explicit yes. The
+A `.claude/settings.json` the install merged into (the repo had its own hooks, or
+another marketplace) is team content and is kept - drop the two kit-added keys
+(`extraKnownMarketplaces.cybernet`, `enabledPlugins["code-conventions@cybernet"]`)
+by hand. Copies of the migrated agents/skills left over from an older kit are
+still removed under the same byte-identical rule (the old templates stay in
+`templates/_migrated/` for exactly this comparison). The
 central store registration is machine-wide state shared by every repo: it is
 unregistered only on an interactive yes or with `--force` - an unattended run
 (no TTY / `SDD_KIT_ASSUME_YES=1`) keeps it and prints the manual command. On an untouched install the round trip is
@@ -142,7 +148,12 @@ generic flow with a `.spec-guard-paths` TODO.
 ## Dependencies
 
 Checked on start: git, node/npx, uv. Missing openspec CLI or youtrack-mcp are
-offered for install (with permission). No YouTrack token -> the script shows
+offered for install (with permission). The `code-conventions@cybernet` plugin is
+a real dependency of the *prompt* half (agents + shared skills, ADR-0027): the
+install wires it into `.claude/settings.json`, Claude Code resolves it on the
+next open (trust prompt), and `scripts/sdd/doctor.sh` reports `repo.plugin` when
+it is missing. Enforcement never depends on it - hooks, pre-commit, `openspec/`
+and `scripts/sdd/*` are physically in the repo (ADR-0027 §2). No YouTrack token -> the script shows
 https://cybernet.youtrack.cloud/users/me?tab=account-security, reads the token
 hidden, and stores it only in youtrack-mcp's `.env` (chmod 600) - never in the
 repo.
@@ -150,6 +161,11 @@ repo.
 ## After install (manual)
 
 1. Fill the TODOs in `AGENTS.md`.
+1b. Reopen the project in Claude Code and accept the trust prompt for the
+   `cybernet` marketplace - that is what actually pulls in
+   `code-conventions@cybernet` with the 7 agents and the shared skills
+   (ADR-0027). Or do it by hand:
+   `claude plugin marketplace add CybernetKZ/code-conventions && claude plugin install code-conventions@cybernet`.
 2. Create `.spec-guard-paths` (code path prefixes, one per line) to enable
    spec-guard - automatic for known repos (see Profiles). Until this file has a
    non-comment line, spec-guard is a deliberate no-op. (LIVING SPEC docs drift

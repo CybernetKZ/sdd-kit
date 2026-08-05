@@ -62,6 +62,17 @@ OpenSpec change and uncommitted work from before the last context compaction.
   come from the AST, `[INFERRED]` ones are guesses - confirm both in the
   actual code.
 
+## Where the rules come from (precedence)
+
+- Agents (planner, plan-griller, test-author, executor, backend-reviewer,
+  database-reviewer, repo-auditor) and the shared skills (feature-flow,
+  incident-flow, grilling, grill-me, grill-with-docs, domain-modeling) come from
+  the `code-conventions` plugin, not from this repository's `.claude/`. If they
+  are missing, the plugin is not enabled/installed - `bash scripts/sdd/doctor.sh`
+  says so.
+- On conflict: THIS file wins over the YouTrack code-style knowledge base, and
+  the knowledge base wins over any skill's prose.
+
 ## Do not edit by hand
 
 TODO: list generated files and directories (migrations, generated code).

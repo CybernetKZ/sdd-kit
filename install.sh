@@ -464,6 +464,19 @@ PY
   return 1
 }
 
+# plugin_carries_migrated — the installed plugin VERSION must actually contain
+# the migrated content. "Installed" alone is not enough: the first real rollout
+# deleted a repo's agent copies while the marketplace had served a pre-ADR-0027
+# build of the plugin (1.0.0, no agents/), leaving the repo with neither.
+# planner.md + feature-flow are the sentinels for the whole migrated set.
+plugin_carries_migrated() {
+  local name="${PLUGIN_ID%@*}" d
+  for d in "$HOME/.claude/plugins/cache"/*/"$name"/*/; do
+    [ -f "${d}agents/planner.md" ] && [ -f "${d}skills/feature-flow/SKILL.md" ] && return 0
+  done
+  return 1
+}
+
 # cleanup_migrated — ADR-0027 step: drop the agents/skills copies the kit
 # installed before the move to the code-conventions plugin.
 #
@@ -488,10 +501,15 @@ $(migrated_manifest)
 EOF
   [ "$present" = 1 ] || return 0
 
-  if plugin_enabled_in_settings && plugin_installed_on_machine; then have_plugin=1; fi
+  if plugin_enabled_in_settings && plugin_installed_on_machine && plugin_carries_migrated; then have_plugin=1; fi
   if [ "$have_plugin" = 0 ]; then
-    warn "agents/skills copies from an older kit are still here, and $PLUGIN_ID is not confirmed (enabled in .claude/settings.json + installed on this machine) — keeping them: deleting now would leave the repo with no planner/test-author/reviewers at all (ADR-0027)"
-    say  "next: install/enable the plugin, then re-run --refresh: claude plugin marketplace add $PLUGIN_REPO && claude plugin install $PLUGIN_ID"
+    if plugin_installed_on_machine && ! plugin_carries_migrated; then
+      warn "installed $PLUGIN_ID is an old build WITHOUT the migrated agents/skills — keeping the local copies (ADR-0027)"
+      say  "next: claude plugin marketplace update cybernet && claude plugin update $PLUGIN_ID, then re-run --refresh"
+    else
+      warn "agents/skills copies from an older kit are still here, and $PLUGIN_ID is not confirmed (enabled in .claude/settings.json + installed on this machine) — keeping them: deleting now would leave the repo with no planner/test-author/reviewers at all (ADR-0027)"
+      say  "next: install/enable the plugin, then re-run --refresh: claude plugin marketplace add $PLUGIN_REPO && claude plugin install $PLUGIN_ID"
+    fi
     return 0
   fi
 

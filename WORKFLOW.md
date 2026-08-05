@@ -180,6 +180,12 @@ single-sourced; this is the one-line summary plus where to read them:
 
 ## Where the named pieces live
 
+The skills and agents below are **provided by the `code-conventions` plugin**
+(`code-conventions@cybernet`), not copied into the repo - the kit enables the
+plugin in `.claude/settings.json` (ADR-0027). Everything deterministic
+(`scripts/sdd/*`, hooks, pre-commit, `openspec/`, `AGENTS.md`) is a repo file
+installed by the kit, and stays that way.
+
 | Piece | Place in the flow |
 |---|---|
 | `feature-flow` skill | IS phases 1-6 for features (its steps 1->8 are marked on the phase titles) - the orchestrator the agent follows |
@@ -189,7 +195,7 @@ single-sourced; this is the one-line summary plus where to read them:
 | `planner` / `plan-griller` agents | phase 2 on opus (`model` frontmatter, ADR-0013): planner writes the change, plan-griller interrogates it |
 | `test-author` agent | phase 3 on sonnet (ADR-0016): one failing test per Scenario from the spec delta, tracer `# spec: ...`, RED confirmed; writes test files only, never implementation |
 | `executor` agent | phase 4 on sonnet (ADR-0021): walks `tasks.md` of a grilled change with RED tests, ticking tasks as it goes; never edits tests, never commits, stops-and-reports on any deviation from the plan instead of improvising - disputes and "change the plan?" calls go back to the orchestrator |
-| `spec-miner` agent | user-level agent (`~/.claude/agents/`), not part of the kit's `templates/agents/` and not installed by it; used for repo onboarding only (seed specs one capability at a time, brownfield repos), NOT in the per-task loop; OpenSpec has no built-in equivalent |
+| `spec-miner` agent | user-level agent (`~/.claude/agents/`), neither in the kit nor in the `code-conventions` plugin, and not installed by either; used for repo onboarding only (seed specs one capability at a time, brownfield repos), NOT in the per-task loop; OpenSpec has no built-in equivalent |
 | reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, run locally only (`scripts/sdd/review.sh`) - no server CI autoreview anymore (ADR-0023) |
 
 ## No magic: prompts vs hooks (what actually enforces)
@@ -219,7 +225,7 @@ Consequences:
   it actually ran: a measured artifact, a log line, a gate that fails without
   it. Unverifiable pieces get removed - 95% of ~285 installed skills were
   never used once (`docs/archive/OUR_PATTERNS.md`), and the `repo-auditor`
-  agent (`templates/agents/repo-auditor.md`) plus the audit section of
+  agent (in the `code-conventions` plugin, ADR-0027) plus the audit section of
   `sdd-doctor` exist to keep it that way.
 
 ## Prototype instead of waiting
@@ -233,12 +239,14 @@ blocking question is open.
 
 ## Cross-cutting tools (active in every phase)
 
-Installed per developer machine by `install.sh --machine-only` (core stack, default-yes):
+CLI binaries are installed per developer machine by `install.sh --machine-only`
+(core stack, default-yes); Claude Code plugins come with `code-conventions`
+through the `cybernet` marketplace, which the repo half enables (ADR-0027 §7):
 
 | Tool | What it does |
 |---|---|
 | **rtk** | compresses shell output in every Bash call (global hook) |
-| **ponytail** | minimal working solutions; less code, fewer tokens (plugin) |
+| **ponytail** | minimal working solutions; less code, fewer tokens (plugin - dependency of `code-conventions`, not installed by the kit) |
 | **ast-grep** | structural codemods for bulk mechanical refactors |
 | **spec-guard + pre-commit hooks** | block code edits without an active OpenSpec change (not in conversation_flow - LIVING SPEC exception); ruff, hygiene, `scripts/sdd/check.sh` on commit |
 
@@ -248,7 +256,7 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 
 ## Grounding: правило -> ADR
 
-Промпты (`templates/skills/*`, `templates/agents/*`) несут само правило фразой,
+Промпты (скиллы и агенты плагина `code-conventions`, профильные скиллы кита) несут само правило фразой,
 без `ADR-XXXX` - целевой репозиторий не имеет `docs/ADR/` (ADR-0022 п.2). Связь
 "правило -> решение" живёт здесь. Меняешь правило - проверь эту таблицу.
 
@@ -286,12 +294,14 @@ it exists only as a benchmark arm inside the ponytail repo; ponytail covers it.
 | `## Grill` открывается provenance-заголовком: кто грилил, сколько вопросов, что изменилось | ADR-0021 |
 | В промптах нет `ADR-XXXX`; вывод человеку - по-русски, машинные форматы/теги - английские | ADR-0022 |
 | SKILL.md workflow-скилла - оркестрация ≤60 строк; справочник - `references/*.md`, доменные правила репо - AGENTS.md; агент-промпты самодостаточны | ADR-0024 |
-| Grill-практика ставится китом: `grilling`/`domain-modeling` вендорены из mattpocock/skills и не редактируются, house-rules - в обёртках `grill-me`/`grill-with-docs` | ADR-0024 |
+| Grill-практика приходит плагином `code-conventions` (до ADR-0027 её ставил кит): `grilling`/`domain-modeling` вендорены из mattpocock/skills и не редактируются, house-rules - в обёртках `grill-me`/`grill-with-docs` | ADR-0024, ADR-0027 |
 | Гриль открывается механическим pre-pass (validate/spec-lint/якоря/MODIFIED побуквенно); жёсткие фейлы - в вердикт, не в вопросы | ADR-0025 |
 | Ревью-leads собирает сам `scripts/sdd/review.sh` (/tmp/tools.txt: radon/complexipy/vulture/semgrep, каждая тулза опциональна) | ADR-0025 |
 | Makefile.sdd выпилен: командная поверхность - `scripts/sdd/*.sh` (check/test/review/index/doctor) | ADR-0026 |
 | PR и смена статуса в YouTrack - действия разработчика; агент делает их сам ТОЛЬКО по явной команде | ADR-0026 |
 | living-spec-check выпилен: дрейф доков CF против main проверяется по требованию `tools/cf/main-drift.sh` | ADR-0026 |
+| Агенты и общие скиллы живут в плагине `code-conventions`, кит их не копирует - он включает плагин в `.claude/settings.json`; enforcement (хуки, pre-commit, openspec) остаётся в ките | ADR-0027 |
+| Каналы суждений: YouTrack KB (Web-A-8) - живые решения о стиле кода без PR; `docs/ADR/` + `docs/GLOSSARY.md` кита - процессные решения через PR. Прецеденс: `AGENTS.md` репо > KB > скиллы | ADR-0027 |
 
 Без ADR (правило живёт только в текстах - кандидат на фиксацию отдельным
 решением): deep-тир пишет сравнение архитектурных опций в `design.md` самого
@@ -308,9 +318,9 @@ Last verified: 2026-08-04 (ADR-0023 wave B text revision - server CI removed fro
 | bootstrap assets: `scripts/sdd/*.sh`, spec-guard, pre-commit hooks, spec-lint, sdd-doctor (incl. audit, store and graph checks) | shipped by sdd-kit - live in a repo once bootstrapped |
 | `sdd-ci.yml`, `autoreview.yml`, `store-ci.yml` | **removed from install** (ADR-0023, ADR-0026 §5 - no CI, no exceptions); not copied by `install.sh`, not present in a bootstrapped repo |
 | **enforcement model** | **local-only, by design** (ADR-0023): no server CI exists to be advisory or required. Only the local hooks (spec-guard, `--no-verify` blocker, pre-commit running `scripts/sdd/check.sh`) block anything |
-| `feature-flow` / `incident-flow` skills | shipped (`templates/skills/`) |
-| `planner` / `plan-griller` agents (model binding for plan/grill; `Graph probes:` provenance line) | shipped (`templates/agents/`, ADR-0013, ADR-0023) |
-| `test-author` agent (tests before code) | shipped (`templates/agents/`, ADR-0016) |
+| `feature-flow` / `incident-flow` skills | shipped by the `code-conventions` plugin (ADR-0027; the kit enables the plugin in `.claude/settings.json` instead of copying the files) |
+| `planner` / `plan-griller` agents (model binding for plan/grill; `Graph probes:` provenance line) | shipped by the `code-conventions` plugin (ADR-0013, ADR-0023, ADR-0027) |
+| `test-author` agent (tests before code) | shipped by the `code-conventions` plugin (ADR-0016, ADR-0027) |
 | **feature flags** | **cut entirely** (ADR-0026 §2): no registry, no lifecycle, no gate; a migration switch, when truly needed, is a plain config value |
 | central store (cybernet-specs) | live - `install.sh --machine-only` clones it to a fixed machine path and registers it; consumer is the **agent** reading cross-service specs at intake/planning, not a machine gate (ADR-0015, ADR-0023) |
 | repo knowledge graph (graphify) | committed to git as a team artifact (`graphify-out/graph.json`, ADR-0023); sdd-doctor warns if stale vs HEAD; navigation/context only, never a gate (ADR-0004) |
