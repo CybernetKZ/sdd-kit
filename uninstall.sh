@@ -151,6 +151,13 @@ fi
 for f in block-no-verify.cjs pre-compact.cjs spec-guard.cjs block-no-verify.js pre-compact.js spec-guard.js; do
   rm_ours "$KIT/templates/$f" ".claude/hooks/$f"
 done
+# .claude/settings.json: removed only when it is still the kit template verbatim
+# (hooks + the ADR-0027 plugin entries). A settings.json that install.sh merged
+# into (its own hooks, or a marketplace it already had) is team content — it is
+# kept, and the two kit-added keys (extraKnownMarketplaces.cybernet,
+# enabledPlugins["code-conventions@cybernet"]) have to be dropped by hand; the
+# alternative, surgically editing a JSON file we do not own, is how installers
+# eat configuration.
 rm_ours "$KIT/templates/settings.json" .claude/settings.json
 for f in spec-lint.py sdd-doctor.sh review-prompt.md; do
   rm_ours "$KIT/templates/$f" ".claude/scripts/$f"
@@ -168,18 +175,25 @@ if [ -f .claude/scripts/repo-audit.sh ]; then
     echo "        next: rm .claude/scripts/repo-audit.sh" >&2
   fi
 fi
+# ADR-0027: the 7 agents and the 6 shared skills moved into the
+# code-conventions plugin, so install.sh no longer copies them — but repos
+# installed before the move still carry them, and uninstall must still clean
+# them up. The old templates stayed in the kit for exactly this (and for
+# install.sh --refresh's migration cleanup) under templates/_migrated/, which is
+# what rm_ours byte-compares against; kit_had() covers older kit revisions of
+# the same files through git history.
 for a in backend-reviewer database-reviewer planner plan-griller test-author executor repo-auditor; do
-  rm_ours "$KIT/templates/agents/$a.md" ".claude/agents/$a.md"
+  rm_ours "$KIT/templates/_migrated/agents/$a.md" ".claude/agents/$a.md"
 done
-rm_ours "$KIT/templates/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md
-rm_ours "$KIT/templates/skills/feature-flow/references/details.md" .claude/skills/feature-flow/references/details.md
-rm_ours "$KIT/templates/skills/incident-flow/SKILL.md" .claude/skills/incident-flow/SKILL.md
-rm_ours "$KIT/templates/skills/grilling/SKILL.md" .claude/skills/grilling/SKILL.md
-rm_ours "$KIT/templates/skills/grill-me/SKILL.md" .claude/skills/grill-me/SKILL.md
-rm_ours "$KIT/templates/skills/grill-with-docs/SKILL.md" .claude/skills/grill-with-docs/SKILL.md
-rm_ours "$KIT/templates/skills/domain-modeling/SKILL.md" .claude/skills/domain-modeling/SKILL.md
-rm_ours "$KIT/templates/skills/domain-modeling/CONTEXT-FORMAT.md" .claude/skills/domain-modeling/CONTEXT-FORMAT.md
-rm_ours "$KIT/templates/skills/domain-modeling/ADR-FORMAT.md" .claude/skills/domain-modeling/ADR-FORMAT.md
+rm_ours "$KIT/templates/_migrated/skills/feature-flow/SKILL.md" .claude/skills/feature-flow/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/feature-flow/references/details.md" .claude/skills/feature-flow/references/details.md
+rm_ours "$KIT/templates/_migrated/skills/incident-flow/SKILL.md" .claude/skills/incident-flow/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/grilling/SKILL.md" .claude/skills/grilling/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/grill-me/SKILL.md" .claude/skills/grill-me/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/grill-with-docs/SKILL.md" .claude/skills/grill-with-docs/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/domain-modeling/SKILL.md" .claude/skills/domain-modeling/SKILL.md
+rm_ours "$KIT/templates/_migrated/skills/domain-modeling/CONTEXT-FORMAT.md" .claude/skills/domain-modeling/CONTEXT-FORMAT.md
+rm_ours "$KIT/templates/_migrated/skills/domain-modeling/ADR-FORMAT.md" .claude/skills/domain-modeling/ADR-FORMAT.md
 del .claude/last-session-state.md .claude/expected-env
 
 # ------------------------------------------------------------ 2. CI workflows

@@ -2,12 +2,19 @@
 # SDD installer — one entry point for both halves of the setup:
 #
 #   1. REPO section    SDD assets in a repository: openspec, AGENTS.md, local
-#                      gates, hooks, agents, skills, pre-commit. Idempotent:
-#                      never overwrites existing files, only adds what is missing.
+#                      gates, hooks, scripts, pre-commit, and the
+#                      code-conventions plugin wired into .claude/settings.json.
+#                      Idempotent: never overwrites existing files, only adds
+#                      what is missing.
 #                      No CI workflows: ADR-0023 §5 retired server-side gates.
+#                      Agents and the shared skills are NOT copied anymore
+#                      (ADR-0027): they live in the code-conventions plugin.
 #   2. MACHINE section the central spec store (clone at a fixed path + register)
-#                      and per-developer tools (ponytail, rtk, graphify,
-#                      ast-grep, and the opt-in ones). Touches no repository.
+#                      and per-developer CLI tools (rtk, graphify, ast-grep,
+#                      ruff, the static-review set, and the opt-in ones).
+#                      Touches no repository. Claude Code PLUGINS are not
+#                      installed here (ADR-0027 §7): ponytail arrives as a
+#                      dependency of code-conventions via the marketplace.
 #
 # Usage:
 #   sdd-kit/install.sh [/path/to/repo]              both sections (repo first)
@@ -15,16 +22,23 @@
 #   sdd-kit/install.sh --machine-only               developer tools only
 #   sdd-kit/install.sh --refresh [/path/to/repo]    update the kit-owned files
 #
-# --refresh re-copies ONLY the kit-owned manifest (hooks, agents, skills,
-# scripts, scripts/sdd/*, pre-commit) when the target drifted from
+# --refresh re-copies ONLY the kit-owned manifest (hooks, scripts,
+# scripts/sdd/*, pre-commit) when the target drifted from
 # the template, and reports a per-file (+added/-removed) summary. Repo-owned
 # files (AGENTS.md, .spec-guard-paths, .claude/expected-env,
 # ruff.toml, openspec/**, .mcp.json, .claude/settings.json) are never touched
-# wholesale. The one exception: .claude/settings.json's `hooks` block is
-# additively merged (merge_settings_hooks(), both on install and --refresh) —
-# any kit hook copied into .claude/hooks/ that is not yet referenced gets
-# wired in; a repo's own hook entries (e.g. pretooluse_guard.py) are never
-# removed, reordered, or replaced.
+# wholesale. The one exception: .claude/settings.json's `hooks`,
+# `extraKnownMarketplaces` and `enabledPlugins` blocks are additively merged
+# (merge_settings(), both on install and --refresh) — any kit hook copied into
+# .claude/hooks/ that is not yet referenced gets wired in, and the
+# code-conventions@cybernet plugin gets enabled; a repo's own entries (e.g.
+# pretooluse_guard.py, another marketplace) are never removed, reordered, or
+# replaced.
+# --refresh also runs the ADR-0027 migration cleanup: the agents and shared
+# skills that moved into the code-conventions plugin are deleted from the target
+# repo — but ONLY when they are still byte-identical to the kit's old templates
+# AND the plugin is confirmed available (see cleanup_migrated()). Otherwise they
+# are kept with a warning: refresh must never delete the only working copy.
 # --refresh always implies the repo section only: the machine tools have no
 # refresh semantics (re-run --machine-only for those), so --repo-only is
 # redundant with it (accepted, ignored).
@@ -55,6 +69,17 @@ OPENSPEC="npx -y @fission-ai/openspec@1.7.0"
 STORE_ID="${SDD_STORE_ID:-cybernet-specs}"
 STORE_DIR="${SDD_STORE_DIR:-$HOME/cybernet/cybernet-specs}"
 STORE_GIT="${SDD_STORE_GIT:-https://github.com/octrow/cybernet-specs.git}"
+
+# code-conventions plugin (ADR-0027): the single carrier of the session
+# artifacts — the 7 agents and the shared skills (feature-flow, incident-flow,
+# grilling, grill-me, grill-with-docs, domain-modeling). The kit no longer
+# copies them into repos; it enables the plugin instead. Names must match the
+# plugin's README ("Zero-click for a whole project") exactly, otherwise Claude
+# Code resolves nothing: marketplace key `cybernet`, plugin id
+# `code-conventions@cybernet`, source repo CybernetKZ/code-conventions.
+PLUGIN_MARKETPLACE="cybernet"
+PLUGIN_ID="code-conventions@cybernet"
+PLUGIN_REPO="CybernetKZ/code-conventions"
 
 say()  { echo "[sdd-kit] $*"; }
 warn() { echo "[sdd-kit] WARN: $*" >&2; }
@@ -287,11 +312,22 @@ strip_opsx_commands() {
 # Deliberately NOT here — repo-owned, never overwritten by --refresh:
 #   AGENTS.md, CLAUDE.md, .spec-guard-paths,
 #   .claude/expected-env, ruff.toml, openspec/**, .mcp.json,
-#   .claude/settings.json (never wholesale-rewritten; its `hooks` block is
-#   additively merged by merge_settings_hooks() — see that function for why:
-#   the kit hooks it copies into .claude/hooks/ are useless if nothing in
-#   settings.json invokes them, so wiring them in is part of installing them,
-#   not a repo-owned decision; existing hook entries are never touched).
+#   .claude/settings.json (never wholesale-rewritten; its `hooks`,
+#   `extraKnownMarketplaces` and `enabledPlugins` blocks are additively merged
+#   by merge_settings() — see that function for why: the kit hooks it copies
+#   into .claude/hooks/ are useless if nothing in settings.json invokes them,
+#   and the agents/skills the kit stopped copying are useless unless the plugin
+#   that carries them is enabled, so wiring both in is part of installing,
+#   not a repo-owned decision; existing entries are never touched).
+#
+# Deliberately NOT here either — ADR-0027: the 7 agents (.claude/agents/*.md)
+# and the 6 shared skills (feature-flow, incident-flow, grilling, grill-me,
+# grill-with-docs, domain-modeling) moved into the code-conventions plugin,
+# which is the single carrier of session artifacts now. The kit enables the
+# plugin (merge_settings()) instead of copying those files, and --refresh
+# removes previously-copied ones (cleanup_migrated()). Profile-specific skills
+# (tz, tz-review, tz-implement) come from profile payloads and are unaffected;
+# the vendor-generated .claude/skills/openspec-* stay repo-side too.
 #
 # Deliberately NOT here either — ADR-0023 §5 / ADR-0026 §5 retired server-side
 # gates: the sdd-ci.yml / autoreview.yml / store-ci.yml workflows are no longer
@@ -306,22 +342,6 @@ kit_manifest() {
 block-no-verify.cjs .claude/hooks/block-no-verify.cjs
 pre-compact.cjs .claude/hooks/pre-compact.cjs
 spec-guard.cjs .claude/hooks/spec-guard.cjs
-agents/backend-reviewer.md .claude/agents/backend-reviewer.md
-agents/database-reviewer.md .claude/agents/database-reviewer.md
-agents/planner.md .claude/agents/planner.md
-agents/plan-griller.md .claude/agents/plan-griller.md
-agents/test-author.md .claude/agents/test-author.md
-agents/executor.md .claude/agents/executor.md
-agents/repo-auditor.md .claude/agents/repo-auditor.md
-skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
-skills/feature-flow/references/details.md .claude/skills/feature-flow/references/details.md
-skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
-skills/grilling/SKILL.md .claude/skills/grilling/SKILL.md
-skills/grill-me/SKILL.md .claude/skills/grill-me/SKILL.md
-skills/grill-with-docs/SKILL.md .claude/skills/grill-with-docs/SKILL.md
-skills/domain-modeling/SKILL.md .claude/skills/domain-modeling/SKILL.md
-skills/domain-modeling/CONTEXT-FORMAT.md .claude/skills/domain-modeling/CONTEXT-FORMAT.md
-skills/domain-modeling/ADR-FORMAT.md .claude/skills/domain-modeling/ADR-FORMAT.md
 spec-lint.py .claude/scripts/spec-lint.py
 sdd-doctor.sh .claude/scripts/sdd-doctor.sh
 review-prompt.md .claude/scripts/review-prompt.md
@@ -334,6 +354,179 @@ pre-commit-hook.sh .git/hooks/pre-commit
 EOF
 }
 
+# -------------------------------------------------- ADR-0027 migration list --
+# The files the kit USED to install and no longer does: the 7 agents and the 6
+# shared skills that moved into the code-conventions plugin.
+#
+# Why the old templates are still in the kit, under templates/_migrated/:
+# deleting a copy out of a target repo is only safe when we can prove that copy
+# is ours and unmodified, and proving it needs the exact bytes we once wrote.
+# Keeping the old templates verbatim in one clearly-named directory is the
+# simplest form of that proof — no hash tables to maintain, `cmp -s` does the
+# work, and `git diff` on the kit shows exactly what the comparison baseline is.
+# templates/_migrated/ is NEVER installed: it is absent from kit_manifest(), so
+# neither the install pass nor --refresh copies anything out of it. It is read
+# by cleanup_migrated() here and by uninstall.sh (rm_ours) only.
+# Copies installed from an OLDER kit revision (before a template was last
+# edited) are covered too, by the same git-history blob check uninstall.sh uses
+# — see kit_blob_known().
+#
+# Format per line: "<path under templates/> <destination relative to the repo>".
+migrated_manifest() {
+  cat <<'EOF'
+_migrated/agents/backend-reviewer.md .claude/agents/backend-reviewer.md
+_migrated/agents/database-reviewer.md .claude/agents/database-reviewer.md
+_migrated/agents/planner.md .claude/agents/planner.md
+_migrated/agents/plan-griller.md .claude/agents/plan-griller.md
+_migrated/agents/test-author.md .claude/agents/test-author.md
+_migrated/agents/executor.md .claude/agents/executor.md
+_migrated/agents/repo-auditor.md .claude/agents/repo-auditor.md
+_migrated/skills/feature-flow/SKILL.md .claude/skills/feature-flow/SKILL.md
+_migrated/skills/feature-flow/references/details.md .claude/skills/feature-flow/references/details.md
+_migrated/skills/incident-flow/SKILL.md .claude/skills/incident-flow/SKILL.md
+_migrated/skills/grilling/SKILL.md .claude/skills/grilling/SKILL.md
+_migrated/skills/grill-me/SKILL.md .claude/skills/grill-me/SKILL.md
+_migrated/skills/grill-with-docs/SKILL.md .claude/skills/grill-with-docs/SKILL.md
+_migrated/skills/domain-modeling/SKILL.md .claude/skills/domain-modeling/SKILL.md
+_migrated/skills/domain-modeling/CONTEXT-FORMAT.md .claude/skills/domain-modeling/CONTEXT-FORMAT.md
+_migrated/skills/domain-modeling/ADR-FORMAT.md .claude/skills/domain-modeling/ADR-FORMAT.md
+EOF
+}
+
+# kit_blob_known <path> — true when <path> is byte-identical to ANY version of
+# ANY kit template ever committed (same rule as uninstall.sh's kit_had()). A
+# repo installed from an older kit revision carries stale-but-genuine kit files;
+# without this they would all look like "team edits" and never get cleaned up.
+# Needs the kit to be a git checkout; when it is not, the current-template
+# `cmp` above is the only evidence and everything else is kept (conservative).
+KIT_BLOBS=""
+kit_blob_known() {
+  local blob
+  if [ -z "$KIT_BLOBS" ]; then
+    # --no-abbrev: without it --raw prints short hashes that never match hash-object
+    KIT_BLOBS="$(git -C "$KIT" log --all --format= --raw --no-abbrev \
+      -- templates docs/archive profiles 2>/dev/null | awk '{print $3"\n"$4}' | sort -u)"
+    [ -n "$KIT_BLOBS" ] || KIT_BLOBS="none"  # not a git checkout — do not re-run per file
+  fi
+  blob="$(git hash-object -- "$1" 2>/dev/null)" || return 1
+  printf '%s\n' "$KIT_BLOBS" | grep -qx "$blob"
+}
+
+# plugin_enabled_in_settings — true when the target repo's .claude/settings.json
+# (or .claude/settings.local.json, where a developer may have opted in) enables
+# $PLUGIN_ID. Read-only, JSON-parsed, never guessed with grep.
+plugin_enabled_in_settings() {
+  python3 - "$PLUGIN_ID" .claude/settings.json .claude/settings.local.json <<'PY'
+import json, sys
+plugin_id = sys.argv[1]
+for path in sys.argv[2:]:
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except Exception:
+        continue
+    enabled = data.get("enabledPlugins")
+    if isinstance(enabled, dict) and enabled.get(plugin_id):
+        sys.exit(0)
+    if isinstance(enabled, list) and plugin_id in enabled:
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+# plugin_installed_on_machine — best-effort: is the plugin actually resolvable
+# on THIS machine? Claude Code records installs in
+# ~/.claude/plugins/installed_plugins.json and unpacks them under
+# ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>. Either signal is
+# enough; no `claude plugin` subprocess is spawned (the CLI may be missing, and
+# an install check must not cost a network round trip).
+plugin_installed_on_machine() {
+  local name="${PLUGIN_ID%@*}" d
+  if [ -f "$HOME/.claude/plugins/installed_plugins.json" ] \
+     && python3 - "$PLUGIN_ID" "$HOME/.claude/plugins/installed_plugins.json" <<'PY'
+import json, sys
+plugin_id, path = sys.argv[1], sys.argv[2]
+name = plugin_id.split("@")[0]
+try:
+    with open(path) as f:
+        plugins = json.load(f).get("plugins", {})
+except Exception:
+    sys.exit(1)
+# exact id first, then the same plugin from any other marketplace
+sys.exit(0 if plugin_id in plugins or any(k.split("@")[0] == name for k in plugins) else 1)
+PY
+  then
+    return 0
+  fi
+  for d in "$HOME/.claude/plugins/cache"/*/"$name"; do
+    [ -d "$d" ] && return 0
+  done
+  return 1
+}
+
+# cleanup_migrated — ADR-0027 step: drop the agents/skills copies the kit
+# installed before the move to the code-conventions plugin.
+#
+# Order of the two guards matters, and it is the whole point of this function:
+# a repo must never be left with neither the file nor the plugin. So a copy is
+# deleted only when BOTH hold:
+#   (a) it is genuinely ours and unmodified — byte-identical to the old template
+#       in templates/_migrated/, or to any version of it ever committed to the
+#       kit (kit_blob_known(), the rule uninstall.sh uses). Team edits survive.
+#   (b) the plugin is confirmed available — enabled in the target's
+#       .claude/settings.json AND actually installed on this machine.
+# Anything else is kept, loudly, with the exact next step.
+cleanup_migrated() {
+  local m_src m_dst removed=0 kept=0 have_plugin=0 present=0 d
+  # nothing to clean? then say nothing at all — the common case for a repo
+  # installed after the move. (here-doc, not a pipe: `present` must survive.)
+  while read -r m_src m_dst; do
+    [ -n "$m_dst" ] || continue
+    [ -e "$m_dst" ] && present=1
+  done <<EOF
+$(migrated_manifest)
+EOF
+  [ "$present" = 1 ] || return 0
+
+  if plugin_enabled_in_settings && plugin_installed_on_machine; then have_plugin=1; fi
+  if [ "$have_plugin" = 0 ]; then
+    warn "agents/skills copies from an older kit are still here, and $PLUGIN_ID is not confirmed (enabled in .claude/settings.json + installed on this machine) — keeping them: deleting now would leave the repo with no planner/test-author/reviewers at all (ADR-0027)"
+    say  "next: install/enable the plugin, then re-run --refresh: claude plugin marketplace add $PLUGIN_REPO && claude plugin install $PLUGIN_ID"
+    return 0
+  fi
+
+  while read -r m_src m_dst; do
+    [ -n "$m_src" ] || continue
+    [ -e "$m_dst" ] || continue
+    if cmp -s "$KIT/templates/$m_src" "$m_dst" || kit_blob_known "$m_dst"; then
+      if git ls-files --error-unmatch -- "$m_dst" >/dev/null 2>&1; then
+        git rm -q -f -- "$m_dst" || rm -f "$m_dst"
+      else
+        rm -f "$m_dst"
+      fi
+      removed=$((removed + 1)); say "removed: $m_dst (moved to $PLUGIN_ID, ADR-0027)"
+    else
+      kept=$((kept + 1))
+      warn "kept: $m_dst differs from the kit version (team edits?) — the plugin carries this file now"
+      echo "        next: diff \"$KIT/templates/$m_src\" \"$m_dst\" && rm \"$m_dst\"" >&2
+    fi
+  done <<EOF
+$(migrated_manifest)
+EOF
+
+  # only directories the migration owned, and only when empty
+  for d in .claude/skills/feature-flow/references .claude/skills/feature-flow \
+           .claude/skills/incident-flow .claude/skills/grilling \
+           .claude/skills/grill-me .claude/skills/grill-with-docs \
+           .claude/skills/domain-modeling .claude/agents; do
+    [ -d "$d" ] && rmdir "$d" 2>/dev/null && say "removed: $d/ (empty)" || true
+  done
+
+  [ "$removed" -gt 0 ] && say "migration: $removed file(s) removed — they come from $PLUGIN_ID now"
+  [ "$kept" -gt 0 ] && say "migration: $kept modified file(s) kept — review them by hand (the plugin version is canonical)"
+  return 0
+}
+
 # assemble_pre_commit <destination> — writes the pre-commit hook. (The old
 # LIVING SPEC splice is gone, ADR-0026 §4: doc drift is checked on demand via
 # tools/cf/main-drift.sh, not warned about at commit time.)
@@ -343,12 +536,25 @@ assemble_pre_commit() {
   chmod +x "$dst"
 }
 
-# merge_settings_hooks <destination settings.json> — additively wires any kit
-# hook (block-no-verify.cjs, spec-guard.cjs, pre-compact.cjs) that install.sh
-# already copied into .claude/hooks/ but that is not yet referenced anywhere
-# in the destination's `hooks` object. Two callers: the install pass (after
-# `put settings.json`, since a pre-existing settings.json is left alone by
-# put() and may predate the kit) and `--refresh` (refresh_settings_hooks()).
+# merge_settings <destination settings.json> — additively wires two things
+# from the kit template into the destination:
+#   1. any kit hook (block-no-verify.cjs, spec-guard.cjs, pre-compact.cjs) that
+#      install.sh already copied into .claude/hooks/ but that is not yet
+#      referenced anywhere in the destination's `hooks` object;
+#   2. the code-conventions plugin (ADR-0027): the `extraKnownMarketplaces`
+#      entry for the cybernet marketplace and the `enabledPlugins` entry for
+#      code-conventions@cybernet — the "zero-click for a whole project" shape
+#      from the plugin's README, copied verbatim from templates/settings.json
+#      so there is one source of truth for both keys.
+# Two callers: the install pass (after `put settings.json`, since a pre-existing
+# settings.json is left alone by put() and may predate the kit) and `--refresh`
+# (refresh_settings()).
+#
+# Why the plugin entry belongs here and not in a repo-owned decision: the kit
+# stopped copying the agents and the shared skills (kit_manifest comment), so
+# without this block a fresh install leaves the repo with no planner /
+# test-author / reviewers at all. Enabling the plugin is part of installing the
+# kit, exactly like wiring the hooks it just copied.
 #
 # Why additive-merge instead of "detect and warn": the warn-only path (the
 # old refresh_settings_hooks()) left the three kit hooks on disk but
@@ -361,6 +567,10 @@ assemble_pre_commit() {
 #     destination's hooks tree is left exactly where it is — never removed,
 #     reordered, or replaced. A repo's own hook (e.g. pretooluse_guard.py in
 #     conversation_flow) always survives untouched.
+#   - only ADDS plugin/marketplace entries, and only under a key name that is
+#     not there yet: a repo that already enabled the plugin, disabled it on
+#     purpose (`false`), or pointed the `cybernet` marketplace at a fork keeps
+#     its own value.
 #   - idempotent: a kit hook command already present (from a prior run, or a
 #     repo that wired it by hand) is skipped, so re-running adds nothing new.
 #   - atomic write (tmp file + `os.replace`), so a crash mid-write cannot
@@ -368,7 +578,7 @@ assemble_pre_commit() {
 #   - json.load/json.dump (python3), never sed/awk on JSON.
 #   - a destination that isn't valid JSON is left untouched and reported —
 #     never blindly overwritten.
-merge_settings_hooks() {
+merge_settings() {
   local dst="$1" out
   [ -f "$dst" ] || return 0
   out="$(python3 - "$KIT/templates/settings.json" "$dst" <<'PY'
@@ -416,6 +626,24 @@ for event, kit_groups in kit.get("hooks", {}).items():
             label = event + (f"/{matcher}" if matcher else "")
             added.append(f"{label}: {cmd}")
 
+# ADR-0027: plugin wiring. Both keys are plain string->value maps at the top
+# level; only MISSING keys are added, so a repo that points the same marketplace
+# name at its own fork, or already enabled the plugin, is left exactly as is.
+for key in ("extraKnownMarketplaces", "enabledPlugins"):
+    kit_block = kit.get(key)
+    if not isinstance(kit_block, dict):
+        continue
+    if not isinstance(dst.get(key), dict):
+        if dst.get(key) is not None:
+            print(f"CONFLICT:{key} is not an object — left alone")
+            continue
+        dst[key] = {}
+    for name, value in kit_block.items():
+        if name in dst[key]:
+            continue
+        dst[key][name] = value
+        added.append(f"{key}: {name}")
+
 if added:
     tmp = dst_path + ".tmp"
     with open(tmp, "w") as f:
@@ -428,15 +656,16 @@ PY
 )"
   case "$out" in
     *UNREADABLE:*)
-      warn "$dst is not valid JSON — could not check/wire kit hooks; fix it manually, then re-run"
+      warn "$dst is not valid JSON — could not check/wire kit hooks or the $PLUGIN_ID plugin; fix it manually, then re-run"
       return 0 ;;
   esac
   if [ -z "$out" ]; then
-    say "ok:      $dst — kit hooks already wired"
+    say "ok:      $dst — kit hooks and $PLUGIN_ID already wired"
   else
     while IFS= read -r line; do
       case "$line" in
-        ADDED:*) say "wired:   $dst — ${line#ADDED:}" ;;
+        ADDED:*)    say "wired:   $dst — ${line#ADDED:}" ;;
+        CONFLICT:*) warn "$dst — ${line#CONFLICT:}" ;;
       esac
     done <<EOF
 $out
@@ -735,14 +964,19 @@ repo_section() {
   # ---------------------------------- 5. kit-owned files (the manifest, once)
   # Hooks, agents, skills, scripts (incl. scripts/sdd/). Same list that
   # `--refresh` re-copies later; .git/hooks/pre-commit is assembled in 8b.
-  local m_src m_dst
+  local m_src m_dst STALE=0
   while read -r m_src m_dst; do
     [ -n "$m_src" ] || continue
     [ "$m_dst" = "$KIT_PRE_COMMIT_DST" ] && continue
+    # A kit file that already exists is left alone — but if it drifted from the
+    # template the repo keeps running an older kit (hooks included) with no hint
+    # that --refresh is the way out. Count them and say so once.
+    [ -e "$m_dst" ] && ! cmp -s "$KIT/templates/$m_src" "$m_dst" && STALE=$((STALE+1))
     put "$m_src" "$m_dst"
   done <<EOF
 $(kit_manifest)
 EOF
+  [ "$STALE" -gt 0 ] && say "note:    $STALE kit-owned file(s) differ from the templates and were left alone — run install.sh --refresh to update them"
 
   # 5a. Makefile: gone (ADR-0026 §3) — the command surface is scripts/sdd/*.sh,
   # copied by the manifest above; nothing is appended to the repo's Makefile.
@@ -762,12 +996,19 @@ EOF
 
   # ----- 7. Claude Code settings (NOT in the manifest: repos add own hooks).
   #          A brand-new settings.json is the kit template verbatim (nothing
-  #          to merge). A pre-existing one is left alone by put() — but the
-  #          kit hooks just copied into .claude/hooks/ in step 5 are dead
-  #          unless something in settings.json invokes them, so wire in
-  #          whichever ones are missing (additive, never touches the rest).
+  #          to merge) — it already carries the code-conventions marketplace +
+  #          enabledPlugins entry (ADR-0027). A pre-existing one is left alone
+  #          by put() — but the kit hooks just copied into .claude/hooks/ in
+  #          step 5 are dead unless something in settings.json invokes them,
+  #          and the agents/skills the kit no longer copies are missing unless
+  #          the plugin is enabled, so wire in whichever entries are missing
+  #          (additive, never touches the rest).
   put settings.json .claude/settings.json
-  merge_settings_hooks .claude/settings.json
+  merge_settings .claude/settings.json
+  if ! plugin_installed_on_machine; then
+    warn "$PLUGIN_ID is enabled in .claude/settings.json but not installed on this machine — the agents (planner, test-author, backend-reviewer, ...) and the shared skills live there now (ADR-0027) and are missing until it is"
+    say  "next: accept the trust prompt when Claude Code reopens this project, or install it yourself: claude plugin marketplace add $PLUGIN_REPO && claude plugin install $PLUGIN_ID"
+  fi
 
   # 8. spec-guard is opt-in: create .spec-guard-paths with your code path prefixes
   if [ ! -e .spec-guard-paths ] && [ -n "$PROFILE_SPEC_GUARD_PATHS" ]; then
@@ -886,11 +1127,12 @@ refresh_file() {
 
 # .claude/settings.json is never wholesale-rewritten: a repo may have added
 # its own hooks (pretooluse_guard.py in conversation_flow). Delegates to the
-# same merge_settings_hooks() the install pass uses, so a repo that installed
-# before this existed (or drifted since) gets caught up on --refresh too.
-refresh_settings_hooks() {
+# same merge_settings() the install pass uses, so a repo that installed
+# before this existed (or drifted since) gets caught up on --refresh too —
+# including the ADR-0027 plugin entries.
+refresh_settings() {
   [ -f .claude/settings.json ] || { say "missing:   .claude/settings.json (run install.sh --repo-only)"; return 0; }
-  merge_settings_hooks .claude/settings.json
+  merge_settings .claude/settings.json
 }
 
 # .git/hooks/pre-commit: a hand-merged hook (repo's own checks) is never
@@ -938,7 +1180,11 @@ $(kit_manifest)
 EOF
 
   refresh_pre_commit
-  refresh_settings_hooks
+  # settings.json FIRST, cleanup after: the plugin has to be enabled before
+  # cleanup_migrated() is allowed to consider deleting the local copies of what
+  # the plugin now carries (ADR-0027).
+  refresh_settings
+  cleanup_migrated
 
   # ADR-0020 §8: re-stamp on every refresh too — `.claude/skills/openspec-*` is
   # NOT under openspec/ (that tree is repo-owned and refresh never touches it),
@@ -986,21 +1232,17 @@ machine_section() {
     return 0
   fi
 
-  # -------------------------------------------------------------- 1. ponytail
-  # Lazy-senior-developer skill: less code, fewer tokens (plugin by Dietrich Gebert).
-  if grep -qs '"ponytail@ponytail"' "$HOME/.claude/settings.json" 2>/dev/null; then
-    say "ok:      ponytail already enabled"
-  elif ask_install "Install ponytail? (minimal working solutions, saves tokens)" y \
-       "claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail"; then
-    if claude plugin marketplace add DietrichGebert/ponytail \
-       && claude plugin install ponytail@ponytail; then
-      DONE=$((DONE+1)); say "installed: ponytail (restart Claude Code to activate)"
-    else
-      say "manual:  run inside Claude Code: /plugin marketplace add DietrichGebert/ponytail then /plugin install ponytail"
-    fi
-  else SKIPPED=$((SKIPPED+1)); fi
+  # ------------------------------------------- 1. Claude Code plugins: not ours
+  # ADR-0027 §7: this section installs CLI BINARIES only. Claude Code plugins
+  # (ponytail, rtk-plugin) are dependencies of the code-conventions plugin and
+  # arrive through the cybernet marketplace when a repo enables it — the repo
+  # section wires that into .claude/settings.json. Installing ponytail from here
+  # too would enable the same plugin from a second marketplace, which loads its
+  # skills twice (code-conventions README, "Do not enable the same plugin from
+  # two marketplaces").
   # Note: "caveman" is not a standalone tool — it exists only as a benchmark arm
   # inside the ponytail repo. Ponytail covers the same ground.
+  say "note:    Claude Code plugins (ponytail, rtk-plugin) come with $PLUGIN_ID via the $PLUGIN_MARKETPLACE marketplace (ADR-0027 §7) — not installed here"
 
   # ------------------------------------------------------------------- 2. rtk
   # Compresses shell output before it hits the context (git log -> hash+subject).

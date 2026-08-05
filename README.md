@@ -44,18 +44,29 @@ cd /path/to/repo && /path/to/sdd-kit/install.sh --refresh
 
 `--refresh` re-copies only the **kit-owned manifest** (the list lives in
 `install.sh`, function `kit_manifest`): `.claude/hooks/*.cjs`,
-`.claude/agents/*.md`, `.claude/skills/*/` (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling),
 `.claude/scripts/{spec-lint.py,sdd-doctor.sh,review-prompt.md}`, `scripts/sdd/*.sh`
-and `.git/hooks/pre-commit`.
+and `.git/hooks/pre-commit`. Agents and the shared skills are **not** in the
+manifest anymore - they come from the `code-conventions` plugin (ADR-0027).
 Each changed file is reported as `refreshed: <path> (+X/-Y lines)`; a second run
 reports zero. Repo-owned files are never touched: `AGENTS.md`, `CLAUDE.md`,
 `.spec-guard-paths`, `.claude/expected-env`, `ruff.toml`,
 `openspec/**`, `.mcp.json`. `.claude/settings.json` is never rewritten wholesale:
-its `hooks` block is additively merged instead (`merge_settings_hooks()`, run on
-both install and `--refresh`) - missing kit hooks are added in, any hooks the
-repo added on its own are left untouched. Review the result with `git diff`
-before committing. `--refresh` is the repo section only - machine tools have no
-refresh semantics, re-run `--machine-only` for those.
+its `hooks`, `extraKnownMarketplaces` and `enabledPlugins` blocks are additively
+merged instead (`merge_settings()`, run on both install and `--refresh`) -
+missing kit hooks are added in, the `code-conventions@cybernet` plugin is
+enabled, and anything the repo added on its own is left untouched. Review the
+result with `git diff` before committing. `--refresh` is the repo section only -
+machine tools have no refresh semantics, re-run `--machine-only` for those.
+
+`--refresh` also runs the **ADR-0027 migration cleanup**: the agents and shared
+skills that moved into the plugin are deleted from the repo, but only when both
+halves hold - the file is still byte-identical to the kit's old template (kept
+verbatim in `templates/_migrated/`, or any version of it ever committed to the
+kit) **and** the plugin is confirmed available (enabled in
+`.claude/settings.json` *and* installed on this machine). Otherwise the files
+stay and the run says why: refresh must never leave a repo with neither the file
+nor the plugin. Team-modified copies are always kept, with the exact `diff`
+command.
 
 ## Uninstall
 
@@ -79,16 +90,17 @@ clean: `git status` shows the repo exactly as before install.
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
 | `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (the same pin is marked `openspec-pin` at every site - installers, scripts, agent prompts; `grep -rn openspec-pin` finds them all; `grep '# openspec-pin'` finds them all - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
 | `scripts/sdd/*.sh` | 5 scripts (the Makefile is gone, ADR-0026 §3): `check.sh` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `doctor.sh`, `test.sh` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `review.sh` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `index.sh` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
-| `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
+| the 7 agents | **via the `code-conventions` plugin, not copied into the repo** (ADR-0027): `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit). What the kit installs is the *enablement*: the marketplace + `enabledPlugins` entry below. Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
+| `.claude/settings.json` plugin entries | `extraKnownMarketplaces.cybernet` (`CybernetKZ/code-conventions`) + `enabledPlugins["code-conventions@cybernet"]`, merged additively on install and `--refresh` - the "zero-click for a whole project" shape from the plugin's README. Anyone opening the project accepts one trust prompt and has the agents and shared skills. `superpowers` and `ponytail` come along as plugin dependencies |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
 | `.claude/scripts/spec-lint.py` | spec freshness (`Last verified` vs `git diff` over `enforced:` anchors) + spec metadata validation; runs inside `sdd-check`, warn-only until `SPEC_LINT_STRICT=1`. Anchor format: `<!-- enforced: path/to/file.py:ClassName.method -->` - repo-relative path first, symbol (or line/range) after the colon. **Both halves are checked**: a missing file or a symbol that does not appear in it makes the spec MISSING (bare `ClassName.method()` anchors are not resolved - see Design notes) |
 | `.git/hooks/pre-commit` | protected-branch guard (main/master/prod/stage block, dev warns; `SDD_ALLOW_PROTECTED=1` overrides), ruff autofix+format on staged Python, hygiene checks (merge markers, >5 MB files, `breakpoint()`, secrets/token patterns, new submodules, invalid JSON/TOML/YAML) + `scripts/sdd/check.sh` (merged by hand if a hook already exists) |
 | `.claude/scripts/review-prompt.md` | the one canonical AI-review prompt, used by `scripts/sdd/review.sh` |
 | `.claude/scripts/sdd-doctor.sh` | environment doctor (`scripts/sdd/doctor.sh`): required tools (git, node, python3 ≥3.10, uv, ruff, openspec), claude/gh CLI + auth, store registration, youtrack token, hooks/pre-commit presence, (profile) presence of per-service `.env` files a fresh clone needs - paths only, never secret values - and an `audit` section (advisory clutter: extra MCP servers, foreign agent-tool configs like .cursor/.serena, stray skills/agents); runs at the end of the install; findings as `{level, group, code, message, next}` with the exact fix command, `--json` for machines (ADR-0008) |
 | `.mcp.json` | project MCP servers: context7 + youtrack (paths resolved for this machine) |
-| `.claude/skills/feature-flow/` | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> validate the spec delta, then the `test-author` agent writes the tests BEFORE code (QA-SDD-PROCESS.md, ADR-0016; the implementer never writes them, human QA ownership is the target) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
-| `.claude/skills/incident-flow/` | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by the `test-author` agent from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
-| `.claude/skills/{grilling,grill-me,grill-with-docs,domain-modeling}/` | the grill practice, vendored from [mattpocock/skills](https://github.com/mattpocock/skills): a relentless one-question-at-a-time interview to stress-test a plan, with grill-with-docs recording decisions into the project's ADR registry and glossary as they crystallise (this is how the kit's own ADR-0019...0023 sessions ran) |
+| `feature-flow` skill (**via the plugin**, ADR-0027) | the team's ticket-to-PR workflow as a skill: interrogate the YouTrack ticket -> pick tier (light/standard/deep, ADR-0010) -> OpenSpec change + grill -> validate the spec delta, then the `test-author` agent writes the tests BEFORE code (QA-SDD-PROCESS.md, ADR-0016; the implementer never writes them, human QA ownership is the target) -> implement -> manual check -> review -> PR -> ready_to_test handoff |
+| `incident-flow` skill (**via the plugin**) | the team's incident workflow: collect evidence (CybernetKZ/incident_collect) -> root-cause doc (bug/misuse/infra - misuse/infra: the doc is the deliverable) -> OpenSpec change -> regression test first (written by the `test-author` agent from the incident scenario), then fix -> verify against the incident -> ready_to_test handoff |
+| `{grilling,grill-me,grill-with-docs,domain-modeling}` skills (**via the plugin**) | the grill practice, vendored from [mattpocock/skills](https://github.com/mattpocock/skills): a relentless one-question-at-a-time interview to stress-test a plan, with grill-with-docs recording decisions into the project's ADR registry and glossary as they crystallise (this is how the kit's own ADR-0019...0023 sessions ran) |
 | `ruff.toml` | explicit-select Ruff config (classic E/F + curated additions) - installed ONLY when the repo has no Ruff config of its own; explicit select because ruff ≥0.15 default rules ballooned to 400+ |
 | `.spec-guard-paths` + store wiring | for known repos (see Profiles below): seeded automatically |
 
@@ -164,10 +176,14 @@ server gates on is one deliberate, separate decision.
 
 Three kinds of thing land in the repo. Only the middle column blocks anything.
 
-**Skills** - prompt-level workflows you invoke. Two ship with the kit and are
-model-invocable (an agent may pick them up on its own); the six `openspec-*`
-skills come from `openspec init` and carry `disable-model-invocation: true`,
-meaning they run only when you name them.
+**Skills** - prompt-level workflows you invoke. `feature-flow` and
+`incident-flow` come from the `code-conventions` plugin (ADR-0027 - the kit
+enables the plugin, it no longer copies the files); the six `openspec-*` skills
+come from `openspec init` into the repo and carry
+`disable-model-invocation: true`, meaning they run only when you name them.
+Without the plugin enabled and installed, everything in the first two rows and
+the whole Agents table below simply does not exist - `scripts/sdd/doctor.sh`
+reports that as `repo.plugin`.
 
 | Skill | Use it for | OpenSpec wiring |
 |---|---|---|
@@ -180,8 +196,9 @@ meaning they run only when you name them.
 | `/openspec-sync-specs` | reconcile specs with reality | rewrites `openspec/specs/` |
 | `/openspec-explore` | find out what is already specified before writing anything | read-only over `openspec/` |
 
-**Agents** - subagents you delegate a phase to. They cannot invoke skills, so
-each carries the relevant protocol inline.
+**Agents** - subagents you delegate a phase to. All seven come from the
+`code-conventions` plugin (ADR-0027), not from `.claude/agents/`. They cannot
+invoke skills, so each carries the relevant protocol inline.
 
 | Agent | Phase | Model | OpenSpec wiring |
 |---|---|---|---|
@@ -218,7 +235,7 @@ run inside `scripts/sdd/check.sh`; neither replaces the other.
 ## Working a new task
 
 The pipeline is one shape with three depths. Pick the depth from the tier table
-in `.claude/skills/feature-flow/SKILL.md` §1b (ADR-0010/ADR-0021) - preparation
+in the `feature-flow` skill (plugin) §1b (ADR-0010/ADR-0021) - preparation
 depth varies, **the gates never do**.
 
 ```
@@ -269,6 +286,23 @@ as the source of the tier table. Always read the target repo's `AGENTS.md`
 before assuming the kit's default flow applies - the repo's own lints and guards
 outrank the kit's.
 
+## Where a rule lives: judgment channels and precedence
+
+Two channels, on purpose, and one precedence order (ADR-0027 §6 - the same text
+lives in the `code-conventions` repo, so it is readable from either side):
+
+| Channel | What goes there | How it changes |
+|---|---|---|
+| **YouTrack KB** (Web-A-8) | live calls about code style - the things that get revisited often | edited in place, no PR |
+| **sdd-kit `docs/ADR/` + `docs/GLOSSARY.md`** | process decisions that must outlive a session and deserve review | PR |
+
+**Precedence when they disagree:** the target repo's `AGENTS.md` > YouTrack KB >
+skills (plugin or otherwise). A repo's own rule always wins - the kit's default
+flow is a default, not a mandate. A style call in the KB outranks a skill's
+prose, because the KB is where the team keeps changing its mind on purpose. If a
+decision keeps being re-litigated in the KB, that is the signal to promote it to
+an ADR.
+
 ## Per-developer tools: install.sh --machine-only
 
 The repo half installs repo assets; personal tooling lives on each developer's
@@ -279,8 +313,13 @@ as part of a plain `install.sh`, or on its own:
 sdd-kit/install.sh --machine-only   # core stack installs by default [Y/n]
 ```
 
+**CLI binaries only** (ADR-0027 §7). Claude Code *plugins* are not installed
+here: `ponytail` (and optionally `rtk-plugin`) arrive as dependencies of
+`code-conventions` through the `cybernet` marketplace, which the repo half
+enables in `.claude/settings.json`. Installing ponytail from here as well would
+enable the same plugin from two marketplaces and load its skills twice.
+
 **Core stack (default install - quality up, token spend down):**
-**ponytail** (plugin: minimal working solutions, saves tokens),
 **rtk** (shell-output compressor + global hook),
 **Graphify** (repo knowledge graph - faster/cheaper code analysis; PyPI name
 `graphifyy`, installed as `graphifyy[postgres,sql]`), **ast-grep** (AST codemods
@@ -296,9 +335,9 @@ code-navigation MCP via uvx - an earlier trial left `.serena/` litter that
 the sdd-doctor audit section flags, so it stays opt-in).
 
 Not offered here: **caveman** (only a benchmark arm inside the ponytail repo, not a
-standalone tool - ponytail covers it; the grill practice itself is installed
-per-repo: `grilling`/`grill-me`/`grill-with-docs`/`domain-modeling` are in the
-repo manifest), **Playwright** (chrome-devtools-axi covers the
+standalone tool - ponytail covers it; the grill practice
+`grilling`/`grill-me`/`grill-with-docs`/`domain-modeling` comes from the
+`code-conventions` plugin, ADR-0027), **Playwright** (chrome-devtools-axi covers the
 browser loop), **Headroom** (dropped 2026-07-31: compresses ~0-2%, breaks the
 prompt-cache prefix, measured +45..62% cost - see
 [ADR-0014](docs/ADR/ADR-0014-drop-headroom.md)).

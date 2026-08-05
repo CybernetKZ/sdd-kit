@@ -1,4 +1,12 @@
 {
+  "extraKnownMarketplaces": {
+    "cybernet": {
+      "source": { "source": "github", "repo": "CybernetKZ/code-conventions" }
+    }
+  },
+  "enabledPlugins": {
+    "code-conventions@cybernet": true
+  },
   "hooks": {
     "PreToolUse": [
       {

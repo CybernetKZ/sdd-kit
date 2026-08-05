@@ -208,6 +208,56 @@ print(' '.join(missing))
   else
     warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, pre-compact) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
+  # repo.plugin (ADR-0027): the 7 agents (planner, plan-griller, test-author,
+  # executor, backend-reviewer, database-reviewer, repo-auditor) and the shared
+  # skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs,
+  # domain-modeling) are NOT repo files anymore — they come from the
+  # code-conventions@cybernet plugin. Without it they do not exist at all, and
+  # nothing else says so: a delegated planner/test-author/reviewer just silently
+  # is not there. Two halves, both required: enabled for this project, and
+  # actually installed on this machine.
+  CC_PLUGIN_ID="code-conventions@cybernet"
+  CC_ENABLED=$(python3 -c "
+import json, sys
+plugin_id = '$CC_PLUGIN_ID'
+for path in ('.claude/settings.json', '.claude/settings.local.json'):
+    try:
+        data = json.load(open(path))
+    except Exception:
+        continue
+    enabled = data.get('enabledPlugins')
+    if isinstance(enabled, dict) and enabled.get(plugin_id):
+        print('yes'); sys.exit(0)
+    if isinstance(enabled, list) and plugin_id in enabled:
+        print('yes'); sys.exit(0)
+print('no')
+" 2>/dev/null)
+  CC_INSTALLED=$(python3 -c "
+import glob, json, os, sys
+plugin_id = '$CC_PLUGIN_ID'
+name = plugin_id.split('@')[0]
+home = os.path.expanduser('~')
+try:
+    plugins = json.load(open(os.path.join(home, '.claude/plugins/installed_plugins.json'))).get('plugins', {})
+except Exception:
+    plugins = {}
+hit = plugin_id in plugins or any(k.split('@')[0] == name for k in plugins) \
+    or bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name)))
+print('yes' if hit else 'no')
+" 2>/dev/null)
+  if [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = yes ]; then
+    ok repo.plugin "$CC_PLUGIN_ID enabled and installed (carries the 7 agents + the shared skills, ADR-0027)"
+  elif [ "$CC_ENABLED" != yes ]; then
+    bad repo.plugin "$CC_PLUGIN_ID not enabled in .claude/settings.json — the agents (planner, plan-griller, test-author, executor, backend-reviewer, database-reviewer, repo-auditor) and the skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling) live in that plugin (ADR-0027) and do not exist without it" \
+      "run sdd-kit/install.sh --refresh $ROOT (adds extraKnownMarketplaces + enabledPlugins additively)"
+  else
+    # per-developer state, not a repo defect: the repo is wired correctly, this
+    # machine has not resolved the plugin yet (trust prompt not accepted, no
+    # marketplace access). Soft degradation by ADR-0027's risk section — warn.
+    warn repo.plugin "$CC_PLUGIN_ID enabled for this project but not installed on this machine — every agent/skill it carries is missing (ADR-0027)" \
+      "reopen the project in Claude Code and accept the trust prompt, or: claude plugin marketplace add CybernetKZ/code-conventions && claude plugin install $CC_PLUGIN_ID"
+  fi
+
   if [ -f .spec-guard-paths ]; then
     # count only real prefixes: skip comments and blank lines (same rule as spec-guard.cjs)
     GUARD_PATHS=$(grep -cv -e '^[[:space:]]*#' -e '^[[:space:]]*$' .spec-guard-paths || true)
@@ -341,14 +391,20 @@ print(' '.join(sorted(servers - allowed)))
   done
   [ -e CLAUDE.local.md ] && note audit.claude-local "CLAUDE.local.md present (personal file, fine — must stay untracked)"
 
-  # 3. Skills: only the openspec-* set + the kit's flows are expected.
+  # 3. Skills: only the openspec-* set + the profile skills are expected.
   #    tz/tz-review/tz-implement come from a profile payload (ADR-0019 phase 4,
   #    conversation_flow) — known, not junk, so do not tell anyone to delete them.
+  #    feature-flow/incident-flow/grilling/grill-me/grill-with-docs/
+  #    domain-modeling moved into the code-conventions plugin (ADR-0027): a local
+  #    copy is a leftover from an older kit, and it SHADOWS the plugin version.
   if [ -d .claude/skills ]; then
     for s in .claude/skills/*/; do
       [ -d "$s" ] || continue
       name=$(basename "$s")
-      case "$name" in openspec-*|feature-flow|incident-flow|tz|tz-review|tz-implement|grilling|grill-me|grill-with-docs|domain-modeling) ;;
+      case "$name" in openspec-*|tz|tz-review|tz-implement) ;;
+        feature-flow|incident-flow|grilling|grill-me|grill-with-docs|domain-modeling)
+          warn audit.skill-migrated "skill moved to $CC_PLUGIN_ID (ADR-0027) but a local copy is still here: .claude/skills/$name — it shadows the plugin version" \
+            "run sdd-kit/install.sh --refresh $ROOT (removes unmodified copies once the plugin is confirmed)" ;;
         patch|patch-review|patch-implement)
           note audit.skill-deprecated "deprecated skill kept on purpose: .claude/skills/$name (ADR-0019 §4 — retained to read the archived patch docs under docs/patches/, banner-marked DEPRECATED since 2026-08-03)" ;;
         *) warn audit.skill-extra "unexpected skill: .claude/skills/$name" "delete if unused: rm -r .claude/skills/$name" ;;
@@ -361,8 +417,8 @@ print(' '.join(sorted(servers - allowed)))
   #     this check exists for: openspec/ restored from a seed ref, or a
   #     pre-existing openspec/ left alone, without `openspec init --tools
   #     claude` / `openspec update` ever running. openspec-propose missing is
-  #     called out by name: templates/agents/planner.md and
-  #     templates/skills/feature-flow/SKILL.md hardcode
+  #     called out by name: the planner agent and the feature-flow skill (both
+  #     in the code-conventions plugin since ADR-0027) hardcode
   #     `.claude/skills/openspec-propose/SKILL.md` as the path a subagent
   #     follows in lieu of invoking the skill directly — without the file,
   #     that documented path is just broken, not merely "a skill missing".
@@ -382,7 +438,7 @@ print(' '.join(sorted(servers - allowed)))
     if [ -n "$MISSING_OS_SKILLS" ]; then
       EXTRA_HINT=""
       case " $MISSING_OS_SKILLS " in
-        *" openspec-propose "*) EXTRA_HINT=" (openspec-propose is hardcoded in templates/agents/planner.md and templates/skills/feature-flow/SKILL.md — its absence breaks the documented path, not just a missing skill)" ;;
+        *" openspec-propose "*) EXTRA_HINT=" (openspec-propose is hardcoded in the planner agent and the feature-flow skill, both from $CC_PLUGIN_ID — its absence breaks the documented path, not just a missing skill)" ;;
       esac
       warn audit.skill-missing "openspec/ exists but missing skill(s):$MISSING_OS_SKILLS$EXTRA_HINT" "run: sdd-kit/install.sh --repo-only $ROOT  (regenerates the openspec-* skills)"
     elif [ -n "$UNSTAMPED_OS_SKILLS" ]; then
@@ -402,12 +458,18 @@ print(' '.join(sorted(servers - allowed)))
     warn audit.opsx-commands ".claude/commands/opsx present (ADR-0020 §8: openspec-* skills are the supported entry point, not /opsx:* slash commands)" "rm -rf .claude/commands/opsx"
   fi
 
-  # 4. Agents: the sdd-kit set (2 reviewers + planner + plan-griller + test-author) is expected.
+  # 4. Agents: NO agent is expected as a repo file anymore (ADR-0027) — all 7
+  #    kit agents come from the code-conventions plugin. A local copy of one of
+  #    them is a leftover from an older kit and shadows the plugin version;
+  #    anything else is a repo-local agent, reported as before.
   if [ -d .claude/agents ]; then
     for a in .claude/agents/*.md; do
       [ -f "$a" ] || continue
       name=$(basename "$a" .md)
-      case "$name" in backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor|executor) ;;
+      case "$name" in
+        backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor|executor)
+          warn audit.agent-migrated "agent moved to $CC_PLUGIN_ID (ADR-0027) but a local copy is still here: .claude/agents/$name.md — it shadows the plugin version" \
+            "run sdd-kit/install.sh --refresh $ROOT (removes unmodified copies once the plugin is confirmed)" ;;
         *) note audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
       esac
     done
