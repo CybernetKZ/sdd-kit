@@ -35,8 +35,11 @@ if [ -n "$STAGED" ]; then
     exit 1
   fi
 
-  # accidental large files (dumps, audio, venv artifacts)
+  # accidental large files (dumps, audio, venv artifacts).
+  # graphify-out/ is exempt: the code graph is a committed team artifact by
+  # design (ADR-0004) and graph.json alone is ~20 MB — that is not an accident.
   for f in $STAGED; do
+    case "$f" in graphify-out/*) continue ;; esac
     if [ -f "$f" ] && [ "$(wc -c < "$f")" -gt 5242880 ]; then
       echo "pre-commit: $f is larger than 5 MB — commit blocked (use storage, not git)" >&2
       exit 1
