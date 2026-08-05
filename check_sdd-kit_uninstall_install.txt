@@ -1,0 +1,227 @@
+╭─── Claude Code v2.1.222 ─────────────────────────────────────────────────────╮
+│                                        │ Tips for getting started            │
+│       Welcome back Daniil Petrov!      │ Run /init to create a CLAUDE.md fi… │
+│                                        │ ─────────────────────────────────── │
+│                 ▐▛███▜▌                │ What's new                          │
+│                ▝▜█████▛▘               │ Fixed worktree-isolated sessions a… │
+│                  ▘▘ ▝▝                 │ Fixed PreToolUse auto-allow hooks … │
+│                                        │ Fixed `/usage-credits` on Team and… │
+│   Opus 5 · Claude Team · Cybernet AI   │ /release-notes for more             │
+│           ~/cybernet/sdd-kit           │                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ check before and after (git, etc) uninstall / install sdd-kit for             
+conversation_flow, find issues and fix them. log: > cd sdd-kit
+> bash uninstall.sh /home/octrow/cybernet/conversation_flow
+[sdd-kit] profile: conversation_flow
+[sdd-kit] WARN: kept: .claude/hooks/block-no-verify.cjs differs from the kit
+version (team edits?)
+  next: diff
+"/home/octrow/cybernet/sdd-kit/templates/block-no-verify.cjs"
+".claude/hooks/block-no-verify.cjs" && rm ".claude/hooks/block-no-verify.cjs"
+# or re-run with --force
+[sdd-kit] removed: .claude/hooks/pre-compact.cjs
+[sdd-kit] WARN: kept: .claude/hooks/spec-guard.cjs differs from the kit
+version (team edits?)
+  next: diff "/home/octrow/cybernet/sdd-kit/templates/spec-guard.cjs"
+".claude/hooks/spec-guard.cjs" && rm ".claude/hooks/spec-guard.cjs"  # or
+re-run with --force
+[sdd-kit] WARN: kept: .claude/settings.json differs from the kit version
+(team edits?)
+  next: diff "/home/octrow/cybernet/sdd-kit/templates/settings.json"
+".claude/settings.json" && rm ".claude/settings.json"  # or re-run with
+--force
+[sdd-kit] WARN: kept: .claude/scripts/spec-lint.py differs from the kit
+version (team edits?)
+  next: diff "/home/octrow/cybernet/sdd-kit/templates/spec-lint.py"
+".claude/scripts/spec-lint.py" && rm ".claude/scripts/spec-lint.py"  # or
+re-run with --force
+[sdd-kit] WARN: kept: .claude/scripts/sdd-doctor.sh differs from the kit
+version (team edits?)
+  next: diff "/home/octrow/cybernet/sdd-kit/templates/sdd-doctor.sh"
+".claude/scripts/sdd-doctor.sh" && rm ".claude/scripts/sdd-doctor.sh"  # or
+re-run with --force
+[sdd-kit] removed: .claude/scripts/review-prompt.md
+[sdd-kit] WARN: kept: .claude/agents/backend-reviewer.md differs from the kit
+version (team edits?)
+  next: diff
+"/home/octrow/cybernet/sdd-kit/templates/agents/backend-reviewer.md"
+".claude/agents/backend-reviewer.md" && rm
+".claude/agents/backend-reviewer.md"  # or re-run with --force
+[sdd-kit] WARN: kept: .claude/agents/database-reviewer.md differs from the
+kit version (team edits?)
+  next: diff
+"/home/octrow/cybernet/sdd-kit/templates/agents/database-reviewer.md"
+".claude/agents/database-reviewer.md" && rm
+".claude/agents/database-reviewer.md"  # or re-run with --force
+[sdd-kit] WARN: kept: .claude/agents/planner.md differs from the kit version
+(team edits?)
+  next: diff
+"/home/octrow/cybernet/sdd-kit/templates/agents/planner.md"
+".claude/agents/planner.md" && rm ".claude/agents/planner.md"  # or re-run
+with --force
+[sdd-
+──── (165 lines hidden) ─────────────────────────────────────────────────────
+led
+[sdd-kit] ok:      rtk already installed (rtk 0.44.0)
+[sdd-kit] ok:      graphify already installed
+[sdd-kit] ok:      ast-grep already installed
+[sdd-kit] ok:      ruff already installed
+[sdd-kit] Install static review tools? (radon, complexipy, vulture, semgrep —
+leads for scripts/sdd/review.sh) [Y/n] Y
+Resolved 66 packages in 7.06s
+Prepared 46 packages in 21.16s
+Installed 66 packages in 36ms
++ annotated-types==0.8.0
++ anyio==4.14.2
++ attrs==26.1.0
++ boltons==21.0.0
++ bracex==3.0.1
++ certifi==2026.7.22
++ cffi==2.1.1
++ charset-normalizer==3.4.9
++ click==8.4.2
++ click-option-group==0.5.9
++ colorama==0.4.6
++ cryptography==50.0.0
++ exceptiongroup==1.2.2
++ face==26.0.1
++ glom==25.12.0
++ googleapis-common-protos==1.75.0
++ h11==0.16.0
++ httpcore==1.0.9
++ httpx==0.28.1
++ httpx-sse==0.4.3
++ idna==3.18
++ importlib-metadata==8.7.1
++ jsonschema==4.25.1
++ jsonschema-specifications==2025.9.1
++ markdown-it-py==4.2.0
++ mcp==1.23.3
++ mdurl==0.1.2
++ opentelemetry-api==1.37.0
++ opentelemetry-exporter-otlp-proto-common==1.37.0
++ opentelemetry-exporter-otlp-proto-http==1.37.0
++ opentelemetry-instrumentation==0.58b0
++ opentelemetry-instrumentation-requests==0.58b0
++ opentelemetry-instrumentation-threading==0.58b0
++ opentelemetry-proto==1.37.0
++ opentelemetry-sdk==1.37.0
++ opentelemetry-semantic-conventions==0.58b0
++ opentelemetry-util-http==0.58b0
++ packaging==26.3
++ peewee==3.19.0
++ protobuf==6.33.6
++ pycparser==3.0
++ pydantic==2.13.4
++ pydantic-core==2.46.4
++ pydantic-settings==2.14.2
++ pygments==2.20.0
++ pyjwt==2.13.0
++ python-dotenv==1.2.2
++ python-multipart==0.0.32
++ referencing==0.37.0
++ requests==2.34.2
++ rich==15.0.0
++ rpds-py==2026.6.3
++ ruamel-yaml==0.19.1
++ ruamel-yaml-clib==0.2.15
++ semantic-version==2.10.0
++ semgrep==1.172.0
++ sse-starlette==3.4.6
++ starlette==1.3.1
++ tomli==2.4.1
++ typing-extensions==4.16.0
++ typing-inspection==0.4.2
++ urllib3==2.7.0
++ uvicorn==0.52.1
++ wcmatch==8.5.2
++ wrapt==1.17.3
++ zipp==4.1.0
+Installed 2 executables: pysemgrep, semgrep
+[sdd-kit] installed: static review tools
+[sdd-kit] ok:      gh-axi skill already installed
+[sdd-kit] ok:      chrome-devtools-axi skill already installed
+[sdd-kit] Install serena? (semantic code navigation MCP via uvx; leaves
+.serena/ dirs — sdd-doctor's audit flags them) [y/N] N
+[sdd-kit] machine done: 1 installed, 1 declined
+[sdd-kit] restart Claude Code so new plugins/hooks/skills take effect. for
+example AGENTS.md/simlink CLAUDE.md, etc
+
+● I'll investigate the uninstall/install cycle and find the issues. Let me start
+  by looking at the scripts and the actual repo state.
+
+  Listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Cooked for 4m 25s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Brewed for 3m 54s
+
+❯ claude                                                                        
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Worked for 3m 27s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Brewed for 3m 20s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Baked for 4m 9s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Brewed for 3m 50s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Sautéed for 3m 52s
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Churned for 4m 11s
+
+❯ continue                                                                      
+
+❯ continue                                                                      
+
+● API Error: 529 Overloaded. This is a server-side issue, usually 
+  temporary — try again in a moment. If it persists, check 
+  https://status.claude.com.
+
+✻ Sautéed for 3m 59s
