@@ -1,5 +1,9 @@
-# Required SDD gate on pull requests.
-# Install as .github/workflows/sdd-ci.yml and mark as a required check in branch settings.
+# ARCHIVED (ADR-0023 §5, ADR-0026 §5): server CI is retired, no exceptions —
+# install.sh never copies this. Kept only for a deliberate future "bring CI
+# back" decision. Updated for ADR-0026: the command surface is
+# scripts/sdd/*.sh (Makefile.sdd is gone), and there is no sdd-flags gate.
+# If revived: install as .github/workflows/sdd-ci.yml and mark as a required
+# check in branch settings.
 name: sdd-gate
 
 on:
@@ -14,7 +18,7 @@ jobs:
         with:
           node-version: "22"
       - name: SDD checks (AGENTS.md + openspec validate)
-        run: make sdd-check
+        run: bash scripts/sdd/check.sh
 
   # Advisory single-entry test signal (ADR-0015): ruff + pytest, if the repo
   # has either. A red run here is visible in the PR but is NOT a required
@@ -25,8 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - name: make sdd-test (advisory)
-        run: make sdd-test
+      - name: sdd-test (advisory)
+        run: bash scripts/sdd/test.sh
 
   # TBD disciplines (ADR-0006): branch age + PR size.
   # Escape hatch: labels `long-lived-ok` / `xl-ok` - anyone may set them, but the

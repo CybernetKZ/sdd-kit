@@ -1,6 +1,6 @@
 # AGENTS.md - context for AI agents
 
-<!-- Limit: 500 lines. Checked by make sdd-check. -->
+<!-- Limit: 500 lines. Checked by scripts/sdd/check.sh. -->
 <!-- CLAUDE.md in this repo is a symlink to this file (ADR-0002). -->
 
 Extra Cursor rules for this repo: `.cursor/rules/web-backend-new-rules.mdc`,
@@ -52,7 +52,7 @@ Everything runs through Docker Compose from the repo root (`docker-compose.yml`)
 - `make status` / `make logs [service]` / `make stop` / `make down`.
 - `make enter_backend` - shell inside the running backend container.
 - `make test` - backend tests: `docker compose run --rm backend sh -c "export ENV='TEST' && pytest"`.
-- `make sdd-check` - SDD checks (AGENTS.md present and ≤500 lines, `openspec validate --all --strict`); defined in `Makefile.sdd`.
+- `bash scripts/sdd/check.sh` - SDD checks (AGENTS.md present and ≤500 lines, `openspec validate --all --strict`).
 - `make migrate name="..."` - autogenerate an Alembic revision for backend.
 - `make migrate_upgrade` / `make migrate_downgrade` - apply / revert one migration.
 - `make create_db` / `make drop_db` / `make clear_redis_cache`.
@@ -114,7 +114,7 @@ logic and contracts), `wbn-project-rules/`, `wbn-post-call-processor/`,
 - Changes go through `openspec/changes/<id>/` (rule: **no code without a spec**;
   for refactoring/tooling work set `skip_specs: true` in the change metadata).
   Completed changes live in `openspec/changes/archive/`.
-- `make sdd-check` runs `openspec validate --all --strict` - it must stay green.
+- `bash scripts/sdd/check.sh` runs `openspec validate --all --strict` - it must stay green.
 - Shared cross-service contracts belong in the central store repo (ADR-0001),
   wired in via `references:` in `openspec/config.yaml`.
 - Until that move is done, the **source of truth for Redis keys, streams, TTLs and

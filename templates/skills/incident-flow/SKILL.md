@@ -34,8 +34,7 @@ survives into the plan - feature-flow step 1's convention; the planner folds it
 into proposal.md. It holds: timeline, what happened vs what the spec says should
 happen (repo `openspec/specs/`, or the store - the read sequence is in
 feature-flow's `references/details.md`, step 1), root cause with file:line,
-blast radius (one call? all
-campaigns of a firm?). Then classify honestly - **code bug / client misuse /
+blast radius (one call? all campaigns of a firm?). Then classify honestly - **code bug / client misuse /
 infra**. Misuse or infra: the doc IS the deliverable; hand it to the owner
 (ticket comment **in Russian** + status via youtrack MCP - the ticket author or
 process owner closes it, not the dev) and **STOP** - no change, no code.

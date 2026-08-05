@@ -82,7 +82,7 @@ tier, not discovered in step 2.
    slice of code and runs the tests that already exist. Half-built state that
    must stay unreachable in prod: keep the wiring-in (route/handler/caller)
    for the LAST task instead of hiding merged code behind a flag (flags are
-   cut, ADR-0026 §2). Archive the change
+   cut entirely - a switch, when truly needed, is a plain config value). Archive the change
    when the last task is merged and verified.
 5. Epic tests are written ONCE for the whole change (all Scenarios, before the
    first PR); Scenarios not yet implemented stay as explicit skips.
@@ -150,7 +150,7 @@ tier, not discovered in step 2.
 
 ## 4b. Contract migrations
 
-There is no flag registry or lifecycle anymore (cut entirely, ADR-0026 §2);
+There is no flag registry or lifecycle anymore - flags are cut entirely;
 a switch, when a migration truly needs one, is a plain config value with no
 process around it.
 
@@ -175,8 +175,7 @@ process around it.
 
 1. Open PR to dev with ticket id in the title: `[feature/WEB-XXXX] <summary>`.
    Opening the PR is the developer's action by default; ONLY on their explicit
-   command the agent runs `gh pr create` itself (ADR-0026 §1) - never
-   unprompted.
+   command the agent runs `gh pr create` itself - never unprompted.
 2. Body: what changed, why, test plan (link the tests/Scenarios). Say if the
    tests were agent-generated without human QA validation.
 3. There is no server CI - what actually blocks you is local: spec-guard, the
@@ -192,7 +191,7 @@ process around it.
 
 1. After the PR is merged to dev, move the ticket to `status: ready_to_test`
    (youtrack MCP). Same rule as the PR: the developer's action by default,
-   the agent does it only on their explicit command (ADR-0026 §1).
+   the agent does it only on their explicit command - never unprompted.
 2. Leave a comment for the tester **in Russian**: what to check and how -
    crystal clear, ONE paragraph max, with a link to the QA
    Scenarios/tests (standard/deep).

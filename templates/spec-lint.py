@@ -209,9 +209,9 @@ def check_deltas(root: Path) -> list[dict]:
     advice and never as a violation.
     """
     out: list[dict] = []
+    # archive is excluded by the glob itself: changes/archive/<id>/specs/... has
+    # one more path segment than */specs/*/spec.md can match (closed history).
     for path in sorted((root / "openspec" / "changes").glob("*/specs/*/spec.md")):
-        if "archive" in path.relative_to(root).parts:
-            continue  # history: closed, never re-litigated
         spec = parse_spec(path)
         rel = str(path.relative_to(root))
         unresolved = [
@@ -257,7 +257,7 @@ def check_freshness(spec: dict, root: Path, cache: dict) -> dict:
         return {
             "status": "UNVERIFIED",
             "reason": f"commit {commit} is not in this clone (shallow "
-            "checkout? CI needs actions/checkout with fetch-depth: 0)",
+            "checkout? run: git fetch --unshallow)",
             "stale_files": [],
             "missing_anchors": missing,
             "enforced_files": len(files),

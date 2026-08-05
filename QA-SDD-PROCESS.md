@@ -117,7 +117,7 @@ change не считается готовым к разработке, QA воз
 Каждый сгенерированный тест обязан нести трейсер обратно на change:
 
 ```python
-# openspec: <change-name> / Requirement: <name> / Scenario: <name>
+# spec: <requirement-id> / <scenario>
 def test_<scenario_slug>(api):
     ...
 ```

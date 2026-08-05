@@ -189,7 +189,7 @@ single-sourced; this is the one-line summary plus where to read them:
 | `planner` / `plan-griller` agents | phase 2 on opus (`model` frontmatter, ADR-0013): planner writes the change, plan-griller interrogates it |
 | `test-author` agent | phase 3 on sonnet (ADR-0016): one failing test per Scenario from the spec delta, tracer `# spec: ...`, RED confirmed; writes test files only, never implementation |
 | `executor` agent | phase 4 on sonnet (ADR-0021): walks `tasks.md` of a grilled change with RED tests, ticking tasks as it goes; never edits tests, never commits, stops-and-reports on any deviation from the plan instead of improvising - disputes and "change the plan?" calls go back to the orchestrator |
-| `spec-miner` agent | repo onboarding only (seed specs one capability at a time), NOT in the per-task loop; OpenSpec has no built-in equivalent |
+| `spec-miner` agent | user-level agent (`~/.claude/agents/`), not part of the kit's `templates/agents/` and not installed by it; used for repo onboarding only (seed specs one capability at a time, brownfield repos), NOT in the per-task loop; OpenSpec has no built-in equivalent |
 | reviewer agents | `backend-reviewer` + `database-reviewer` - ECC-derived (commit ec92b528), consolidated from four agents into two; they replace the old `review-pr.md` prompt, run locally only (`scripts/sdd/review.sh`) - no server CI autoreview anymore (ADR-0023) |
 
 ## No magic: prompts vs hooks (what actually enforces)
@@ -218,8 +218,9 @@ Consequences:
 - **Verifiability is mandatory.** Every skill/tool must have a way to confirm
   it actually ran: a measured artifact, a log line, a gate that fails without
   it. Unverifiable pieces get removed - 95% of ~285 installed skills were
-  never used once (`docs/archive/OUR_PATTERNS.md`), and `repo-audit` exists to keep it
-  that way.
+  never used once (`docs/archive/OUR_PATTERNS.md`), and the `repo-auditor`
+  agent (`templates/agents/repo-auditor.md`) plus the audit section of
+  `sdd-doctor` exist to keep it that way.
 
 ## Prototype instead of waiting
 
@@ -319,3 +320,4 @@ Last verified: 2026-08-04 (ADR-0023 wave B text revision - server CI removed fro
 | traceability gate (Scenario ⇄ test) and QA quality gate | **review discipline, no automation plan** - there is no CI to add them to (ADR-0023); enforced by reviewers reading the change, not tooling |
 | branch age (≤2 days) / PR size (≤1500 lines) | **process rules, no automated signal** (ADR-0023) - no CI warning/fail, no `long-lived-ok`/`xl-ok` labels; the developer self-polices and explains deliberate exceptions in the PR body |
 | frontend profile (frontend-reviewer, TS flags variant) | **backlog, low priority** (ADR-0015 p.5) - web-frontend-new gets the standard backend-oriented install |
+| `.github/workflows/ci.yml` (this repo, sdd-kit itself) | self-test of sdd-kit only - lint + smoke install; not installed into target repositories and not a contradiction of "no server CI" (that doctrine covers target repos, not the kit's own CI) |

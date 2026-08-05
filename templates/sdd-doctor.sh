@@ -120,7 +120,10 @@ if [ -n "$ROOT" ]; then
   # FAIL, not warn: an empty agent context silently degrades every downstream
   # step, and the fix is a one-liner (restore from git history or the kit).
   if [ -f AGENTS.md ]; then
-    AGENTS_REAL_LINES=$(grep -cv '^[[:space:]]*$' AGENTS.md 2>/dev/null || echo 0)
+    # no `|| echo 0`: grep -c prints "0" itself on no-match (exit 1), the fallback
+    # would append a second line ("0\n0") and break the -le comparison below
+    AGENTS_REAL_LINES=$(grep -cv '^[[:space:]]*$' AGENTS.md 2>/dev/null)
+    AGENTS_REAL_LINES=${AGENTS_REAL_LINES:-0}
     if [ ! -s AGENTS.md ]; then
       bad repo.agents-md-content "AGENTS.md is empty (0 bytes) — agents get no project context" \
         "restore it: git show <ref>:AGENTS.md > AGENTS.md, or cp sdd-kit/templates/AGENTS.md AGENTS.md"
@@ -203,7 +206,7 @@ print(' '.join(missing))
       ok repo.hooks "Claude hooks configured (.claude/settings.json, all .claude/hooks/*.cjs wired)"
     fi
   else
-    warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, format) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
+    warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, pre-compact) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
   if [ -f .spec-guard-paths ]; then
     # count only real prefixes: skip comments and blank lines (same rule as spec-guard.cjs)
@@ -233,10 +236,26 @@ print(' '.join(missing))
       "scripts/sdd/index.sh, or run the interactive '/graphify' command in Claude Code for the first build"
   fi
 
-  if [ -f .git/hooks/pre-commit ] && grep -q sdd-check .git/hooks/pre-commit 2>/dev/null; then
-    ok repo.pre-commit "pre-commit hook runs sdd-check"
+  if [ -f .git/hooks/pre-commit ] && grep -q "scripts/sdd/check.sh" .git/hooks/pre-commit 2>/dev/null; then
+    ok repo.pre-commit "pre-commit hook runs scripts/sdd/check.sh"
   else
-    warn repo.pre-commit "pre-commit hook missing or lacks sdd-check" "run sdd-kit/install.sh --repo-only $ROOT"
+    warn repo.pre-commit "pre-commit hook missing or lacks the SDD gate (scripts/sdd/check.sh)" "run sdd-kit/install.sh --repo-only $ROOT"
+  fi
+
+  # The command surface itself (ADR-0026 §3): pre-commit hard-calls
+  # scripts/sdd/check.sh and review.sh needs its prompt+lint assets — a missing
+  # file here means every commit is blocked or the review step silently breaks,
+  # which is exactly what a doctor must not stay quiet about.
+  MISSING_SDD=""
+  for f in scripts/sdd/check.sh scripts/sdd/test.sh scripts/sdd/review.sh \
+           scripts/sdd/index.sh scripts/sdd/doctor.sh \
+           .claude/scripts/spec-lint.py .claude/scripts/review-prompt.md; do
+    [ -f "$f" ] || MISSING_SDD="$MISSING_SDD $f"
+  done
+  if [ -z "$MISSING_SDD" ]; then
+    ok repo.sdd-scripts "SDD command surface present (scripts/sdd/*.sh + .claude/scripts assets)"
+  else
+    bad repo.sdd-scripts "missing SDD script(s):$MISSING_SDD — pre-commit/review will fail" "run sdd-kit/install.sh --refresh $ROOT"
   fi
 
   # Central spec store (ADR-0001, ADR-0023 §1): registered on this machine, the

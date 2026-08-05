@@ -13,7 +13,12 @@ BASE="${SDD_REVIEW_BASE:-$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/
 
 command -v claude >/dev/null || { echo "FAIL: claude CLI not found"; echo "next: install Claude Code and log in"; exit 1; }
 test -f .claude/scripts/review-prompt.md || { echo "FAIL: .claude/scripts/review-prompt.md is missing"; echo "next: run sdd-kit/install.sh --repo-only on this repo"; exit 1; }
+# a missing base must be loud, not a silent empty diff that reads as "nothing to review"
+git rev-parse --verify --quiet "$BASE" >/dev/null \
+  || { echo "FAIL: review base '$BASE' is not a ref in this repo"; echo "next: git fetch origin, or set SDD_REVIEW_BASE to an existing branch"; exit 1; }
 
+# /tmp/sdd-review.diff is a fixed path on purpose — review-prompt.md tells the
+# reviewer to Read exactly this file (same contract as /tmp/tools.txt below).
 git diff "$BASE"...HEAD > /tmp/sdd-review.diff
 test -s /tmp/sdd-review.diff || { echo "sdd-review: 0 changes vs $BASE — nothing to review"; exit 0; }
 

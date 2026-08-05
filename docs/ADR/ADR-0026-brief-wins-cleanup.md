@@ -35,7 +35,7 @@
    перед пушем (`openspec validate` в pre-commit клона store). Уточняет
    ADR-0023 §5 до конца.
 6. **Профили и тулзы «депрекейтнутых» репо не трогаем** (profiles/*.env,
-   tools/skills/web-backend-new и voice-agent-constructor-backend): есть
+   profiles/web-backend-new/ и profiles/voice-agent-constructor-backend/): есть
    не просят, WBN — площадка бенчмарка.
 
 ## Последствия

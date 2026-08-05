@@ -180,7 +180,7 @@ else
   rm_ours "$KIT/templates/ruff.toml" ruff.toml
 fi
 rm_retired feature_flags.py "flags cut entirely — ADR-0026 §2"
-rm -f .spec-guard-paths && say "removed: .spec-guard-paths"
+[ -e .spec-guard-paths ] && { rm .spec-guard-paths; REMOVED=$((REMOVED+1)); say "removed: .spec-guard-paths"; }
 
 # .mcp.json: ours contains only context7/youtrack (+ our shape) — else keep.
 if [ -f .mcp.json ]; then
@@ -201,11 +201,11 @@ fi
 if [ -f .git/hooks/pre-commit ]; then
   if grep -q "sdd-kit git pre-commit hook" .git/hooks/pre-commit; then
     rm .git/hooks/pre-commit; REMOVED=$((REMOVED+1)); say "removed: .git/hooks/pre-commit"
-  elif grep -q "sdd-check" .git/hooks/pre-commit; then
+  elif grep -q "scripts/sdd/check.sh" .git/hooks/pre-commit; then
     if [ "$FORCE" = 1 ]; then
       rm .git/hooks/pre-commit; REMOVED=$((REMOVED+1)); say "removed: .git/hooks/pre-commit (forced: was hand-merged)"
     else
-      KEPT=$((KEPT+1)); warn "kept: .git/hooks/pre-commit was hand-merged — remove the sdd-check lines yourself"
+      KEPT=$((KEPT+1)); warn "kept: .git/hooks/pre-commit was hand-merged — remove the scripts/sdd/check.sh lines yourself"
     fi
   fi
 fi

@@ -50,10 +50,10 @@ git ls-tree -r --name-only origin/main -- docs/patches | grep -o 'patch[0-9]*' |
 Базовое состояние гейтов - записать ДО начала, иначе не отличить свой результат от фона:
 
 ```bash
-make sdd-check                                   # OK (spec-lint advisory)
+bash scripts/sdd/check.sh                        # OK (spec-lint advisory)
 python3 .claude/scripts/spec-lint.py             # FRESH=5 STALE=15, 0 metadata violations
 npx -y @fission-ai/openspec@1.7.0 validate --all --strict   # 29 passed / 0 failed
-make sdd-doctor                                  # 1 warning (spec-guard off by design), 0 failures
+bash scripts/sdd/doctor.sh                       # 1 warning (spec-guard off by design), 0 failures
 PY=/opt/anaconda3/bin/python3.12 make test       # зафиксировать: зелёный или нет
 ```
 
@@ -188,7 +188,7 @@ Node - через `nvm use 20`; дефолтный vLLM-endpoint недосту�
 ## Шаг 6. Ревью кода
 
 ```bash
-make sdd-review        # база сравнения: SDD_REVIEW_BASE (по умолчанию из origin/HEAD)
+bash scripts/sdd/review.sh   # база сравнения: SDD_REVIEW_BASE (по умолчанию из origin/HEAD)
 ```
 
 Субагенты: `backend-reviewer` (Python/FastAPI), `database-reviewer` (если появились миграции).
@@ -222,7 +222,7 @@ npx -y @fission-ai/openspec@1.7.0 validate --all --strict
 ```bash
 npx -y @fission-ai/openspec@1.7.0 validate --all --strict
 python3 .claude/scripts/spec-lint.py     # спеки, которые вы трогали, должны стать FRESH
-make sdd-check
+bash scripts/sdd/check.sh
 ```
 
 ## Замерные метрики
@@ -263,7 +263,7 @@ make sdd-check
 | `openspec validate --all --strict` | было 29/0 -> должно стать 30/0 (+1 активный change), после архивации снова 29/0 |
 | `spec-lint` metadata violations | должно остаться 0 на всех прогонах |
 | Дельта проверена spec-lint | в выводе есть строка `N change delta(s) checked, 0 with findings` |
-| `make sdd-doctor` | было 1 warning / 0 failures - новых warning быть не должно |
+| `bash scripts/sdd/doctor.sh` | было 1 warning / 0 failures - новых warning быть не должно |
 
 ### Качество результата
 

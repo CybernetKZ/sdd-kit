@@ -1,6 +1,6 @@
 # AGENTS.md - context for AI agents
 
-<!-- Limit: 500 lines. Enforced by `make sdd-check`. -->
+<!-- Limit: 500 lines. Enforced by `scripts/sdd/check.sh`. -->
 <!-- CLAUDE.md in this repository is a symlink to this file (ADR-0002). -->
 
 Local, uncommitted workflow rules live in `CLAUDE.local.md` (graph-first
@@ -98,10 +98,11 @@ Tests:
 
 SDD checks:
 
-- `make sdd-check` (from `Makefile.sdd`) - asserts `AGENTS.md` exists and is
+- `bash scripts/sdd/check.sh` - asserts `AGENTS.md` exists and is
   ≤500 lines, warns on leftover template placeholders, and runs
-  `npx @fission-ai/openspec@1.7.0 validate --all --strict`. This is the required
-  PR gate (`.github/workflows/sdd-ci.yml`).
+  `npx @fission-ai/openspec@1.7.0 validate --all --strict`. This is a local
+  gate (run manually or via pre-commit) - there is no server-side CI for this
+  repo.
 
 ## Module map
 

@@ -29,18 +29,9 @@ function check(cmd) {
   return null;
 }
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (d) => (raw += d));
-process.stdin.on('end', () => {
-  let cmd = raw;
-  try { cmd = JSON.parse(raw)?.tool_input?.command ?? raw; } catch { /* plain text */ }
-  const reason = typeof cmd === 'string' ? check(cmd) : null;
-  if (reason) { process.stderr.write(reason + '\n'); process.exit(2); }
-  process.exit(0);
-});
-
-// self-check: node block-no-verify.js --test
+// self-check: node block-no-verify.cjs --test
+// (before the stdin subscription — with it first the process would sit
+// waiting for stdin and the block below would never run standalone)
 if (process.argv[2] === '--test') {
   const assert = require('node:assert');
   assert(check('git commit --no-verify -m x'));
@@ -56,3 +47,14 @@ if (process.argv[2] === '--test') {
   console.log('block-no-verify: self-check OK');
   process.exit(0);
 }
+
+let raw = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', (d) => (raw += d));
+process.stdin.on('end', () => {
+  let cmd = raw;
+  try { cmd = JSON.parse(raw)?.tool_input?.command ?? raw; } catch { /* plain text */ }
+  const reason = typeof cmd === 'string' ? check(cmd) : null;
+  if (reason) { process.stderr.write(reason + '\n'); process.exit(2); }
+  process.exit(0);
+});

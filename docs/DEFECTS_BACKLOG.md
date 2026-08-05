@@ -25,10 +25,10 @@ where an overlap exists (see dedup note under that table).
 
 | ID | Severity | Title | Source |
 |---|---|---|---|
-| WEB-2256-review(C1) | CRITICAL | Lease-loss race in shutdown can permanently drop post-commit webhook/archive-publish side effects | reviews/WEB-2256-review.md |
-| WEB-2256-review(C2) | CRITICAL | Graceful shutdown closes shared Redis/RabbitMQ/DB clients while tasks may still be running past cancel_timeout | reviews/WEB-2256-review.md |
-| WEB-2256-review(H1) | HIGH | Task drain budget (12s) far shorter than message budget (300s) strands in-flight calls >=10 min on every deploy | reviews/WEB-2256-review.md |
-| WEB-2256-review(H2) | HIGH | Consumers start before shutdown manager registers them; SIGTERM during startup leaves consumers mid-message with no clean close | reviews/WEB-2256-review.md |
+| WEB-2256-review(C1) | CRITICAL | Lease-loss race in shutdown can permanently drop post-commit webhook/archive-publish side effects | archive/WEB-2256-review.md |
+| WEB-2256-review(C2) | CRITICAL | Graceful shutdown closes shared Redis/RabbitMQ/DB clients while tasks may still be running past cancel_timeout | archive/WEB-2256-review.md |
+| WEB-2256-review(H1) | HIGH | Task drain budget (12s) far shorter than message budget (300s) strands in-flight calls >=10 min on every deploy | archive/WEB-2256-review.md |
+| WEB-2256-review(H2) | HIGH | Consumers start before shutdown manager registers them; SIGTERM during startup leaves consumers mid-message with no clean close | archive/WEB-2256-review.md |
 | NEXT_STEPS(wbn-ci) | HIGH | WBN CI does not run tests at all (pytest step missing from pipeline) | NEXT_STEPS.md:135 |
 
 ---

@@ -346,7 +346,7 @@ sdd-kit переустановлен на свежий клон `~/dev/web-backe
 (code/opus + python/sonnet + database/sonnet) прогнаны по коммиту 3cc56e7c
 (WEB-2256, PCP shutdown refactor, 31 файл): 2 CRITICAL, 5 HIGH, 11 MEDIUM,
 ложные наводки статических инструментов отфильтрованы. Полный отчёт:
-`reviews/WEB-2256-review.md`. Вердикт: WARNING - мержить после
+`archive/WEB-2256-review.md`. Вердикт: WARNING - мержить после
 фиксов C1 (гонка lease -> потеря вебхука навсегда), C2 (cleanup закрывает
 соединения под живыми задачами), H1 (drain 12с против бюджета сообщения 300с).
 

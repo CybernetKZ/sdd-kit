@@ -22,7 +22,7 @@ process.stdin.on('end', () => {
   const file = input?.tool_input?.file_path;
   if (!file) process.exit(0);
 
-  // Repository root comes from Claude Code (same as pre-compact.js).
+  // Repository root comes from Claude Code (same as pre-compact.cjs).
   const root = process.env.CLAUDE_PROJECT_DIR;
   if (!root) process.exit(0);
 

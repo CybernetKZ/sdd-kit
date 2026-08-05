@@ -12,23 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck all shell scripts
-        run: shellcheck -S warning install.sh uninstall.sh templates/*.sh
+        run: shellcheck -S warning install.sh uninstall.sh templates/*.sh templates/scripts/sdd/*.sh
       - name: bash syntax
         run: |
           bash -n install.sh uninstall.sh
-          for f in templates/pre-commit-hook.sh templates/sdd-doctor.sh; do
+          for f in templates/pre-commit-hook.sh templates/sdd-doctor.sh templates/scripts/sdd/*.sh; do
             bash -n "$f"
           done
       - name: node syntax (hooks)
         run: for f in templates/*.cjs; do node --check "$f"; done
       - name: python syntax (spec-lint)
         run: python3 -m py_compile templates/spec-lint.py
-      - name: YAML templates parse
+      - name: workflow YAML parses
         run: |
           python3 - <<'EOF'
           import yaml, glob
-          files = glob.glob('templates/*.yml') + glob.glob('.github/workflows/*.yml')
-          for f in files:
+          for f in glob.glob('.github/workflows/*.yml'):
               yaml.safe_load(open(f))
               print('ok', f)
           EOF
@@ -52,10 +51,10 @@ jobs:
       - name: gates work in the installed repo
         run: |
           cd /tmp/smoke-repo
-          make sdd-check
-          make sdd-doctor || true   # advisory: warns on a bare runner, never blocks
+          bash scripts/sdd/check.sh
+          bash scripts/sdd/doctor.sh || true   # advisory: warns on a bare runner, never blocks
           test -x .git/hooks/pre-commit
-          grep -q "sdd-check" .git/hooks/pre-commit
+          grep -q "scripts/sdd/check.sh" .git/hooks/pre-commit
       - name: PROFILE_OPENSPEC_SEED_REF restores openspec/ from a git ref instead of init
         run: |
           R=/tmp/seed-repo/conversation_flow   # basename picks profiles/conversation_flow.env

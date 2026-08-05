@@ -50,9 +50,10 @@ and `.git/hooks/pre-commit`.
 Each changed file is reported as `refreshed: <path> (+X/-Y lines)`; a second run
 reports zero. Repo-owned files are never touched: `AGENTS.md`, `CLAUDE.md`,
 `.spec-guard-paths`, `.claude/expected-env`, `ruff.toml`,
-`openspec/**`, `.mcp.json`. `.claude/settings.json` is compared, never written:
-if its `hooks` block drifted from the template you get a WARN and merge by hand
-(the repo may have added its own hooks). Review the result with `git diff`
+`openspec/**`, `.mcp.json`. `.claude/settings.json` is never rewritten wholesale:
+its `hooks` block is additively merged instead (`merge_settings_hooks()`, run on
+both install and `--refresh`) - missing kit hooks are added in, any hooks the
+repo added on its own are left untouched. Review the result with `git diff`
 before committing. `--refresh` is the repo section only - machine tools have no
 refresh semantics, re-run `--machine-only` for those.
 
@@ -76,7 +77,7 @@ clean: `git status` shows the repo exactly as before install.
 | Artifact | Purpose |
 |---|---|
 | `AGENTS.md` (+ `CLAUDE.md` symlink) | canonical agent context, ≤500 lines; existing `CLAUDE.md` is renamed, not lost |
-| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (same pin in `install.sh`, `scripts/sdd/check.sh` and `sdd-doctor.sh`, each marked `# openspec-pin` - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
+| `openspec/` | `openspec init --tools claude` on the pinned CLI **`@fission-ai/openspec@1.7.0`** (the same pin appears in 5 places - `install.sh`, `uninstall.sh` (twice), `scripts/sdd/check.sh` and `sdd-doctor.sh` - each marked `# openspec-pin`; `grep '# openspec-pin'` finds them all - bump all of them together). Creates `openspec/specs/` (capability specs), `openspec/changes/` (+ `archive/`), `openspec/config.yaml`, and the six `.claude/skills/openspec-*` skills. A profile may instead restore a prepared `openspec/` tree from `PROFILE_OPENSPEC_SEED_REF` |
 | `scripts/sdd/*.sh` | 5 scripts (the Makefile is gone, ADR-0026 §3): `check.sh` (the gate: AGENTS.md exists/≤500 lines + `openspec validate --all --strict`, blocking; spec-lint advisory until `SPEC_LINT_STRICT=1`), `doctor.sh`, `test.sh` (advisory ruff+pytest, override with `SDD_TEST_CMD`), `review.sh` (local AI review of the diff, seeded with static leads in `/tmp/tools.txt` when radon/complexipy/vulture/semgrep are installed), `index.sh` (graphify graph, built/updated by install too, never a gate - ADR-0004). Every failure prints a concrete `next:` step |
 | `.claude/agents/` | 7 agents: `planner` + `plan-griller` (phase-2 plan/grill on opus via `model` frontmatter, ADR-0013), `test-author` (phase-3 failing tests from the spec delta, sonnet, ADR-0016), `executor` (phase-4 implementation on sonnet, strictly `tasks.md`-bound, ADR-0021), `backend-reviewer` (Python/FastAPI) and `database-reviewer` (PostgreSQL/SQLAlchemy) for the AI review step, `repo-auditor` (read-only agent-readiness audit of the repo). Full table with the OpenSpec wiring: [After install](#after-install-what-to-use) |
 | `.claude/hooks/` + `.claude/settings.json` | spec-guard (blocks code edits without an active `openspec/changes/<id>/` - **silent until `.spec-guard-paths` lists at least one path prefix**), a `git commit --no-verify` blocker, and a PreCompact survival packet (`.claude/last-session-state.md` - active change + uncommitted work, so agents resume after compaction; idea from ProjectStore, ADR-0008) |
@@ -109,7 +110,8 @@ target directory name matches a profile, install.sh additionally:
 - seeds `.claude/expected-env` from `PROFILE_ENV_FILES` so `sdd-doctor` warns when
   a per-service `.env` a fresh clone needs is missing (WBN lists all 8 services);
 - for the store repo itself (`PROFILE_IS_STORE=1`): minimal install - local
-  registration + a strict-validate CI gate, nothing else.
+  registration + a pre-commit hook in the store's own clone that runs
+  `openspec validate --all --strict` at commit time (ADR-0026 §5), nothing else.
 
 The store is read-only for a service repo. A repo change that needs a
 cross-repo contract edited keeps the reasoning in its own `proposal.md`, but
@@ -138,8 +140,9 @@ repo.
 1. Fill the TODOs in `AGENTS.md`.
 2. Create `.spec-guard-paths` (code path prefixes, one per line) to enable
    spec-guard - automatic for known repos (see Profiles). Until this file has a
-   non-comment line, spec-guard and the LIVING SPEC pre-commit fragment are
-   deliberate no-ops.
+   non-comment line, spec-guard is a deliberate no-op. (LIVING SPEC docs drift
+   for conversation_flow has no pre-commit check either - ADR-0026 §4 removed
+   it in favor of on-demand `tools/cf/main-drift.sh`.)
 3. Seed `openspec/specs/` one capability at a time. The kit does **not** ship a
    spec-miner agent - use the `openspec-explore` / `openspec-sync-specs` skills,
    or a machine-level miner agent of your own; the conversation_flow run that
@@ -205,8 +208,8 @@ each carries the relevant protocol inline.
 | `scripts/sdd/index.sh` | no | graphify graph for navigation only (ADR-0004) |
 
 Are they wired to OpenSpec correctly? Yes, with two things to know. The CLI is
-pinned to `1.7.0` in four places (`# openspec-pin`) - bump them together or
-`sdd-check` and `sdd-doctor` will disagree. And `openspec validate --all
+pinned to `1.7.0` in 5 places (`grep '# openspec-pin'` finds them all) - bump
+them together or `sdd-check` and `sdd-doctor` will disagree. And `openspec validate --all
 --strict` checks *structure* (a Requirement needs at least one Scenario, a
 change needs its deltas), while `spec-lint.py` checks *truthfulness* (do the
 `enforced:` anchors point at symbols that exist, is the spec still fresh). Both
@@ -332,9 +335,10 @@ concrete `next:` command suggestion on every failure path.
 No magic: "skills"/"rules"/"plugins" are prompts injected into the model's
 context - advisory by nature, the model can ignore them. Hooks
 (pre-commit, PreToolUse/PreCompact) are deterministic code and cannot be
-ignored. Enforcement therefore lives only in hooks + CI gates, and every
-installed piece must be verifiable (a gate, a log line, a measured
-artifact) - the `sdd-doctor` audit section names what never runs.
+ignored. There is no server CI for target repos (ADR-0023/0026): enforcement
+therefore lives only in local hooks, and every installed piece must be
+verifiable (a gate, a log line, a measured artifact) - the `sdd-doctor` audit
+section names what never runs.
 
 Spec anchors are paths, not symbols. `spec-lint` used to resolve a bare
 `ClassName.method()` by building a CamelCase->file index and falling back to
@@ -354,11 +358,13 @@ onboarding: convert and verify all specs first, only then run a task on the new
 process), **ADR-0010** (three tiers vary preparation, never gates). Index with
 one-line summaries: `docs/ADR/README.md`.
 
-And today even the CI half is advisory on purpose (ADR-0015): branch
-protection is off and no check is required, so the only pieces that actually
-block are local (spec-guard, the `--no-verify` blocker, pre-commit). Server
-gates are honest signals in a log; switching them on is one deliberate
-decision, deferred rather than cancelled.
+And gates are local-only by design (ADR-0015/0023/0026): there is no server
+CI for target repos, no branch protection, no required check - the only
+pieces that actually block are local (spec-guard, the `--no-verify` blocker,
+pre-commit's `scripts/sdd/check.sh`). The store repo adds its own local
+pre-commit `openspec validate --all --strict` on its clone (ADR-0026 §5).
+Turning server gates on for target repos is one deliberate decision,
+deferred rather than cancelled.
 
 ## Attribution
 
@@ -382,6 +388,10 @@ tools/cf/             conversation_flow migration instructions - run by hand,
                       NOT installed (mine-section, verify-section, patch2change, ...)
 docs/                 ADR/ (the decision registry), GLOSSARY.md, DEFECTS_CF.md,
                       archive/ (finished plans, dry-runs, handoffs), ...
+.github/workflows/ci.yml   self-test of the kit itself (shellcheck, syntax,
+                      smoke install) - never installed into target repos, so
+                      it does not contradict the "no server CI" doctrine above
+                      (that doctrine is about target repos, not the kit repo)
 ```
 
 ## Benchmarks

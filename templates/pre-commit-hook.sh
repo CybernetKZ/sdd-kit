@@ -16,9 +16,9 @@ if [ "${SDD_ALLOW_PROTECTED:-0}" != "1" ]; then
   esac
 fi
 
-# Branch age (ADR-0006) is NOT checked here: the CI tbd-gates job owns that
-# signal and knows the real PR base — this hook could only guess origin/dev,
-# which lied for every branch not targeting dev.
+# Branch age (ADR-0006) is NOT checked here: it is a process rule with no
+# automation (ADR-0023 §5 — no server CI), and this hook could only guess
+# origin/dev as the base, which lied for every branch not targeting dev.
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 
@@ -43,7 +43,7 @@ if [ -n "$STAGED" ]; then
     fi
   done
 
-  # ruff on staged Python: autofix lint + format, then re-stage (non-blocking, like CI reviewdog reports the rest)
+  # ruff on staged Python: autofix lint + format, then re-stage (non-blocking)
   PY=$(echo "$STAGED" | grep -E '\.py$' || true)
   if [ -n "$PY" ]; then
     RUFF=""

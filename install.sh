@@ -76,7 +76,9 @@ while [ $# -gt 0 ]; do
     --machine-only) DO_REPO=0 ;;
     --refresh)      DO_REFRESH=1; DO_MACHINE=0 ;;  # repo section only, by definition
     -h|--help)
-      sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'
+      # print the header comment block: from line 2 down to the first non-comment
+      # line (no magic line numbers — the header grows)
+      awk 'NR<2 {next} /^#/ {sub(/^# ?/,""); print; next} {exit}' "$0"
       exit 0 ;;
     -*) fail "unknown option: $1 (try --help)" ;;
     *)  REPO_ARG="$1" ;;
@@ -779,10 +781,10 @@ EOF
   # Lives in .git/hooks (never committed), so it is safe to install even in test mode.
   local PRE_COMMIT=.git/hooks/pre-commit
   if [ -e "$PRE_COMMIT" ]; then
-    if grep -q "sdd-check" "$PRE_COMMIT" 2>/dev/null; then
-      say "exists:  $PRE_COMMIT (already runs sdd-check)"
+    if grep -q "scripts/sdd/check.sh" "$PRE_COMMIT" 2>/dev/null; then
+      say "exists:  $PRE_COMMIT (already runs scripts/sdd/check.sh)"
     else
-      warn "$PRE_COMMIT exists without sdd-check — add 'bash scripts/sdd/check.sh' to it manually (template: $KIT/templates/pre-commit-hook.sh)"
+      warn "$PRE_COMMIT exists without the SDD gate — add 'bash scripts/sdd/check.sh' to it manually (template: $KIT/templates/pre-commit-hook.sh)"
     fi
   else
     assemble_pre_commit "$PRE_COMMIT"
