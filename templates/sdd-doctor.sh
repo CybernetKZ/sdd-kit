@@ -243,10 +243,15 @@ except Exception:
     plugins = {}
 hit = plugin_id in plugins or any(k.split('@')[0] == name for k in plugins) \
     or bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name)))
-print('yes' if hit else 'no')
+# 'stale' = installed, but the cached build predates ADR-0027 and has no agents/
+carries = bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name, '*', 'agents', 'planner.md')))
+print('yes' if (hit and carries) else ('stale' if hit else 'no'))
 " 2>/dev/null)
   if [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = yes ]; then
     ok repo.plugin "$CC_PLUGIN_ID enabled and installed (carries the 7 agents + the shared skills, ADR-0027)"
+  elif [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = stale ]; then
+    warn repo.plugin "$CC_PLUGIN_ID installed but the cached build has no agents/ — it predates ADR-0027, every delegated agent/skill is missing" \
+      "claude plugin marketplace update cybernet && claude plugin update $CC_PLUGIN_ID"
   elif [ "$CC_ENABLED" != yes ]; then
     bad repo.plugin "$CC_PLUGIN_ID not enabled in .claude/settings.json — the agents (planner, plan-griller, test-author, executor, backend-reviewer, database-reviewer, repo-auditor) and the skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling) live in that plugin (ADR-0027) and do not exist without it" \
       "run sdd-kit/install.sh --refresh $ROOT (adds extraKnownMarketplaces + enabledPlugins additively)"
