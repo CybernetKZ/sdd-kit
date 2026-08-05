@@ -69,15 +69,51 @@ ask() { # explicit yes required; non-TTY: yes only with SDD_KIT_ASSUME_YES=1
   return 1
 }
 
-# rm_ours <source-in-kit> <dest> — delete dest only when identical to source
+# del <path...> — remove a kit-installed file; when git tracks it, remove it
+# through git so the index stays coherent. A plain rm on a tracked file leaves
+# an unstaged deletion that the next install turns into a phantom
+# "deleted + untracked" pair in git status.
+del() {
+  local p
+  for p in "$@"; do
+    [ -e "$p" ] || [ -L "$p" ] || continue
+    if git ls-files --error-unmatch -- "$p" >/dev/null 2>&1; then
+      git rm -q -f -- "$p" || rm -f "$p"
+    else
+      rm -f "$p"
+    fi
+  done
+}
+
+# kit_had <dest> — true when dest is byte-identical to ANY version of ANY kit
+# template ever committed. A repo installed from an older kit revision carries
+# stale-but-genuine kit files; without this check every one of them is reported
+# as "team edits?" and left behind, so uninstall never actually uninstalls.
+KIT_BLOBS=""
+kit_had() {
+  local blob
+  if [ -z "$KIT_BLOBS" ]; then
+    # --no-abbrev: without it --raw prints short hashes that never match hash-object
+    KIT_BLOBS="$(git -C "$KIT" log --all --format= --raw --no-abbrev \
+      -- templates docs/archive profiles 2>/dev/null | awk '{print $3"\n"$4}' | sort -u)"
+    [ -n "$KIT_BLOBS" ] || KIT_BLOBS="none"  # not a git checkout — do not re-run per file
+  fi
+  blob="$(git hash-object -- "$1" 2>/dev/null)" || return 1
+  printf '%s\n' "$KIT_BLOBS" | grep -qx "$blob"
+}
+
+# rm_ours <source-in-kit> <dest> — delete dest only when it is a kit file:
+# identical to the current template, or to one of its earlier committed versions
 # (--force: delete even when it differs).
 rm_ours() {
   local src="$1" dst="$2"
   [ -e "$dst" ] || return 0
   if [ -f "$src" ] && cmp -s "$src" "$dst"; then
-    rm "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst"
+    del "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst"
+  elif kit_had "$dst"; then
+    del "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (older kit version)"
   elif [ "$FORCE" = 1 ]; then
-    rm "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (forced: differed from the kit version)"
+    del "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (forced: differed from the kit version)"
   else
     KEPT=$((KEPT+1))
     warn "kept: $dst differs from the kit version (team edits?)"
@@ -92,7 +128,7 @@ rm_retired() {
   local dst="$1" why="$2"
   [ -e "$dst" ] || return 0
   if [ "$FORCE" = 1 ]; then
-    rm "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (retired: $why)"
+    del "$dst"; REMOVED=$((REMOVED+1)); say "removed: $dst (retired: $why)"
   else
     KEPT=$((KEPT+1)); warn "kept: $dst (retired: $why)"
     echo "        next: rm \"$dst\"" >&2
@@ -119,11 +155,13 @@ rm_ours "$KIT/templates/settings.json" .claude/settings.json
 for f in spec-lint.py sdd-doctor.sh review-prompt.md; do
   rm_ours "$KIT/templates/$f" ".claude/scripts/$f"
 done
+# python leaves __pycache__ next to spec-lint.py — a kit byproduct, not team content
+[ -e .claude/scripts/spec-lint.py ] || rm -rf .claude/scripts/__pycache__
 # repo-audit.sh was merged into sdd-doctor.sh — the template is gone, so it
 # cannot be byte-compared; leave the old copy and name the exact command.
 if [ -f .claude/scripts/repo-audit.sh ]; then
   if [ "$FORCE" = 1 ]; then
-    rm .claude/scripts/repo-audit.sh; REMOVED=$((REMOVED+1))
+    del .claude/scripts/repo-audit.sh; REMOVED=$((REMOVED+1))
     say "removed: .claude/scripts/repo-audit.sh (retired: merged into sdd-doctor.sh)"
   else
     KEPT=$((KEPT+1)); warn "kept: .claude/scripts/repo-audit.sh (retired: merged into sdd-doctor.sh)"
@@ -142,7 +180,7 @@ rm_ours "$KIT/templates/skills/grill-with-docs/SKILL.md" .claude/skills/grill-wi
 rm_ours "$KIT/templates/skills/domain-modeling/SKILL.md" .claude/skills/domain-modeling/SKILL.md
 rm_ours "$KIT/templates/skills/domain-modeling/CONTEXT-FORMAT.md" .claude/skills/domain-modeling/CONTEXT-FORMAT.md
 rm_ours "$KIT/templates/skills/domain-modeling/ADR-FORMAT.md" .claude/skills/domain-modeling/ADR-FORMAT.md
-rm -f .claude/last-session-state.md .claude/expected-env
+del .claude/last-session-state.md .claude/expected-env
 
 # ------------------------------------------------------------ 2. CI workflows
 # Retired by ADR-0023 §5 (no server-side gates) — install.sh no longer copies
@@ -180,7 +218,20 @@ else
   rm_ours "$KIT/templates/ruff.toml" ruff.toml
 fi
 rm_retired feature_flags.py "flags cut entirely — ADR-0026 §2"
-[ -e .spec-guard-paths ] && { rm .spec-guard-paths; REMOVED=$((REMOVED+1)); say "removed: .spec-guard-paths"; }
+# .spec-guard-paths is the team's list of guarded code paths — it is data, not a
+# template copy, so it gets the same identical-only rule as everything else:
+# removed when it still matches what the profile wrote, kept otherwise.
+if [ -e .spec-guard-paths ]; then
+  if [ -n "${PROFILE_SPEC_GUARD_PATHS:-}" ] \
+     && printf '%s\n' "$PROFILE_SPEC_GUARD_PATHS" | cmp -s - .spec-guard-paths; then
+    del .spec-guard-paths; REMOVED=$((REMOVED+1)); say "removed: .spec-guard-paths"
+  elif [ "$FORCE" = 1 ]; then
+    del .spec-guard-paths; REMOVED=$((REMOVED+1)); say "removed: .spec-guard-paths (forced: differed from the profile)"
+  else
+    KEPT=$((KEPT+1)); warn "kept: .spec-guard-paths differs from the profile list (team edits?)"
+    echo "        next: rm .spec-guard-paths  # or re-run with --force" >&2
+  fi
+fi
 
 # .mcp.json: ours contains only context7/youtrack (+ our shape) — else keep.
 if [ -f .mcp.json ]; then
@@ -189,9 +240,9 @@ import json, sys
 servers = set(json.load(open('.mcp.json')).get('mcpServers', {}))
 sys.exit(0 if servers <= {'context7', 'youtrack'} else 1)
 " 2>/dev/null; then
-    rm .mcp.json; REMOVED=$((REMOVED+1)); say "removed: .mcp.json"
+    del .mcp.json; REMOVED=$((REMOVED+1)); say "removed: .mcp.json"
   elif [ "$FORCE" = 1 ]; then
-    rm .mcp.json; REMOVED=$((REMOVED+1)); say "removed: .mcp.json (forced: had extra servers)"
+    del .mcp.json; REMOVED=$((REMOVED+1)); say "removed: .mcp.json (forced: had extra servers)"
   else
     KEPT=$((KEPT+1)); warn "kept: .mcp.json has servers beyond context7/youtrack — remove ours by hand"
   fi
@@ -212,12 +263,12 @@ fi
 
 # ------------------------------------- 6. AGENTS.md / CLAUDE.md (restore names)
 if [ -L CLAUDE.md ] && [ "$(readlink CLAUDE.md)" = "AGENTS.md" ]; then
-  rm CLAUDE.md; say "removed: CLAUDE.md symlink"
+  del CLAUDE.md; say "removed: CLAUDE.md symlink"
 fi
 if [ -f AGENTS.md ]; then
   if cmp -s "$KIT/templates/AGENTS.md" AGENTS.md \
      || { [ -f "$KIT/profiles/$REPO_NAME/AGENTS.md" ] && cmp -s "$KIT/profiles/$REPO_NAME/AGENTS.md" AGENTS.md; }; then
-    rm AGENTS.md; REMOVED=$((REMOVED+1)); say "removed: AGENTS.md (unmodified kit/payload copy)"
+    del AGENTS.md; REMOVED=$((REMOVED+1)); say "removed: AGENTS.md (unmodified kit/payload copy)"
   elif [ ! -e CLAUDE.md ] && ask "Rename AGENTS.md back to CLAUDE.md? (the installer renamed it on install)"; then
     if git ls-files --error-unmatch AGENTS.md >/dev/null 2>&1; then
       git mv AGENTS.md CLAUDE.md

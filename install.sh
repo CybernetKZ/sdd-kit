@@ -625,6 +625,12 @@ repo_section() {
     fi
   elif [ ! -e CLAUDE.md ]; then
     ln -s AGENTS.md CLAUDE.md; say "created: CLAUDE.md -> AGENTS.md"
+    # The symlink was tracked before (uninstall, or a rename round-trip, staged
+    # its deletion) — re-add it, otherwise git status keeps showing a deleted
+    # CLAUDE.md next to an identical untracked one until someone commits it.
+    if git diff --cached --name-only --diff-filter=D -- CLAUDE.md 2>/dev/null | grep -q .; then
+      git add CLAUDE.md && say "re-tracked: CLAUDE.md symlink (was staged as deleted)"
+    fi
   fi
 
   # ----------------------------------------------------------------- 4. OpenSpec
