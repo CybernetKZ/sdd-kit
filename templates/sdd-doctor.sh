@@ -208,10 +208,10 @@ print(' '.join(missing))
   else
     warn repo.hooks "no .claude/settings.json — hooks (spec-guard, no-verify, pre-compact) inactive" "run sdd-kit/install.sh --repo-only $ROOT"
   fi
-  # repo.plugin (ADR-0027): the 7 agents (planner, plan-griller, test-author,
-  # executor, backend-reviewer, database-reviewer, repo-auditor) and the shared
-  # skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs,
-  # domain-modeling) are NOT repo files anymore — they come from the
+  # repo.plugin (ADR-0027): the 8 agents (planner, plan-griller, test-author,
+  # executor, backend-reviewer, database-reviewer, repo-auditor, spec-miner) and
+  # the shared skills (feature-flow, incident-flow, grilling, grill-me,
+  # grill-with-docs, domain-modeling) are NOT repo files anymore — they come from the
   # code-conventions@cybernet plugin. Without it they do not exist at all, and
   # nothing else says so: a delegated planner/test-author/reviewer just silently
   # is not there. Two halves, both required: enabled for this project, and
@@ -245,15 +245,26 @@ hit = plugin_id in plugins or any(k.split('@')[0] == name for k in plugins) \
     or bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name)))
 # 'stale' = installed, but the cached build predates ADR-0027 and has no agents/
 carries = bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name, '*', 'agents', 'planner.md')))
-print('yes' if (hit and carries) else ('stale' if hit else 'no'))
+# 'partial' = has agents/, but predates plugin 1.2.0, which added spec-miner. Seeding
+# openspec/specs/ (install.sh's manual step 3) has no agent without it.
+has_miner = bool(glob.glob(os.path.join(home, '.claude/plugins/cache/*', name, '*', 'agents', 'spec-miner.md')))
+if not hit:
+    print('no')
+elif not carries:
+    print('stale')
+else:
+    print('yes' if has_miner else 'partial')
 " 2>/dev/null)
   if [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = yes ]; then
-    ok repo.plugin "$CC_PLUGIN_ID enabled and installed (carries the 7 agents + the shared skills, ADR-0027)"
+    ok repo.plugin "$CC_PLUGIN_ID enabled and installed (carries the 8 agents + the shared skills, ADR-0027)"
+  elif [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = partial ]; then
+    warn repo.plugin "$CC_PLUGIN_ID installed but the cached build has no agents/spec-miner.md — it predates plugin 1.2.0, so seeding openspec/specs/ has no miner agent" \
+      "claude plugin marketplace update cybernet && claude plugin update $CC_PLUGIN_ID"
   elif [ "$CC_ENABLED" = yes ] && [ "$CC_INSTALLED" = stale ]; then
     warn repo.plugin "$CC_PLUGIN_ID installed but the cached build has no agents/ — it predates ADR-0027, every delegated agent/skill is missing" \
       "claude plugin marketplace update cybernet && claude plugin update $CC_PLUGIN_ID"
   elif [ "$CC_ENABLED" != yes ]; then
-    bad repo.plugin "$CC_PLUGIN_ID not enabled in .claude/settings.json — the agents (planner, plan-griller, test-author, executor, backend-reviewer, database-reviewer, repo-auditor) and the skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling) live in that plugin (ADR-0027) and do not exist without it" \
+    bad repo.plugin "$CC_PLUGIN_ID not enabled in .claude/settings.json — the agents (planner, plan-griller, test-author, executor, backend-reviewer, database-reviewer, repo-auditor, spec-miner) and the skills (feature-flow, incident-flow, grilling, grill-me, grill-with-docs, domain-modeling) live in that plugin (ADR-0027) and do not exist without it" \
       "run sdd-kit/install.sh --refresh $ROOT (adds extraKnownMarketplaces + enabledPlugins additively)"
   else
     # per-developer state, not a repo defect: the repo is wired correctly, this
@@ -463,7 +474,7 @@ print(' '.join(sorted(servers - allowed)))
     warn audit.opsx-commands ".claude/commands/opsx present (ADR-0020 §8: openspec-* skills are the supported entry point, not /opsx:* slash commands)" "rm -rf .claude/commands/opsx"
   fi
 
-  # 4. Agents: NO agent is expected as a repo file anymore (ADR-0027) — all 7
+  # 4. Agents: NO agent is expected as a repo file anymore (ADR-0027) — all 8
   #    kit agents come from the code-conventions plugin. A local copy of one of
   #    them is a leftover from an older kit and shadows the plugin version;
   #    anything else is a repo-local agent, reported as before.
@@ -472,13 +483,26 @@ print(' '.join(sorted(servers - allowed)))
       [ -f "$a" ] || continue
       name=$(basename "$a" .md)
       case "$name" in
-        backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor|executor)
+        backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor|executor|spec-miner)
           warn audit.agent-migrated "agent moved to $CC_PLUGIN_ID (ADR-0027) but a local copy is still here: .claude/agents/$name.md — it shadows the plugin version" \
             "run sdd-kit/install.sh --refresh $ROOT (removes unmodified copies once the plugin is confirmed)" ;;
         *) note audit.agent-extra "extra agent: .claude/agents/$name.md (keep only if actively used)" ;;
       esac
     done
   fi
+
+  # 4b. Same shadowing, one level up: a machine-level ~/.claude/agents/<kit agent>.md
+  #     wins over the plugin copy for every repo on this machine, so plugin updates
+  #     to that agent silently never apply. Per-developer state, not a repo defect.
+  for a in "$HOME"/.claude/agents/*.md; do
+    [ -f "$a" ] || continue
+    name=$(basename "$a" .md)
+    case "$name" in
+      backend-reviewer|database-reviewer|planner|plan-griller|test-author|repo-auditor|executor|spec-miner)
+        warn audit.agent-home-shadow "machine-level copy shadows the plugin agent: ~/.claude/agents/$name.md — plugin updates to it never reach this machine" \
+          "confirm the plugin carries it (repo.plugin ok above), then: rm ~/.claude/agents/$name.md" ;;
+    esac
+  done
 
   # 5. Local settings: plugins silently enabled per-repo are a common leftover.
   if [ -f .claude/settings.local.json ]; then

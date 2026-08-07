@@ -171,13 +171,21 @@ repo.
    non-comment line, spec-guard is a deliberate no-op. (LIVING SPEC docs drift
    for conversation_flow has no pre-commit check either - ADR-0026 §4 removed
    it in favor of on-demand `tools/cf/main-drift.sh`.)
-3. Seed `openspec/specs/` one capability at a time. The kit does **not** ship a
-   spec-miner agent - use the `openspec-explore` / `openspec-sync-specs` skills,
-   or a machine-level miner agent of your own; the conversation_flow run that
-   produced the current convention is written up in `docs/archive/SPEC_MINER_PILOT.md`
-   and `docs/archive/STORE_VERIFICATION.md`. Anchor format is
-   `<!-- enforced: path/to/file.py:ClassName.method -->` and `spec-lint.py`
-   validates **both** halves - a fabricated symbol makes the spec MISSING.
+3. Seed `openspec/specs/` one capability at a time with the `spec-miner` agent,
+   which comes from the `code-conventions` plugin like every other kit agent
+   (ADR-0027) - it needs plugin **1.2.0 or newer**, and `doctor.sh` reports an
+   older cached build as `repo.plugin` `partial`. It is a subagent, not a skill:
+   there is no `/spec-miner`, you delegate to it. One capability per run - it
+   writes only `openspec/specs/<capability>/spec.md` and its Bash is read-only.
+   Its metadata keys and the anchor format `<!-- enforced: path/to/file.py:ClassName.method -->`
+   are a contract with `spec-lint.py` (`ALLOWED_KEYS` + anchor resolution):
+   `spec-lint` validates **both** halves, so a fabricated symbol makes the spec
+   MISSING, and changing either side alone fails every mined spec at the
+   pre-commit gate. The conversation_flow run that produced this convention is
+   written up in `docs/archive/SPEC_MINER_PILOT.md` and
+   `docs/archive/STORE_VERIFICATION.md`. For a spec that already has a change
+   with deltas, archive the change instead - mining is only for behaviour that
+   never went through the pipeline.
 4. Run `scripts/sdd/doctor.sh` and clear the FAILs. WARNs are advisory clutter
    reports, not blockers.
 5. AI review auth (subscription, no API key): tokens are PER-DEVELOPER,
@@ -212,7 +220,7 @@ reports that as `repo.plugin`.
 | `/openspec-sync-specs` | reconcile specs with reality | rewrites `openspec/specs/` |
 | `/openspec-explore` | find out what is already specified before writing anything | read-only over `openspec/` |
 
-**Agents** - subagents you delegate a phase to. All seven come from the
+**Agents** - subagents you delegate a phase to. All eight come from the
 `code-conventions` plugin (ADR-0027), not from `.claude/agents/`. They cannot
 invoke skills, so each carries the relevant protocol inline.
 
@@ -225,6 +233,7 @@ invoke skills, so each carries the relevant protocol inline.
 | `backend-reviewer` | 5 - review | sonnet | reads the diff + specs |
 | `database-reviewer` | 5 - review | sonnet | reads migrations/queries |
 | `repo-auditor` | any time | inherits | read-only agent-readiness scorecard for the repo |
+| `spec-miner` | 0 - onboarding | opus | **writes** `openspec/specs/<capability>/spec.md` from existing code, one capability per run; flat Requirement/Invariant blocks with `id`/`enforced`/`entities` metadata that `spec-lint.py` validates |
 
 **Utils** - the deterministic half. These are the only things that can stop you.
 
@@ -301,6 +310,76 @@ empty on purpose while the conversion runs (ADR-0019,
 as the source of the tier table. Always read the target repo's `AGENTS.md`
 before assuming the kit's default flow applies - the repo's own lints and guards
 outrank the kit's.
+
+### Worked example: WEB-2316 in `conversation_flow`
+
+The override above, spelled out end to end. Ticket `WEB-2316`, target repo
+`/home/octrow/cybernet/conversation_flow`, kit freshly installed.
+
+**0. Verify the install, then restart Claude Code.**
+
+```bash
+cd /home/octrow/cybernet/conversation_flow
+bash scripts/sdd/doctor.sh          # must end in 0 failure(s)
+git status --short                  # must NOT show staged D for .claude/hooks/*, scripts/sdd/*
+```
+
+Two things bite here. `install.sh` after an `uninstall.sh` leaves the kit files
+staged as **deleted** (uninstall removes them via git, install only re-tracks the
+`CLAUDE.md` symlink) - `git add .claude/hooks .claude/scripts scripts/sdd .mcp.json
+.spec-guard-paths` before you commit anything, or the commit takes the kit out
+with it. And the plugin, hooks and skills only take effect after a restart, so
+`/tz` does not exist in the session that ran the installer.
+
+`doctor.sh` will report `WARN [repo.spec-guard]` here. That is correct for this
+repo, not a defect: `.spec-guard-paths` is comments-only on purpose until phase 5
+of the CF migration.
+
+**1. Read `AGENTS.md` first.** It is the reason this example does not start with
+`/feature-flow`.
+
+**2. Find out what is already specified** - changing documented behaviour is a
+different task than adding to it.
+
+```bash
+openspec list --specs                                  # this repo
+openspec list --specs --store cybernet-specs           # cross-repo contracts
+grep -rn "<the behaviour you are about to touch>" docs/DOCUMENTATION.md
+```
+
+`/openspec-explore` does the same read-only sweep conversationally.
+
+**3. Pick the ТЗ number - count it, never guess.** CF numbers changes
+`tz-NNN-<slug>`; the YouTrack id lives inside `proposal.md`, not in the directory
+name. The next free number is the **maximum of four sources** (`/tz` §1 lists
+them; `origin/main` still creates `docs/patches/` in parallel, so the remote
+lookup is not redundant). Say the max comes back `100` - you are `tz-101`.
+
+**4. `/tz WEB-2316`** writes `openspec/changes/tz-101-<slug>/` - `proposal.md`
+(with `> Тикет: WEB-2316`), the spec deltas, `tasks.md`. Branch:
+`feature/web-2316-<slug>`.
+
+**5. `/tz-review`, then `plan-griller`. In that order** (ADR-0020): review checks
+the change's claims against the actual code and returns
+`готово к реализации` / `требует правок`; the grill then attacks the design and
+its answers land in the `## Grill` section of `proposal.md`. Do not implement
+while either is open.
+
+**6. `test-author`** turns each `#### Scenario:` in the spec delta into one
+failing test with a `# spec: <requirement-id> / <scenario>` tracer. RED before
+production code (ADR-0016) - the implementer never writes its own tests.
+
+**7. `/tz-implement`** walks the phases with their STOP gates: logical commits
+tagged `ТЗ №101`, `make test` plus the frontend build after each, and the spec
+delta, `docs/DOCUMENTATION.md`, §17 changelog and version bump in those same
+commits.
+
+**8. Gates, then PR.** `scripts/sdd/test.sh`, `scripts/sdd/check.sh`,
+`scripts/sdd/review.sh`, then `backend-reviewer` on the diff and
+`database-reviewer` too if it touched migrations or queries. Merge, then archive
+the change - which folds the deltas into `openspec/specs/`. If WEB-2316 had
+touched a cross-repo contract, the `cybernet-specs` edit would be its own change
+and PR, and this change could not be archived while that PR was open (ADR-0018).
 
 ## Where a rule lives: judgment channels and precedence
 
